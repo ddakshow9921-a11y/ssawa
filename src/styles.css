@@ -734,6 +734,272 @@ button:disabled {
   text-align: right;
 }
 
+.betaOpsNav {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.betaOpsNav button,
+.signalCard,
+.leadCard,
+.decisionCard,
+.scriptCard,
+.guideStep,
+.reportPanel {
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(16, 32, 51, 0.05);
+}
+
+.betaOpsNav button {
+  min-height: 70px;
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 14px;
+  color: var(--charcoal);
+  text-align: left;
+}
+
+.betaOpsNav strong,
+.signalCard strong,
+.leadCard strong,
+.decisionCard strong {
+  color: var(--navy);
+}
+
+.betaOpsNav span,
+.targetProgress span,
+.leadCard small,
+.scriptCard .eyebrow {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.targetProgress {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.targetProgress:last-child {
+  border-bottom: 0;
+}
+
+.targetProgress > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.betaFunnel {
+  display: grid;
+  gap: 10px;
+}
+
+.funnelStep {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+}
+
+.funnelStep.warning {
+  background: var(--orange-soft);
+  border-color: var(--orange-line);
+}
+
+.funnelStep > div {
+  display: grid;
+  gap: 3px;
+}
+
+.funnelStep small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.categorySignalGrid,
+.formulaGrid,
+.decisionGrid,
+.scriptGrid,
+.guideSteps {
+  display: grid;
+  gap: 12px;
+}
+
+.categorySignalGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.signalCard,
+.decisionCard,
+.scriptCard,
+.guideStep,
+.reportPanel {
+  padding: 16px;
+}
+
+.signalCard p,
+.signalCard small,
+.decisionCard p,
+.scriptCard p,
+.guideStep p,
+.reportPanel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.pipelineBoard {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(240px, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.pipelineColumn {
+  min-height: 260px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.pipelineColumn h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  color: var(--navy);
+  font-size: 15px;
+}
+
+.leadCard {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.leadCard p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.formulaGrid,
+.decisionGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.reportPanel {
+  display: grid;
+  gap: 16px;
+}
+
+.reportPanel h2 {
+  margin: 0;
+  color: var(--navy);
+}
+
+.betaDecisionBox {
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.scriptGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.scriptCard {
+  display: grid;
+  gap: 10px;
+}
+
+.guideSteps {
+  margin-bottom: 20px;
+}
+
+.guideStep {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.guideStep > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--orange-soft);
+  color: var(--orange);
+  font-weight: 950;
+}
+
+.guideStep h2 {
+  margin: 0 0 6px;
+  color: var(--navy);
+  font-size: 18px;
+}
+
+.wideLeft {
+  grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr);
+}
+
+.listButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  text-align: left;
+}
+
+.listButton:hover,
+.listButton.active {
+  border-color: rgba(239, 126, 35, 0.55);
+  background: var(--orange-soft);
+}
+
+.listButton p {
+  margin: 5px 0 0;
+  color: var(--muted);
+}
+
+.roadmapGrid,
+.playbookGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.playbookGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .chipList {
   display: flex;
   flex-wrap: wrap;
@@ -3333,6 +3599,11 @@ tr.selectedRow {
 
   .quickGrid,
   .dashboardGrid,
+  .betaOpsNav,
+  .categorySignalGrid,
+  .scriptGrid,
+  .roadmapGrid,
+  .playbookGrid,
   .analysisSourceGrid,
   .methodGrid,
   .categoryChoiceGrid,
@@ -3403,6 +3674,13 @@ tr.selectedRow {
   .heroPanel,
   .quickGrid,
   .dashboardGrid,
+  .betaOpsNav,
+  .categorySignalGrid,
+  .formulaGrid,
+  .decisionGrid,
+  .scriptGrid,
+  .roadmapGrid,
+  .playbookGrid,
   .analysisSourceGrid,
   .twoColumn,
   .requestGrid,

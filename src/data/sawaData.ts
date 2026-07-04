@@ -13,6 +13,22 @@ import type {
   AnalysisSourceType,
   AppData,
   BetaFeedback,
+  BetaFeedbackDecision,
+  BetaFeedbackInsight,
+  BetaFeedbackInsightCategory,
+  BetaFeedbackInsightSeverity,
+  BetaKpiSummary,
+  BetaParticipant,
+  BetaParticipantSource,
+  BetaParticipantStatus,
+  BetaParticipantType,
+  BetaTarget,
+  BetaExperiment,
+  BetaExperimentStatus,
+  BetaExperimentTargetGroup,
+  CategoryFocusScore,
+  CategoryFocusStatus,
+  CategoryPlaybook,
   BillingAccount,
   BillingPaymentMethodType,
   BillingEvent,
@@ -22,6 +38,7 @@ import type {
   Category,
   CommissionFeeType,
   CommissionPolicy,
+  DataQualityCheck,
   Deal,
   DealAttachment,
   DealItem,
@@ -29,8 +46,16 @@ import type {
   DealStatusLog,
   DeliveryNoteStatus,
   DemoEnvironment,
+  DropoffMetric,
   FeedbackStatus,
   FeedbackType,
+  FavoriteItem,
+  FavoriteItemGroup,
+  FeatureFlag,
+  FeatureFlagKey,
+  FocusSetting,
+  ImprovementPriority,
+  ImprovementPriorityStatus,
   ManualPurchaseDraft,
   Message,
   MessageReadState,
@@ -51,10 +76,14 @@ import type {
   PurchaseDocumentType,
   PurchaseRecord,
   PurchaseRecordItem,
+  BusinessValidationDecision,
+  BusinessValidationReport,
   QaChecklistItem,
   QaChecklistStatus,
   PlatformFee,
   PlatformFeeStatus,
+  QuoteRequestOpsInsight,
+  QuoteRequestOpsStatus,
   QuoteCreditType,
   QuoteParticipationCredit,
   Quote,
@@ -63,7 +92,9 @@ import type {
   QuoteRequest,
   QuoteRequestDraft,
   QuoteRequestItem,
+  QuoteRiskLevel,
   ReceiptStatus,
+  RepeatUsageInsight,
   Report,
   ReportAction,
   ReportActionType,
@@ -77,6 +108,13 @@ import type {
   ReviewReport,
   ReviewReportStatus,
   ReviewStatus,
+  RoadmapItem,
+  RoadmapItemStatus,
+  CategoryPerformance,
+  FunnelMetric,
+  OperatorTask,
+  OperatorTaskStatus,
+  OperatorTaskType,
   Settlement,
   SettlementItem,
   SettlementMode,
@@ -92,6 +130,9 @@ import type {
   SupplierDocumentType,
   SupplierProfile,
   SupplierReputationScore,
+  SupplierMatchCandidate,
+  SupplierResponseOpsRow,
+  SupplierResponseStatus,
   SupplierGrade,
   SupplierStats,
   SupplierUsage,
@@ -99,6 +140,12 @@ import type {
   UserRole,
   UserSanction,
   VatPolicy,
+  SalesActivity,
+  SalesActivityResult,
+  SalesActivityType,
+  SalesLead,
+  SalesLeadPriority,
+  SalesLeadStage,
 } from "../types";
 
 const STORAGE_KEY = "ssawa-mvp-data-v6";
@@ -544,6 +591,202 @@ export const qaChecklistStatusLabels: Record<QaChecklistStatus, string> = {
   passed: "통과",
   failed: "실패",
   skipped: "보류",
+};
+
+export const betaParticipantTypeLabels: Record<BetaParticipantType, string> = {
+  buyer: "구매자",
+  supplier: "공급업체",
+};
+
+export const betaParticipantSourceLabels: Record<BetaParticipantSource, string> = {
+  direct_sales: "직접 영업",
+  referral: "추천",
+  community: "커뮤니티",
+  partner: "파트너",
+  landing: "랜딩",
+  manual: "수기 등록",
+  etc: "기타",
+};
+
+export const betaParticipantStatusLabels: Record<BetaParticipantStatus, string> = {
+  invited: "초대",
+  signed_up: "가입",
+  onboarded: "온보딩",
+  active: "활성",
+  inactive: "비활성",
+  dropped: "이탈",
+};
+
+export const salesLeadStageLabels: Record<SalesLeadStage, string> = {
+  new: "신규 리드",
+  contacted: "연락 완료",
+  interested: "관심 있음",
+  invited: "초대 발송",
+  signed_up: "가입 완료",
+  onboarded: "온보딩 완료",
+  active: "활성 사용자",
+  rejected: "거절",
+  lost: "이탈/실패",
+};
+
+export const salesLeadPriorityLabels: Record<SalesLeadPriority, string> = {
+  low: "낮음",
+  normal: "보통",
+  high: "높음",
+  urgent: "긴급",
+};
+
+export const salesActivityTypeLabels: Record<SalesActivityType, string> = {
+  call: "전화",
+  sms: "문자",
+  kakao: "카카오톡",
+  visit: "방문",
+  email: "이메일",
+  meeting: "미팅",
+  demo: "데모",
+  follow_up: "후속 연락",
+  note: "메모",
+};
+
+export const salesActivityResultLabels: Record<SalesActivityResult, string> = {
+  success: "성공",
+  no_answer: "부재",
+  interested: "관심",
+  not_interested: "관심 없음",
+  need_follow_up: "후속 필요",
+  signed_up: "가입 완료",
+  rejected: "거절",
+};
+
+export const betaExperimentStatusLabels: Record<BetaExperimentStatus, string> = {
+  planned: "예정",
+  running: "진행 중",
+  completed: "완료",
+  stopped: "중단",
+};
+
+export const betaExperimentTargetGroupLabels: Record<BetaExperimentTargetGroup, string> = {
+  buyers: "구매자",
+  suppliers: "공급업체",
+  both: "양쪽",
+};
+
+export const betaFeedbackInsightCategoryLabels: Record<BetaFeedbackInsightCategory, string> = {
+  ux: "UX",
+  bug: "버그",
+  pricing: "가격/요금제",
+  supplier_quality: "공급업체 품질",
+  buyer_need: "구매자 니즈",
+  feature_request: "기능 요청",
+  onboarding: "온보딩",
+  trust: "신뢰/안전",
+  etc: "기타",
+};
+
+export const betaFeedbackInsightSeverityLabels: Record<BetaFeedbackInsightSeverity, string> = {
+  low: "낮음",
+  normal: "보통",
+  high: "높음",
+  critical: "치명",
+};
+
+export const betaFeedbackDecisionLabels: Record<BetaFeedbackDecision, string> = {
+  do_now: "지금 처리",
+  do_later: "다음 배포",
+  reject: "기각",
+  needs_research: "추가 조사",
+};
+
+export const operatorTaskTypeLabels: Record<OperatorTaskType, string> = {
+  sales: "영업",
+  cs: "CS",
+  qa: "QA",
+  supplier_onboarding: "공급업체 온보딩",
+  buyer_followup: "구매자 후속",
+  bug_check: "버그 확인",
+  report: "리포트",
+  etc: "기타",
+};
+
+export const operatorTaskStatusLabels: Record<OperatorTaskStatus, string> = {
+  todo: "대기",
+  doing: "진행 중",
+  done: "완료",
+  blocked: "막힘",
+  cancelled: "취소",
+};
+
+export const businessValidationDecisionLabels: Record<BusinessValidationDecision, string> = {
+  continue: "계속 진행",
+  pivot: "방향 전환",
+  pause: "일시 중단",
+  expand: "확장 준비",
+  needs_more_data: "추가 데이터 필요",
+};
+
+export const categoryFocusStatusLabels: Record<CategoryFocusStatus, string> = {
+  recommended: "집중 추천",
+  maintain: "유지",
+  need_supply: "공급업체 보강 필요",
+  need_demand: "수요 검증 필요",
+  hold: "보류",
+  expand_candidate: "확장 후보",
+};
+
+export const quoteRiskLevelLabels: Record<QuoteRiskLevel, string> = {
+  low: "낮음",
+  normal: "보통",
+  high: "높음",
+  urgent: "긴급",
+};
+
+export const quoteRequestOpsStatusLabels: Record<QuoteRequestOpsStatus, string> = {
+  normal: "정상",
+  needs_supplier_match: "공급업체 매칭 필요",
+  waiting_quotes: "견적 대기",
+  no_quotes_risk: "미도착 위험",
+  operator_assisting: "운영자 개입 중",
+  resolved: "해결",
+  failed: "실패",
+};
+
+export const supplierResponseStatusLabels: Record<SupplierResponseStatus, string> = {
+  fast: "빠른응답",
+  normal: "정상",
+  slow: "응답느림",
+  low_participation: "견적참여저조",
+  dormant_risk: "휴면위험",
+  needs_contact: "연락필요",
+  needs_education: "교육필요",
+};
+
+export const improvementPriorityStatusLabels: Record<ImprovementPriorityStatus, string> = {
+  reviewing: "검토 중",
+  apply_now: "이번 단계 반영",
+  apply_next: "다음 단계 반영",
+  hold: "보류",
+  rejected: "기각",
+  done: "완료",
+};
+
+export const featureFlagKeyLabels: Record<FeatureFlagKey, string> = {
+  enable_analysis: "자료 자동분석",
+  enable_accounting_sync: "오늘장사 장부 연동",
+  enable_supplier_billing: "공급업체 요금제",
+  enable_settlements: "정산 관리",
+  enable_reviews: "후기/평점",
+  enable_reports: "신고/분쟁",
+  enable_messages: "문의 스레드",
+  enable_beta_kpi: "베타 KPI",
+  enable_quick_reorder: "빠른 재요청",
+  enable_favorite_items: "자주 쓰는 품목",
+};
+
+export const roadmapItemStatusLabels: Record<RoadmapItemStatus, string> = {
+  planned: "예정",
+  doing: "진행 중",
+  done: "완료",
+  blocked: "막힘",
 };
 
 export const environmentLabels: Record<DemoEnvironment, string> = {
@@ -1200,6 +1443,202 @@ const sampleQaChecklists: QaChecklistItem[] = [
   qaChecklist("qa-14", "배포/환경변수", "빌드와 환경 구분 확인", "mock/demo와 beta/production 데이터 경계 표시", "unchecked", ""),
 ];
 
+const sampleBetaTargets: BetaTarget[] = [
+  {
+    id: "beta-target-2026-07",
+    period_start: "2026-07-01",
+    period_end: "2026-07-31",
+    target_buyers: 100,
+    target_suppliers: 30,
+    target_quote_requests: 50,
+    target_quotes: 150,
+    target_deals: 15,
+    target_completed_deals: 5,
+    target_feedbacks: 30,
+    target_repeat_buyers: 20,
+    target_active_suppliers: 20,
+    notes: "7월 제한 베타: 구매자 100명, 승인 공급업체 30곳, 거래 15건 검증",
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+const sampleBetaParticipants: BetaParticipant[] = [
+  betaParticipant("bp-buyer-1", "buyer", "active", "direct_sales", "buyer-1", "월계치킨", "김사장", "010-1111-2222", "owner@ssawa.local", "서울 노원구", "포장재", "첫 요청 완료, 포장재 단가 비교 니즈 높음", 2, 1, 1, 1, ["치킨집", "반복사용 가능성 높음"]),
+  betaParticipant("bp-buyer-2", "buyer", "active", "referral", "buyer-2", "고깃집오늘", "박대표", "010-3333-4444", "meat@ssawa.local", "경기 성남시", "식자재", "식자재 새벽납품 테스트 중", 1, 1, 1, 0, ["고깃집", "세금계산서 중요"]),
+  betaParticipant("bp-buyer-3", "buyer", "onboarded", "community", undefined, "성수카페", "이매니저", "010-4545-2020", "cafe@ssawa.local", "서울 성동구", "포장재, 소모품", "거래명세서 업로드 테스트 예정", 0, 0, 0, 1, ["카페", "첫 요청 유도 필요"]),
+  betaParticipant("bp-buyer-4", "buyer", "invited", "landing", undefined, "강남치킨", "최점주", "010-5656-3030", "gangnam@ssawa.local", "서울 강남구", "포장재", "초대 링크 발송, 전화 후속 필요", 0, 0, 0, 0, ["초대", "연락 필요"]),
+  betaParticipant("bp-buyer-5", "buyer", "signed_up", "partner", undefined, "동네문구깍집", "오대표", "010-6767-4040", "corner@ssawa.local", "서울 동작구", "소모품", "가입 완료, 첫 요청 작성 중단", 0, 0, 0, 0, ["이탈 위험", "첫 요청 보조"]),
+  betaParticipant("bp-supplier-1", "supplier", "active", "direct_sales", "sup-1-user", "서울포장", "최민지", "010-1111-3001", "sup-1@supplier.ssawa.local", "서울 동대문구", "포장재", "응답 빠름, 포장재 초기 집중 카테고리 후보", 0, 0, 1, 1, ["빠른응답", "유료전환 후보"]),
+  betaParticipant("bp-supplier-2", "supplier", "active", "direct_sales", "sup-2-user", "동대문식자재", "김소연", "010-2222-3002", "sup-2@supplier.ssawa.local", "서울 동대문구", "식자재", "새벽배송 강점, 첫 견적 제출 완료", 0, 0, 1, 0, ["식자재", "응답 안정"]),
+  betaParticipant("bp-supplier-3", "supplier", "active", "manual", "sup-3-user", "충주닥트자재", "파트너 담당자", "010-0000-0000", "sup-3@supplier.ssawa.local", "충북 충주시", "설비/닥트/환기자재", "현장 상담 우수, 고단가 카테고리 검증", 0, 0, 1, 0, ["고단가", "현장상담"]),
+  betaParticipant("bp-supplier-4", "supplier", "onboarded", "direct_sales", "sup-5-user", "서울주방파트너", "파트너 담당자", "010-0000-0000", "sup-5@supplier.ssawa.local", "서울 성동구", "주방용품", "자료 보완 후 승인 예정", 0, 0, 0, 0, ["승인 대기", "자료 보완"]),
+  betaParticipant("bp-supplier-5", "supplier", "inactive", "community", "sup-6-user", "한강포장물류", "파트너 담당자", "010-0000-0000", "sup-6@supplier.ssawa.local", "서울 강서구", "포장재", "통장사본 반려 후 응답 지연", 0, 0, 0, 0, ["이탈 위험", "보완 요청"]),
+];
+
+const sampleSalesLeads: SalesLead[] = [
+  salesLead("lead-1", "buyer", "강남치킨", "최점주", "010-5656-3030", "gangnam@ssawa.local", "서울 강남구", "포장재", "landing", "invited", "high", "초대 링크 확인 전화", "2026-07-05", "포장재 단가 비교 니즈 강함"),
+  salesLead("lead-2", "buyer", "성수카페", "이매니저", "010-4545-2020", "cafe@ssawa.local", "서울 성동구", "포장재", "community", "onboarded", "normal", "거래명세서 업로드 안내", "2026-07-06", "첫 요청까지 운영자 보조 필요"),
+  salesLead("lead-3", "supplier", "동대문식자재", "김소연", "010-2222-3002", "sup-2@supplier.ssawa.local", "서울 동대문구", "식자재", "direct_sales", "active", "high", "유료 전환 의향 인터뷰", "2026-07-08", "새벽배송 강점"),
+  salesLead("lead-4", "supplier", "서울주방파트너", "파트너 담당자", "010-0000-0000", "sup-5@supplier.ssawa.local", "서울 성동구", "주방용품", "direct_sales", "onboarded", "urgent", "사업자 자료 보완 요청", "2026-07-05", "승인 지연 방지 필요"),
+  salesLead("lead-5", "supplier", "서부산업공구", "파트너 담당자", "010-0000-0000", "sup-8@supplier.ssawa.local", "경기 하남시", "공구/산업자재", "manual", "contacted", "normal", "정책 위반 이슈 확인", "2026-07-09", "운영 제한 상태"),
+];
+
+const sampleSalesActivities: SalesActivity[] = [
+  salesActivity("activity-1", "lead-1", "call", "interested", "기존 포장재 거래명세서 업로드를 안내했고 베타 무료 테스트에 관심 있음", "2026-07-04T10:10:00.000Z"),
+  salesActivity("activity-2", "lead-2", "kakao", "need_follow_up", "사진 업로드 방법 캡처 안내 필요", "2026-07-04T11:20:00.000Z"),
+  salesActivity("activity-3", "lead-3", "meeting", "success", "거래 수수료보다 월 구독 선호. 5곳 이상 요청이 들어오면 유료 검토 가능", "2026-07-04T13:10:00.000Z"),
+  salesActivity("activity-4", "lead-4", "sms", "no_answer", "사업자등록증 재업로드 요청 문자 발송", "2026-07-04T15:30:00.000Z"),
+  salesActivity("activity-5", "lead-5", "note", "need_follow_up", "외부 결제 유도 표현 교육 필요", "2026-07-04T16:40:00.000Z"),
+];
+
+const sampleBetaExperiments: BetaExperiment[] = [
+  betaExperiment("exp-1", "거래명세서 업로드 첫 요청 유도", "기존 거래명세서 업로드 CTA를 강조하면 첫 견적요청 전환율이 오른다.", "buyers", "running", "첫 요청 전환율 30% 이상", "성수카페, 강남치킨 대상으로 테스트 중", "CTA 문구를 포장재/식자재별로 분리"),
+  betaExperiment("exp-2", "공급업체 무료 입점 캠페인", "초기 무료 입점과 첫 거래 데이터 제공이 공급업체 가입률을 높인다.", "suppliers", "running", "입점 신청률 20% 이상", "5곳 중 2곳 자료 보완 단계", "자료 보완 안내 문구 정리"),
+  betaExperiment("exp-3", "포장재 집중 카테고리 검증", "치킨/카페 포장재는 요청-응답 균형이 가장 빠르게 맞는다.", "both", "planned", "요청당 평균 견적 3개 이상", "서울포장, 한강포장물류 응답률 비교 예정", "포장재 공급업체 5곳 추가 컨택"),
+];
+
+const sampleBetaFeedbackInsights: BetaFeedbackInsight[] = [
+  feedbackInsight("insight-1", "feedback-1", "ux", "high", 5, 4, 2, "do_now", "모바일 견적요청 CTA와 단계 안내를 14단계 우선순위에 반영"),
+  feedbackInsight("insight-2", "feedback-2", "feature_request", "normal", 4, 3, 3, "do_later", "공급업체 반복 견적 UX 개선 후보"),
+  feedbackInsight("insight-3", "feedback-3", "bug", "normal", 3, 2, 2, "needs_research", "관리자 테이블 모바일 가로 스크롤 검수 필요"),
+];
+
+const sampleOperatorTasks: OperatorTask[] = [
+  operatorTask("task-1", "서울주방파트너 사업자자료 보완 요청", "승인 대기 업체의 사업자등록증과 가격표 보완을 요청합니다.", "supplier_onboarding", "todo", "urgent", "supplier", "sup-5", "2026-07-05"),
+  operatorTask("task-2", "강남치킨 첫 견적요청 전화 보조", "초대 링크 발송 후 포장재 첫 요청 등록까지 안내합니다.", "buyer_followup", "doing", "high", "lead", "lead-1", "2026-07-05"),
+  operatorTask("task-3", "무견적 요청 공급업체 수동 매칭", "닥트/환기자재 요청에 추가 공급업체 2곳을 수동 매칭합니다.", "sales", "todo", "high", "quote_request", "req-3", "2026-07-05"),
+  operatorTask("task-4", "정산 화면 모바일 QA", "베타 QA 체크리스트 실패 항목을 모바일에서 재검수합니다.", "qa", "doing", "normal", "qa", "qa-11", "2026-07-07"),
+  operatorTask("task-5", "유료 전환 의향 인터뷰 5곳 예약", "활성 공급업체 대상으로 월 구독/거래 수수료 선호를 확인합니다.", "report", "todo", "normal", "experiment", "exp-2", "2026-07-10"),
+];
+
+const sampleBusinessValidationReports: BusinessValidationReport[] = [
+  {
+    id: "bvr-1",
+    period_start: "2026-07-01",
+    period_end: "2026-07-07",
+    summary: "초기 베타는 포장재와 식자재에서 요청-응답 균형이 가장 빠르게 형성되고 있습니다.",
+    buyer_findings: "구매자는 거래명세서 업로드와 기존 단가 비교에 반응합니다. 첫 요청 작성 중단 구간은 모바일 CTA와 품목 입력 단계입니다.",
+    supplier_findings: "공급업체는 무료 입점보다 실제 요청 수와 응답 후 선택 가능성에 더 민감합니다.",
+    kpi_findings: "요청당 평균 견적과 첫 견적 도착 시간은 초기 검증 핵심 지표이며, 무견적 요청은 운영자가 즉시 개입해야 합니다.",
+    risk_findings: "승인 대기 공급업체 자료 보완 지연과 관리자 테이블 모바일 QA가 베타 운영 리스크입니다.",
+    recommendation: "포장재를 1차 집중 카테고리로 두고, 구매자 첫 요청 유도와 공급업체 응답 교육을 동시에 강화합니다.",
+    decision: "continue",
+    keep_features: ["견적요청", "견적비교", "공급업체 매칭", "빠른 재요청"],
+    reduce_features: ["복잡한 정산 리포트", "전체 카테고리 동시 확장"],
+    hide_features: ["정산 고급 리포트", "건축자재 전국 확장", "상용 AI 자동화 메뉴"],
+    strengthen_features: ["견적 미도착 대응", "포장재 템플릿", "공급업체 응답 독려", "반복 요청 UX"],
+    focus_category: "포장재",
+    priority_regions: ["서울", "경기"],
+    priority_buyer_segments: ["치킨집", "카페", "배달전문점"],
+    next_product_priorities: ["수동 매칭 보조", "빠른 재요청", "자주 쓰는 품목 묶음"],
+    next_sales_priorities: ["포장재 공급업체 10곳 추가 확보", "치킨집/카페 첫 요청 캠페인"],
+    monetization_validation_status: "공급업체는 실제 요청 수가 보일 때 성과형 또는 월 구독 검토 의향이 있습니다.",
+    launch_blockers: ["무견적 요청 12시간 초과 방지", "첫 요청 작성 중단 구간 축소", "포장재 공급업체 응답 안정화"],
+    created_by: "admin-1",
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+const sampleFocusSettings: FocusSetting[] = [
+  {
+    id: "focus-1",
+    focus_category_name: "포장재",
+    focus_region: "서울/경기",
+    focus_mode_enabled: true,
+    buyer_home_message: "배달용기, 컵, 봉투 견적을 빠르게 받아보세요.",
+    supplier_home_message: "포장재 견적요청이 늘고 있습니다. 빠른 견적으로 신규 거래처를 확보하세요.",
+    priority_template_names: ["치킨집 포장재 기본세트", "카페 포장재 기본세트"],
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+const sampleFeatureFlags: FeatureFlag[] = [
+  featureFlag("flag-1", "enable_analysis", "자료 자동분석", "OCR/AI 분석 mock 메뉴", true, true, false),
+  featureFlag("flag-2", "enable_accounting_sync", "오늘장사 장부 연동", "구매내역 장부 반영 준비", true, true, false),
+  featureFlag("flag-3", "enable_supplier_billing", "공급업체 요금제", "요금제/이용현황 mock", true, true, false),
+  featureFlag("flag-4", "enable_settlements", "정산 관리", "정산 예정 내역과 수수료 관리", true, true, true),
+  featureFlag("flag-5", "enable_reviews", "후기/평점", "거래 후기와 공급업체 신뢰도", true, false, false),
+  featureFlag("flag-6", "enable_reports", "신고/분쟁", "안전거래 신고와 운영 처리", true, false, false),
+  featureFlag("flag-7", "enable_messages", "문의 스레드", "요청/거래별 메시지", true, false, false),
+  featureFlag("flag-8", "enable_beta_kpi", "베타 KPI", "관리자 KPI와 사업검증", true, false, true),
+  featureFlag("flag-9", "enable_quick_reorder", "빠른 재요청", "지난 요청/구매 기반 재견적", true, false, false),
+  featureFlag("flag-10", "enable_favorite_items", "자주 쓰는 품목", "반복 구매 품목 묶음", true, false, false),
+];
+
+const sampleFavoriteItemGroups: FavoriteItemGroup[] = [
+  favoriteItemGroup("fav-group-1", "buyer-1", "치킨집 포장재 기본세트", "포장재", "월계치킨이 매월 반복 구매하는 포장재 묶음"),
+  favoriteItemGroup("fav-group-2", "buyer-1", "카페 포장재 기본세트", "포장재", "성수카페 온보딩에 추천할 컵/뚜껑/캐리어 묶음"),
+];
+
+const sampleFavoriteItems: FavoriteItem[] = [
+  favoriteItem("fav-item-1", "fav-group-1", "치킨박스", "무지 10호", 1000, "개", "인쇄 없음", true),
+  favoriteItem("fav-item-2", "fav-group-1", "소스컵", "70ml+뚜껑", 2000, "개", "뚜껑 포함", true),
+  favoriteItem("fav-item-3", "fav-group-1", "배달봉투 대형", "무지", 1000, "장", "두께 확인", true),
+  favoriteItem("fav-item-4", "fav-group-1", "나무젓가락", "일회용", 1000, "개", "", true),
+  favoriteItem("fav-item-5", "fav-group-1", "물티슈", "개별 포장", 1000, "개", "", true),
+  favoriteItem("fav-item-6", "fav-group-2", "아이스컵", "16oz", 1000, "개", "PET", true),
+  favoriteItem("fav-item-7", "fav-group-2", "컵뚜껑", "16oz 돔리드", 1000, "개", "", true),
+  favoriteItem("fav-item-8", "fav-group-2", "빨대", "개별 포장", 1000, "개", "", true),
+  favoriteItem("fav-item-9", "fav-group-2", "컵홀더", "무지", 1000, "개", "", true),
+  favoriteItem("fav-item-10", "fav-group-2", "캐리어", "2구", 500, "개", "", true),
+];
+
+const sampleCategoryPlaybooks: CategoryPlaybook[] = [
+  categoryPlaybook(
+    "playbook-1",
+    "포장재",
+    ["치킨집", "카페", "배달전문점", "디저트샵"],
+    ["포장재 도매", "배달용기 전문", "인쇄 포장재 업체"],
+    ["배달용기", "치킨박스", "소스컵", "아이스컵", "봉투", "컵홀더", "캐리어"],
+    "기존 포장재 거래명세서만 올리면 같은 품목을 더 좋은 조건으로 비교합니다.",
+    ["반복구매 고객 확보", "초기 무료 입점", "실제 견적요청 기반 신규 거래처"],
+    "기존 포장재 거래명세서만 올려보세요. 같은 품목 더 좋은 견적을 비교해드립니다.",
+    ["규격 불명확", "인쇄 여부 누락", "배송비 조건 누락"],
+    ["템플릿에서 규격 필드 강조", "인쇄 여부 질문 추가", "배송비 포함 여부 필수 확인"],
+    ["요청당 견적 3개 이상", "첫 견적 3시간 이내", "선택률 35% 이상"],
+  ),
+  categoryPlaybook(
+    "playbook-2",
+    "식자재",
+    ["고깃집", "분식집", "한식당"],
+    ["식자재 도매", "새벽배송 가능 업체", "지역 농수산 납품업체"],
+    ["육류", "채소", "소스류", "식용유", "쌈장"],
+    "납품 시간과 세금계산서 조건을 먼저 확인하는 식자재 견적 템플릿",
+    ["새벽배송 수요", "정기 거래 가능성", "가격 변동 비교 니즈"],
+    "주말 장사 전 필요한 식자재를 한 번에 비교하세요.",
+    ["시세 변동", "새벽배송 가능 여부", "최소 주문금액"],
+    ["납품 가능 시간 필수 입력", "시세 변동 안내", "최소 주문금액 표시"],
+    ["첫 견적 6시간 이내", "반복 요청 20% 이상", "공급업체 8곳 확보"],
+  ),
+  categoryPlaybook(
+    "playbook-3",
+    "설비/닥트/환기자재",
+    ["음식점 주방", "공사현장", "설비 보수 업체"],
+    ["닥트 자재상", "환기 설비 업체", "현장 상담 가능 업체"],
+    ["스파이럴덕트", "후렉시블", "디퓨저", "환풍기"],
+    "현장 사진과 규격을 함께 올리는 설비자재 견적 템플릿",
+    ["고단가 거래", "현장 상담 기반 신뢰 확보", "반복 보수 수요"],
+    "현장 사진만 올려도 규격 상담 가능한 업체를 찾아드립니다.",
+    ["규격 호환성", "현장 방문 필요", "배송/설치 구분"],
+    ["사진 업로드 유도", "현장 상담 여부 표시", "설치 포함 여부 확인"],
+    ["추천 업체 2곳 이상", "상담 응답 24시간 이내", "거래금액 100만원 이상"],
+  ),
+];
+
+const sampleRoadmapItems: RoadmapItem[] = [
+  roadmapItem("roadmap-1", "견적 미도착 요청 운영 개선", "위험도 분류와 수동 매칭 보조를 운영 루틴에 넣습니다.", 1, "urgent", "admin-1", "doing", "12시간 초과 무견적 0건"),
+  roadmapItem("roadmap-2", "공급업체 응답 독려", "응답 느림 업체에 교육 링크와 연락 태스크를 발송합니다.", 1, "high", "admin-1", "doing", "공급 응답률 75% 이상"),
+  roadmapItem("roadmap-3", "반복 요청 UX 강화", "지난 요청과 구매내역에서 수량/납품일만 바꿔 재요청합니다.", 2, "high", "admin-1", "planned", "재요청 10건 이상"),
+  roadmapItem("roadmap-4", "자주 쓰는 품목 묶음", "포장재 기본세트를 견적요청 템플릿처럼 사용합니다.", 2, "normal", "admin-1", "planned", "묶음 기반 요청 5건"),
+  roadmapItem("roadmap-5", "집중 카테고리 템플릿 개선", "포장재 랜딩/홈 CTA와 요청 템플릿을 강화합니다.", 3, "high", "admin-1", "planned", "포장재 요청당 견적 3개"),
+  roadmapItem("roadmap-6", "구매자 온보딩 개선", "첫 요청 작성 전 이탈 구간에 템플릿과 사진 업로드 CTA를 노출합니다.", 3, "normal", "admin-1", "planned", "첫 요청 전환율 35%"),
+  roadmapItem("roadmap-7", "유료화 의향 인터뷰", "활성 공급업체 5곳과 가격정책 인터뷰를 진행합니다.", 4, "normal", "admin-1", "planned", "유료 의향 3곳 이상"),
+  roadmapItem("roadmap-8", "정식 런칭 판단 리포트", "집중 카테고리, 공급망, 재요청 데이터를 기반으로 런칭 판단을 정리합니다.", 4, "high", "admin-1", "planned", "런칭/보류 기준 확정"),
+];
+
 export const initialData: AppData = {
   environment: "demo",
   is_demo: true,
@@ -1320,6 +1759,20 @@ export const initialData: AppData = {
   blacklist_entries: sampleBlacklistEntries,
   feedbacks: sampleFeedbacks,
   qa_checklists: sampleQaChecklists,
+  beta_targets: sampleBetaTargets,
+  beta_participants: sampleBetaParticipants,
+  sales_leads: sampleSalesLeads,
+  sales_activities: sampleSalesActivities,
+  beta_experiments: sampleBetaExperiments,
+  beta_feedback_insights: sampleBetaFeedbackInsights,
+  operator_tasks: sampleOperatorTasks,
+  business_validation_reports: sampleBusinessValidationReports,
+  focus_settings: sampleFocusSettings,
+  feature_flags: sampleFeatureFlags,
+  favorite_item_groups: sampleFavoriteItemGroups,
+  favorite_items: sampleFavoriteItems,
+  category_playbooks: sampleCategoryPlaybooks,
+  roadmap_items: sampleRoadmapItems,
   deal_status_logs: [
     log("log-1", "deal-1", "created", "pending_confirmation", "system", "견적 선택으로 거래가 생성되었습니다."),
     log("log-2", "deal-1", "pending_confirmation", "confirmed", "supplier", "공급업체가 거래를 수락했습니다."),
@@ -1439,17 +1892,30 @@ export function estimateSupplierMatches(
   return approved.filter((supplier) => supplier.categories.includes(categoryName) || supplier.service_regions.some((region) => deliveryRegion.includes(region))).length;
 }
 
-export function calculateSupplierMatchScore(supplier: SupplierProfile, request: QuoteRequest): number {
+export function calculateSupplierMatchScore(supplier: SupplierProfile, request: QuoteRequest, data?: AppData): number {
   if (supplier.approval_status !== "approved") return 0;
   let score = 0;
-  if (supplier.categories.includes(request.category_name)) score += 40;
-  if (matchesSupplierRegion(supplier, request.delivery_region)) score += 30;
-  if (!request.need_tax_invoice || supplier.tax_invoice_available) score += 10;
-  if (!request.card_payment_required || supplier.card_payment_available) score += 10;
-  if ((supplier.default_quote_valid_days ?? 3) <= 3) score += 5;
+  const stats = data?.supplier_stats.find((entry) => entry.supplier_id === supplier.id);
+  const reputation = data ? getSupplierReputation(data, supplier.id) : undefined;
+  const regionMatch = matchesSupplierRegion(supplier, request.delivery_region);
+  const nearbyRegion = !regionMatch && supplier.service_regions.some((region) => region.slice(0, 2) === request.delivery_region.slice(0, 2));
+  const subCategoryMatch = (supplier.sub_categories ?? []).some((subCategory) => request.description.includes(subCategory) || request.title.includes(subCategory));
+
+  if (supplier.categories.includes(request.category_name)) score += 25;
+  if (subCategoryMatch) score += 10;
+  if (regionMatch) score += 20;
+  else if (nearbyRegion) score += 10;
+  if (!request.need_tax_invoice || supplier.tax_invoice_available) score += 5;
+  if (!request.card_payment_required || supplier.card_payment_available) score += 5;
+  if ((stats?.average_response_minutes ?? 999) <= 90) score += 10;
+  if ((stats?.response_rate ?? 0) >= 80) score += 10;
+  if ((reputation?.total_score ?? 0) >= 80) score += 10;
+  if (data?.quotes.some((quoteRecord) => quoteRecord.supplier_id === supplier.id && data.quote_requests.some((requestRecord) => requestRecord.id === quoteRecord.quote_request_id && requestRecord.category_name === request.category_name))) score += 10;
+  if ((supplier.default_quote_valid_days ?? 3) <= 3) score += 3;
   if (supplier.urgent_delivery_available && request.urgent) score += 5;
-  else if (supplier.same_day_delivery_available || supplier.urgent_delivery_available) score += 5;
-  return Math.min(100, score);
+  if ((stats?.response_rate ?? 100) < 45) score -= 10;
+  if ((reputation?.risk_level ?? "normal") === "high" || supplier.approval_status !== "approved") score -= 20;
+  return Math.max(0, Math.min(100, score));
 }
 
 export function getMatchedSuppliersForRequest(request: QuoteRequest, suppliers: SupplierProfile[]): SupplierProfile[] {
@@ -3540,6 +4006,534 @@ export function getOperationsSummary(data: AppData) {
   };
 }
 
+export function calculateFeedbackPriorityScore(impact: number, frequency: number, effort: number) {
+  return Math.max(0, Math.round(impact * 2 + frequency * 1.5 - effort));
+}
+
+export function calculateBetaKpis(data: AppData): BetaKpiSummary {
+  const target = data.beta_targets[0] ?? sampleBetaTargets[0];
+  const buyerParticipants = data.beta_participants.filter((entry) => entry.participant_type === "buyer");
+  const supplierParticipants = data.beta_participants.filter((entry) => entry.participant_type === "supplier");
+  const approvedSupplierCount = data.supplier_profiles.filter((entry) => entry.approval_status === "approved").length;
+  const quoteRequestCount = data.quote_requests.length;
+  const quoteCount = data.quotes.length;
+  const selectedRequestCount = data.quote_requests.filter((entry) => entry.selected_quote_id || ["selected", "in_progress", "completed", "closed"].includes(entry.status)).length;
+  const completedDealCount = data.deals.filter((entry) => ["completed", "closed"].includes(entry.status)).length;
+  const activeSupplierCount = getActiveSupplierRate(data, "count");
+  const goalScores = [
+    ratioPercent(buyerParticipants.length, target.target_buyers),
+    ratioPercent(approvedSupplierCount, target.target_suppliers),
+    ratioPercent(quoteRequestCount, target.target_quote_requests),
+    ratioPercent(quoteCount, target.target_quotes),
+    ratioPercent(data.deals.length, target.target_deals),
+    ratioPercent(completedDealCount, target.target_completed_deals),
+    ratioPercent(data.feedbacks.length, target.target_feedbacks),
+  ];
+
+  return {
+    target,
+    buyerCount: buyerParticipants.length,
+    activeBuyerCount: buyerParticipants.filter((entry) => entry.status === "active").length,
+    supplierCandidateCount: supplierParticipants.length,
+    approvedSupplierCount,
+    activeSupplierCount,
+    quoteRequestCount,
+    quoteCount,
+    averageQuotesPerRequest: round1(quoteCount / Math.max(1, quoteRequestCount)),
+    averageFirstQuoteHours: getAverageFirstQuoteTime(data),
+    quoteRequestConversionRate: getQuoteRequestConversionRate(data),
+    quoteResponseRate: getQuoteResponseRate(data),
+    quoteSelectionRate: Math.round((selectedRequestCount / Math.max(1, quoteRequestCount)) * 100),
+    dealConversionRate: getDealConversionRate(data),
+    completedDealRate: Math.round((completedDealCount / Math.max(1, data.deals.length)) * 100),
+    repeatBuyerRate: getRepeatBuyerRate(data),
+    activeSupplierRate: getActiveSupplierRate(data),
+    feedbackCount: data.feedbacks.length,
+    openIssueCount: data.reports.filter((entry) => !["resolved", "dismissed", "cancelled"].includes(entry.status)).length + data.message_reports.filter((entry) => entry.status === "pending").length,
+    goalAchievementRate: Math.round(goalScores.reduce((sum, score) => sum + Math.min(100, score), 0) / Math.max(1, goalScores.length)),
+    estimatedRevenue: getRevenueSummary(data).totalExpectedRevenue,
+  };
+}
+
+export function getQuoteRequestConversionRate(data: AppData) {
+  const signedOrOnboarded = data.beta_participants.filter((entry) => entry.participant_type === "buyer" && ["signed_up", "onboarded", "active"].includes(entry.status)).length;
+  const requestBuyers = new Set(data.quote_requests.map((entry) => entry.buyer_id)).size;
+  return Math.round((requestBuyers / Math.max(1, signedOrOnboarded)) * 100);
+}
+
+export function getQuoteResponseRate(data: AppData) {
+  const requestWithQuotes = new Set(data.quotes.map((entry) => entry.quote_request_id)).size;
+  return Math.round((requestWithQuotes / Math.max(1, data.quote_requests.length)) * 100);
+}
+
+export function getDealConversionRate(data: AppData) {
+  return Math.round((data.deals.length / Math.max(1, data.quote_requests.length)) * 100);
+}
+
+export function getRepeatBuyerRate(data: AppData) {
+  const requestCounts = countBy(data.quote_requests, (entry) => entry.buyer_id);
+  const repeatBuyers = requestCounts.filter((entry) => entry.value >= 2).length;
+  const allBuyers = new Set(data.quote_requests.map((entry) => entry.buyer_id)).size;
+  return Math.round((repeatBuyers / Math.max(1, allBuyers)) * 100);
+}
+
+export function getActiveSupplierRate(data: AppData): number;
+export function getActiveSupplierRate(data: AppData, mode: "count"): number;
+export function getActiveSupplierRate(data: AppData, mode?: "count") {
+  const approved = data.supplier_profiles.filter((entry) => entry.approval_status === "approved");
+  const quoteSupplierIds = new Set(data.quotes.map((entry) => entry.supplier_id));
+  const activeCount = approved.filter((entry) => quoteSupplierIds.has(entry.id)).length;
+  if (mode === "count") return activeCount;
+  return Math.round((activeCount / Math.max(1, approved.length)) * 100);
+}
+
+export function getAverageFirstQuoteTime(data: AppData) {
+  const firstQuoteHours = data.quote_requests
+    .map((requestRecord) => {
+      const firstQuote = data.quotes
+        .filter((entry) => entry.quote_request_id === requestRecord.id)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))[0];
+      if (!firstQuote) return null;
+      const requestMs = Date.parse(requestRecord.created_at);
+      const quoteMs = Date.parse(firstQuote.created_at);
+      if (!Number.isFinite(requestMs) || !Number.isFinite(quoteMs)) return 4;
+      return Math.max(0.5, (quoteMs - requestMs) / 36e5);
+    })
+    .filter((value): value is number => typeof value === "number");
+  if (!firstQuoteHours.length) return 0;
+  return round1(firstQuoteHours.reduce((sum, value) => sum + value, 0) / firstQuoteHours.length);
+}
+
+export function getCategoryPerformance(data: AppData): CategoryPerformance[] {
+  return categories.map((category) => {
+    const requests = data.quote_requests.filter((entry) => entry.category_name === category.name);
+    const requestIds = new Set(requests.map((entry) => entry.id));
+    const quotes = data.quotes.filter((entry) => requestIds.has(entry.quote_request_id));
+    const selectedCount = requests.filter((entry) => entry.selected_quote_id || ["selected", "in_progress", "completed", "closed"].includes(entry.status)).length;
+    const deals = data.deals.filter((entry) => entry.category_name === category.name);
+    const completedDeals = deals.filter((entry) => ["completed", "closed"].includes(entry.status));
+    const disputeCount = data.reports.filter((entry) => entry.report_type === "deal_dispute" && deals.some((dealRecord) => dealRecord.id === entry.related_entity_id)).length;
+    const feedbackCount = data.feedbacks.filter((entry) => entry.description.includes(category.name) || entry.title.includes(category.name)).length;
+    const averageQuotes = round1(quotes.length / Math.max(1, requests.length));
+    const averageDealAmount = deals.length ? Math.round(deals.reduce((sum, entry) => sum + entry.final_amount, 0) / deals.length) : 0;
+    const recommendation: CategoryPerformance["recommendation"] =
+      requests.length >= 2 && averageQuotes >= 2 ? "집중" : requests.length > 0 && quotes.length === 0 ? "공급망 보강" : requests.length > 0 ? "유지" : "보류";
+
+    return {
+      category: category.name,
+      requestCount: requests.length,
+      quoteCount: quotes.length,
+      averageQuotes,
+      selectedCount,
+      dealCount: deals.length,
+      completedDealCount: completedDeals.length,
+      averageDealAmount,
+      disputeCount,
+      feedbackCount,
+      recommendation,
+    };
+  }).filter((entry) => entry.requestCount > 0 || entry.quoteCount > 0 || entry.dealCount > 0);
+}
+
+export function getFunnelMetrics(data: AppData): FunnelMetric[] {
+  const buyerInvited = data.beta_participants.filter((entry) => entry.participant_type === "buyer" && ["invited", "signed_up", "onboarded", "active", "inactive", "dropped"].includes(entry.status)).length;
+  const buyerSignedUp = data.beta_participants.filter((entry) => entry.participant_type === "buyer" && ["signed_up", "onboarded", "active"].includes(entry.status)).length;
+  const requestBuyers = new Set(data.quote_requests.map((entry) => entry.buyer_id)).size;
+  const quotedRequests = new Set(data.quotes.map((entry) => entry.quote_request_id)).size;
+  const selectedRequests = data.quote_requests.filter((entry) => entry.selected_quote_id || ["selected", "in_progress", "completed", "closed"].includes(entry.status)).length;
+  const supplierLeads = data.sales_leads.filter((entry) => entry.lead_type === "supplier").length;
+  const contactedSuppliers = data.sales_leads.filter((entry) => entry.lead_type === "supplier" && entry.stage !== "new").length;
+  const onboardedSuppliers = data.beta_participants.filter((entry) => entry.participant_type === "supplier" && ["onboarded", "active"].includes(entry.status)).length;
+  const activeSuppliers = getActiveSupplierRate(data, "count");
+
+  return [
+    funnelMetric("구매자 초대", buyerInvited, buyerInvited),
+    funnelMetric("구매자 가입", buyerSignedUp, buyerInvited),
+    funnelMetric("첫 견적요청", requestBuyers, buyerSignedUp),
+    funnelMetric("견적 도착", quotedRequests, data.quote_requests.length),
+    funnelMetric("견적 선택", selectedRequests, quotedRequests),
+    funnelMetric("거래 생성", data.deals.length, selectedRequests),
+    funnelMetric("거래 완료", data.deals.filter((entry) => ["completed", "closed"].includes(entry.status)).length, data.deals.length),
+    funnelMetric("공급업체 리드", supplierLeads, supplierLeads),
+    funnelMetric("공급업체 연락", contactedSuppliers, supplierLeads),
+    funnelMetric("온보딩 완료", onboardedSuppliers, contactedSuppliers),
+    funnelMetric("견적 제출 업체", activeSuppliers, onboardedSuppliers),
+  ];
+}
+
+const categoryFocusBenchmarks: Record<string, Partial<CategoryFocusScore>> = {
+  "포장재": { requestCount: 34, averageQuotes: 3.4, firstQuoteHours: 2.1, selectionRate: 42, dealRate: 38, repeatRate: 32, averageDealAmount: 520000, riskRate: 6 },
+  "식자재": { requestCount: 41, averageQuotes: 1.8, firstQuoteHours: 7.2, selectionRate: 22, dealRate: 18, repeatRate: 18, averageDealAmount: 780000, riskRate: 12 },
+  "설비/닥트/환기자재": { requestCount: 8, averageQuotes: 2.5, firstQuoteHours: 5.4, selectionRate: 35, dealRate: 28, repeatRate: 8, averageDealAmount: 1400000, riskRate: 8 },
+  "건축자재": { requestCount: 5, averageQuotes: 1.2, firstQuoteHours: 12, selectionRate: 10, dealRate: 8, repeatRate: 0, averageDealAmount: 900000, riskRate: 25 },
+};
+
+export function getActiveFocusSetting(data: AppData): FocusSetting {
+  return data.focus_settings.find((entry) => entry.focus_mode_enabled) ?? data.focus_settings[0] ?? sampleFocusSettings[0];
+}
+
+export function calculateCategoryFocusScores(data: AppData): CategoryFocusScore[] {
+  return categories.map((category) => {
+    const requests = data.quote_requests.filter((entry) => entry.category_name === category.name);
+    const requestIds = new Set(requests.map((entry) => entry.id));
+    const quotes = data.quotes.filter((entry) => requestIds.has(entry.quote_request_id));
+    const deals = data.deals.filter((entry) => entry.category_name === category.name);
+    const supplierCount = data.supplier_profiles.filter((entry) => entry.approval_status === "approved" && entry.categories.includes(category.name)).length;
+    const benchmark = categoryFocusBenchmarks[category.name] ?? {};
+    const requestCount = Math.max(requests.length, benchmark.requestCount ?? 0);
+    const activeSupplierCount = Math.max(supplierCount, category.name === "포장재" ? 6 : category.name === "식자재" ? 4 : supplierCount);
+    const averageQuotes = Math.max(round1(quotes.length / Math.max(1, requests.length)), benchmark.averageQuotes ?? 0);
+    const firstQuoteHours = requests.length ? getAverageFirstQuoteTime({ ...data, quote_requests: requests, quotes }) || (benchmark.firstQuoteHours ?? 12) : (benchmark.firstQuoteHours ?? 12);
+    const selectedCount = requests.filter((entry) => entry.selected_quote_id || ["selected", "in_progress", "completed", "closed"].includes(entry.status)).length;
+    const selectionRate = Math.max(Math.round((selectedCount / Math.max(1, requests.length)) * 100), benchmark.selectionRate ?? 0);
+    const dealRate = Math.max(Math.round((deals.length / Math.max(1, requests.length)) * 100), benchmark.dealRate ?? 0);
+    const buyerCounts = countBy(requests, (entry) => entry.buyer_id);
+    const repeatRate = Math.max(Math.round((buyerCounts.filter((entry) => entry.value >= 2).length / Math.max(1, buyerCounts.length)) * 100), benchmark.repeatRate ?? 0);
+    const averageDealAmount = Math.max(deals.length ? Math.round(deals.reduce((sum, entry) => sum + entry.final_amount, 0) / deals.length) : 0, benchmark.averageDealAmount ?? 0);
+    const riskyDeals = deals.filter((entry) => entry.status.includes("cancelled") || entry.status === "disputed").length;
+    const riskRate = Math.max(Math.round((riskyDeals / Math.max(1, deals.length)) * 100), benchmark.riskRate ?? 0);
+    const demandScore = scaledScore(requestCount, 40, 20);
+    const supplyScore = scaledScore(activeSupplierCount, 8, 15);
+    const responseScore = scaledScore(averageQuotes, 3.5, 15);
+    const dealScore = Math.min(20, Math.round((selectionRate * 0.6 + dealRate * 0.4) / 5));
+    const repeatScore = scaledScore(repeatRate, 40, 10);
+    const revenueScore = scaledScore(averageDealAmount, 1200000, 10);
+    const riskPenalty = scaledScore(riskRate, 40, 10);
+    const focusScore = Math.max(0, Math.min(100, demandScore + supplyScore + responseScore + dealScore + repeatScore + revenueScore - riskPenalty));
+    const status: CategoryFocusStatus =
+      focusScore >= 70 ? "recommended"
+      : requestCount >= 8 && averageDealAmount >= 1000000 ? "expand_candidate"
+      : requestCount >= 15 && activeSupplierCount < 4 ? "need_supply"
+      : requestCount < 8 && activeSupplierCount >= 3 ? "need_demand"
+      : riskRate >= 20 ? "hold"
+      : "maintain";
+    const reason = status === "recommended"
+      ? "수요, 응답, 거래 전환이 동시에 확인됩니다."
+      : status === "need_supply"
+        ? "수요는 있으나 응답 가능한 공급업체가 부족합니다."
+        : status === "need_demand"
+          ? "공급 기반은 있으나 구매자 요청 검증이 더 필요합니다."
+          : status === "expand_candidate"
+            ? "요청 수는 적지만 거래금액과 응답 가능성이 높습니다."
+            : status === "hold"
+              ? "운영 난이도와 분쟁 리스크가 높아 보류가 안전합니다."
+              : "핵심 흐름을 유지하며 추가 데이터를 봅니다.";
+
+    return {
+      category: category.name,
+      requestCount,
+      activeSupplierCount,
+      averageQuotes,
+      firstQuoteHours: round1(firstQuoteHours),
+      selectionRate,
+      dealRate,
+      repeatRate,
+      averageDealAmount,
+      riskRate,
+      demandScore,
+      supplyScore,
+      responseScore,
+      dealScore,
+      repeatScore,
+      revenueScore,
+      riskPenalty,
+      focusScore,
+      status,
+      reason,
+    };
+  }).sort((a, b) => b.focusScore - a.focusScore);
+}
+
+export function getQuoteRequestOpsInsights(data: AppData): QuoteRequestOpsInsight[] {
+  return data.quote_requests.map((requestRecord) => {
+    const quoteCount = data.quotes.filter((entry) => entry.quote_request_id === requestRecord.id).length;
+    const matchingSupplierCount = estimateSupplierMatches(data, requestRecord.category_name, requestRecord.delivery_region, requestRecord.need_tax_invoice, requestRecord.card_payment_required);
+    const elapsedHours = getElapsedDemoHours(requestRecord.created_at);
+    const riskLevel = getQuoteRiskLevel(elapsedHours, quoteCount, matchingSupplierCount, requestRecord.urgent ?? false);
+    const opsStatus: QuoteRequestOpsStatus = quoteCount > 0
+      ? "resolved"
+      : matchingSupplierCount === 0
+        ? "needs_supplier_match"
+        : riskLevel === "urgent" || riskLevel === "high"
+          ? "no_quotes_risk"
+          : "waiting_quotes";
+    return {
+      request: requestRecord,
+      buyerName: buyerName(data, requestRecord.buyer_id),
+      elapsedHours,
+      matchingSupplierCount,
+      viewedSupplierCount: Math.min(matchingSupplierCount, requestRecord.expected_supplier_count ?? matchingSupplierCount),
+      quoteCount,
+      riskLevel,
+      opsStatus,
+      assignedAdminName: "운영자",
+      nextAction: getQuoteOpsAction(riskLevel, matchingSupplierCount, quoteCount),
+    };
+  }).sort((a, b) => riskRank(b.riskLevel) - riskRank(a.riskLevel) || b.elapsedHours - a.elapsedHours);
+}
+
+export function getSupplierMatchCandidates(data: AppData, requestId: string): SupplierMatchCandidate[] {
+  const requestRecord = data.quote_requests.find((entry) => entry.id === requestId) ?? data.quote_requests[0];
+  if (!requestRecord) return [];
+  return data.supplier_profiles
+    .map((supplierRecord) => {
+      const stats = data.supplier_stats.find((entry) => entry.supplier_id === supplierRecord.id);
+      const reputation = getSupplierReputation(data, supplierRecord.id);
+      const credits = data.quote_participation_credits.filter((entry) => entry.supplier_id === supplierRecord.id);
+      const remainingCredits = credits.length ? credits.reduce((sum, entry) => sum + entry.remaining_credits, 0) : Math.max(0, (getSupplierCurrentPlan(data, supplierRecord.id)?.quote_participation_limit ?? 0) - (data.supplier_usage.find((entry) => entry.supplier_id === supplierRecord.id)?.quotes_submitted_count ?? 0));
+      const score = calculateSupplierMatchScore(supplierRecord, requestRecord, data);
+      const reasons = [
+        supplierRecord.categories.includes(requestRecord.category_name) ? "카테고리 일치" : "카테고리 확인 필요",
+        matchesSupplierRegion(supplierRecord, requestRecord.delivery_region) ? "지역 일치" : "인접/수동 확인",
+        (stats?.response_rate ?? 0) >= 80 ? "응답률 우수" : "응답 독려 필요",
+        reputation.total_score >= 80 ? "신뢰도 우수" : "신뢰도 확인",
+      ];
+      const label: SupplierMatchCandidate["label"] = score >= 85 ? "강력 추천" : score >= 70 ? "적합" : score >= 50 ? "조건 일부 확인 필요" : (stats?.response_rate ?? 0) < 50 ? "응답 느림" : "제외 권장";
+      return {
+        supplier: supplierRecord,
+        score,
+        label,
+        reasons,
+        responseRate: stats?.response_rate ?? 0,
+        averageResponseMinutes: stats?.average_response_minutes ?? 0,
+        monthlyQuoteCount: data.supplier_usage.find((entry) => entry.supplier_id === supplierRecord.id)?.quotes_submitted_count ?? stats?.total_quotes_submitted ?? 0,
+        remainingCredits,
+        trustScore: reputation.total_score,
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
+export function getSupplierResponseOps(data: AppData): SupplierResponseOpsRow[] {
+  return data.supplier_profiles
+    .filter((supplierRecord) => supplierRecord.approval_status === "approved")
+    .map((supplierRecord) => {
+      const stats = data.supplier_stats.find((entry) => entry.supplier_id === supplierRecord.id);
+      const usage = data.supplier_usage.find((entry) => entry.supplier_id === supplierRecord.id);
+      const matchedRequestCount = data.quote_requests.filter((requestRecord) => calculateSupplierMatchScore(supplierRecord, requestRecord, data) >= 60).length;
+      const quoteCount = data.quotes.filter((entry) => entry.supplier_id === supplierRecord.id).length;
+      const quoteSubmitRate = Math.round((quoteCount / Math.max(1, matchedRequestCount)) * 100);
+      const selectedQuoteCount = data.quotes.filter((entry) => entry.supplier_id === supplierRecord.id && entry.status === "selected").length;
+      const dealWinRate = Math.round((selectedQuoteCount / Math.max(1, quoteCount)) * 100);
+      const averageResponseMinutes = stats?.average_response_minutes ?? 0;
+      const status: SupplierResponseStatus =
+        (stats?.response_rate ?? 0) >= 85 && averageResponseMinutes <= 60 ? "fast"
+        : quoteSubmitRate === 0 ? "needs_education"
+        : (stats?.response_rate ?? 0) < 50 ? "slow"
+        : quoteSubmitRate < 30 ? "low_participation"
+        : averageResponseMinutes >= 180 ? "needs_contact"
+        : "normal";
+      return {
+        supplier: supplierRecord,
+        status,
+        matchedRequestCount,
+        viewedRequestCount: usage?.matched_requests_viewed_count ?? Math.min(matchedRequestCount, stats?.total_quotes_submitted ?? 0),
+        quoteCount,
+        quoteSubmitRate,
+        averageResponseMinutes,
+        selectedQuoteCount,
+        dealWinRate,
+        lastActiveAt: usage?.updated_at ?? stats?.updated_at ?? supplierRecord.updated_at ?? supplierRecord.created_at,
+        action: getSupplierResponseAction(status),
+      };
+    })
+    .sort((a, b) => responseStatusRank(b.status) - responseStatusRank(a.status) || a.quoteSubmitRate - b.quoteSubmitRate);
+}
+
+export function getRepeatUsageInsights(data: AppData): RepeatUsageInsight[] {
+  return data.profiles
+    .filter((profileRecord) => profileRecord.role === "buyer")
+    .map((profileRecord) => {
+      const requests = data.quote_requests.filter((entry) => entry.buyer_id === profileRecord.id);
+      const purchases = data.purchase_records.filter((entry) => entry.buyer_id === profileRecord.id);
+      const lastCategory = requests[0]?.category_name ?? purchases[0]?.category_name ?? "포장재";
+      const riskLabel = requests.length >= 2 ? "반복 사용 가능성 높음" : requests.length === 1 ? "재요청 유도 필요" : "첫 요청 필요";
+      const recommendedAction = requests.length >= 2 ? "가격 변동 비교 CTA 노출" : requests.length === 1 ? "지난 요청 다시 견적받기 알림" : "거래명세서 업로드 안내";
+      return {
+        buyerId: profileRecord.id,
+        buyerName: profileRecord.business_name,
+        requestCount: requests.length,
+        purchaseCount: purchases.length,
+        lastCategory,
+        riskLabel,
+        recommendedAction,
+      };
+    })
+    .sort((a, b) => b.requestCount - a.requestCount || b.purchaseCount - a.purchaseCount);
+}
+
+export function getBuyerDropoffMetrics(data: AppData): DropoffMetric[] {
+  const buyers = data.beta_participants.filter((entry) => entry.participant_type === "buyer");
+  const signed = buyers.filter((entry) => ["signed_up", "onboarded", "active"].includes(entry.status)).length;
+  const onboarded = buyers.filter((entry) => ["onboarded", "active"].includes(entry.status)).length;
+  const requestBuyerIds = new Set(data.quote_requests.map((entry) => entry.buyer_id));
+  const quotedRequestIds = new Set(data.quotes.map((entry) => entry.quote_request_id));
+  const selectedRequests = data.quote_requests.filter((entry) => entry.selected_quote_id || ["selected", "in_progress", "completed", "closed"].includes(entry.status));
+  const dealBuyerIds = new Set(data.deals.map((entry) => entry.buyer_id));
+  const repeatInsights = getRepeatUsageInsights(data);
+  return [
+    dropoffMetric("buyer", "가입했지만 온보딩 미완료", Math.max(0, signed - onboarded), signed, "시작 후 첫 행동이 명확하지 않습니다.", "첫 요청 작성 유도 메시지"),
+    dropoffMetric("buyer", "온보딩 완료 후 견적요청 없음", Math.max(0, onboarded - requestBuyerIds.size), onboarded, "거래명세서/사진 업로드 CTA가 약합니다.", "포장재 템플릿 추천"),
+    dropoffMetric("buyer", "견적요청 등록 후 견적 미도착", getQuoteRequestOpsInsights(data).filter((entry) => entry.quoteCount === 0).length, data.quote_requests.length, "공급업체 수동 매칭이 필요합니다.", "운영자 매칭 보조"),
+    dropoffMetric("buyer", "견적 도착 후 선택 안 함", Math.max(0, quotedRequestIds.size - selectedRequests.length), quotedRequestIds.size, "비교 기준과 문의 동선이 부족합니다.", "견적 비교 가이드 제공"),
+    dropoffMetric("buyer", "거래 생성 후 완료 안 함", data.deals.filter((entry) => !["completed", "closed"].includes(entry.status)).length, data.deals.length, "납품 상태 확인과 증빙 안내가 필요합니다.", "거래 상태 리마인드"),
+    dropoffMetric("buyer", "첫 사용 후 재요청 없음", repeatInsights.filter((entry) => entry.requestCount === 1).length, repeatInsights.length, "반복 구매 품목을 다시 입력해야 합니다.", "지난 요청 다시 견적받기 알림"),
+  ];
+}
+
+export function getSupplierDropoffMetrics(data: AppData): DropoffMetric[] {
+  const supplierLeads = data.sales_leads.filter((entry) => entry.lead_type === "supplier");
+  const supplierParticipants = data.beta_participants.filter((entry) => entry.participant_type === "supplier");
+  const approved = data.supplier_profiles.filter((entry) => entry.approval_status === "approved");
+  const activeSupplierIds = new Set(data.quotes.map((entry) => entry.supplier_id));
+  return [
+    dropoffMetric("supplier", "리드 등록 후 연락 안 됨", supplierLeads.filter((entry) => entry.stage === "new").length, supplierLeads.length, "초기 연락 루틴이 누락됩니다.", "가입 링크와 전화 태스크 생성"),
+    dropoffMetric("supplier", "관심 있음 후 가입 안 함", supplierLeads.filter((entry) => entry.stage === "interested").length, supplierLeads.length, "실제 요청 수 신뢰가 부족합니다.", "포장재 요청 사례 공유"),
+    dropoffMetric("supplier", "가입했지만 입점 신청 안 함", supplierParticipants.filter((entry) => entry.status === "signed_up").length, supplierParticipants.length, "입점 자료 준비가 번거롭습니다.", "필수 자료 안내"),
+    dropoffMetric("supplier", "입점 신청 후 자료 보완 안 함", data.supplier_profiles.filter((entry) => entry.approval_status === "needs_revision" || entry.approval_status === "pending").length, data.supplier_profiles.length, "보완 항목이 명확하지 않습니다.", "관리자 보완 요청"),
+    dropoffMetric("supplier", "승인 후 요청 조회 안 함", approved.filter((entry) => !(data.supplier_usage.find((usage) => usage.supplier_id === entry.id)?.matched_requests_viewed_count ?? 0)).length, approved.length, "알림과 추천 요청 노출이 약합니다.", "적합 요청 알림 강화"),
+    dropoffMetric("supplier", "요청 조회 후 견적 제출 안 함", approved.filter((entry) => !activeSupplierIds.has(entry.id)).length, approved.length, "첫 견적 작성 가이드가 필요합니다.", "견적 제출 가이드 발송"),
+    dropoffMetric("supplier", "첫 견적 후 반복 제출 없음", getSupplierResponseOps(data).filter((entry) => entry.quoteCount === 1).length, approved.length, "선택 실패 후 개선 피드백이 없습니다.", "가격 외 선택 요소 안내"),
+  ];
+}
+
+export function getImprovementPriorities(data: AppData): ImprovementPriority[] {
+  return data.beta_feedback_insights
+    .map((insight) => {
+      const feedback = data.feedbacks.find((entry) => entry.id === insight.feedback_id);
+      const status: ImprovementPriorityStatus = insight.decision === "do_now" ? "apply_now" : insight.decision === "do_later" ? "apply_next" : insight.decision === "reject" ? "rejected" : "reviewing";
+      const linkedWork = insight.category === "ux"
+        ? ["빠른 재요청", "집중형 홈 CTA", "견적요청 단계 축소"]
+        : insight.category === "feature_request"
+          ? ["반복 견적 복사", "자주 쓰는 품목 묶음"]
+          : insight.category === "supplier_quality"
+            ? ["응답률 운영", "수동 매칭"]
+            : ["QA 확인", "운영 태스크"];
+      return {
+        id: insight.id,
+        title: feedback?.title ?? insight.admin_memo,
+        category: insight.category,
+        userType: feedback?.user_role ?? "admin",
+        severity: insight.severity,
+        frequency: insight.frequency,
+        impact: insight.impact,
+        effort: insight.effort,
+        score: insight.priority_score,
+        decision: insight.decision,
+        linkedWork,
+        status,
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
+export function getDataQualityChecks(data: AppData): DataQualityCheck[] {
+  const categoryNames = new Set(data.categories.map((entry) => entry.name));
+  const duplicateRequestTitles = countBy(data.quote_requests, (entry) => `${entry.buyer_id}:${entry.title}`).filter((entry) => entry.value > 1).length;
+  const unknownCategories = data.quote_requests.filter((entry) => !categoryNames.has(entry.category_name)).length;
+  const cancelledRequests = data.quote_requests.filter((entry) => entry.status === "cancelled").length;
+  const openDeals = data.deals.filter((entry) => !["completed", "closed", "cancelled_by_buyer", "cancelled_by_supplier"].includes(entry.status)).length;
+  const testUsers = data.profiles.filter((entry) => entry.is_test_user || entry.email.includes("@ssawa.local")).length;
+  return [
+    qualityCheck("데모/live 구분", data.is_demo ? "warning" : "good", data.is_demo ? "demo 포함" : data.environment, data.is_demo ? "KPI 화면에서 live only 필터를 함께 표시" : "운영 데이터 기준으로 유지"),
+    qualityCheck("테스트 계정 제외", testUsers > 0 ? "warning" : "good", `${testUsers}명`, "실제 KPI 계산 전 테스트 계정 필터 적용"),
+    qualityCheck("중복 견적요청", duplicateRequestTitles > 0 ? "needs_review" : "good", `${duplicateRequestTitles}건`, "동일 구매자/제목 중복 여부 확인"),
+    qualityCheck("취소 요청", cancelledRequests > 0 ? "warning" : "good", `${cancelledRequests}건`, "취소 요청은 전환율에서 별도 표시"),
+    qualityCheck("미완료 거래", openDeals > 0 ? "warning" : "good", `${openDeals}건`, "완료/미완료 거래를 리포트에서 분리"),
+    qualityCheck("카테고리명 통일", unknownCategories > 0 ? "needs_review" : "good", `${unknownCategories}건`, "카테고리 master와 요청 카테고리 동기화"),
+    qualityCheck("지역명 통일", "warning", `${new Set(data.quote_requests.map((entry) => entry.delivery_region.split(" ")[0])).size}개 권역`, "시/도/구 단위 표준화 필요"),
+    qualityCheck("기간 필터", "good", "2026-07 베타", "KPI 화면에 기간/카테고리/지역 필터 노출"),
+  ];
+}
+
+function scaledScore(value: number, target: number, maxScore: number) {
+  return Math.min(maxScore, Math.round((value / Math.max(1, target)) * maxScore));
+}
+
+function getElapsedDemoHours(createdAt: string) {
+  const demoNowMs = Date.parse("2026-07-05T09:00:00.000+09:00");
+  const createdMs = Date.parse(createdAt);
+  if (!Number.isFinite(createdMs)) return 0;
+  return round1(Math.max(0.5, (demoNowMs - createdMs) / 36e5));
+}
+
+function getQuoteRiskLevel(elapsedHours: number, quoteCount: number, matchingSupplierCount: number, urgent = false): QuoteRiskLevel {
+  if (quoteCount > 0) return "low";
+  if (matchingSupplierCount === 0 || elapsedHours >= 12 || (urgent && elapsedHours >= 2)) return "urgent";
+  if (elapsedHours >= 6) return "high";
+  if (elapsedHours >= 3) return "normal";
+  return "low";
+}
+
+function getQuoteOpsAction(riskLevel: QuoteRiskLevel, matchingSupplierCount: number, quoteCount: number) {
+  if (quoteCount > 0) return "견적 비교와 선택 유도";
+  if (matchingSupplierCount === 0) return "CRM에서 신규 공급업체 리드 추가";
+  if (riskLevel === "urgent") return "구매자 지연 안내와 공급업체 전화 연락";
+  if (riskLevel === "high") return "수동 알림 발송과 운영자 담당 배정";
+  if (riskLevel === "normal") return "추천 공급업체에 견적 제출 리마인드";
+  return "1시간 내 자동 모니터링";
+}
+
+function riskRank(level: QuoteRiskLevel) {
+  return level === "urgent" ? 4 : level === "high" ? 3 : level === "normal" ? 2 : 1;
+}
+
+function getSupplierResponseAction(status: SupplierResponseStatus) {
+  if (status === "fast") return "우수 응답 유지와 유료화 인터뷰";
+  if (status === "normal") return "적합 요청 알림 유지";
+  if (status === "slow") return "응답 독려 알림 생성";
+  if (status === "low_participation") return "전화 연락 태스크 생성";
+  if (status === "dormant_risk") return "휴면 위험 안내";
+  if (status === "needs_contact") return "카테고리/지역 설정 점검 요청";
+  return "견적 제출 가이드 보내기";
+}
+
+function responseStatusRank(status: SupplierResponseStatus) {
+  return status === "needs_education" ? 7 : status === "needs_contact" ? 6 : status === "dormant_risk" ? 5 : status === "low_participation" ? 4 : status === "slow" ? 3 : status === "normal" ? 2 : 1;
+}
+
+function dropoffMetric(actor: BetaParticipantType, stage: string, count: number, previousCount: number, reason: string, action: string): DropoffMetric {
+  return {
+    actor,
+    stage,
+    count,
+    rate: ratioPercent(count, previousCount),
+    reason,
+    action,
+  };
+}
+
+function qualityCheck(label: string, status: DataQualityCheck["status"], value: string, action: string): DataQualityCheck {
+  return { label, status, value, action };
+}
+
+function ratioPercent(value: number, target: number) {
+  return Math.round((value / Math.max(1, target)) * 100);
+}
+
+function round1(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+function funnelMetric(label: string, count: number, previousCount: number): FunnelMetric {
+  const conversionRate = ratioPercent(count, previousCount);
+  return {
+    label,
+    count,
+    conversionRate,
+    warning: previousCount > 0 && conversionRate < 50,
+  };
+}
+
+function countBy<T>(items: T[], getter: (item: T) => string) {
+  const map = new Map<string, number>();
+  items.forEach((item) => {
+    const key = getter(item);
+    map.set(key, (map.get(key) ?? 0) + 1);
+  });
+  return Array.from(map.entries()).map(([label, value]) => ({ label, value }));
+}
+
 export function createBetaFeedback(
   data: AppData,
   input: {
@@ -4244,6 +5238,288 @@ function profile(
   region: string,
 ) {
   return { id, name, email, role, business_name, business_number, phone, region, created_at: now };
+}
+
+function betaParticipant(
+  id: string,
+  participantType: BetaParticipantType,
+  status: BetaParticipantStatus,
+  source: BetaParticipantSource,
+  userId: string | undefined,
+  businessName: string,
+  contactName: string,
+  phone: string,
+  email: string,
+  region: string,
+  categoryInterest: string,
+  memo: string,
+  quoteRequestCount: number,
+  quoteSelectedCount: number,
+  dealCount: number,
+  feedbackCount: number,
+  tags: string[],
+): BetaParticipant {
+  return {
+    id,
+    user_id: userId,
+    participant_type: participantType,
+    source,
+    status,
+    assigned_admin_id: "admin-1",
+    business_name: businessName,
+    contact_name: contactName,
+    phone,
+    email,
+    region,
+    category_interest: categoryInterest,
+    memo,
+    quote_request_count: quoteRequestCount,
+    quote_selected_count: quoteSelectedCount,
+    deal_count: dealCount,
+    feedback_count: feedbackCount,
+    tags,
+    invited_at: "2026-07-01T09:00:00.000Z",
+    signed_up_at: ["signed_up", "onboarded", "active", "inactive", "dropped"].includes(status) ? "2026-07-02T10:00:00.000Z" : undefined,
+    onboarded_at: ["onboarded", "active", "inactive", "dropped"].includes(status) ? "2026-07-03T10:00:00.000Z" : undefined,
+    activated_at: status === "active" ? "2026-07-04T10:00:00.000Z" : undefined,
+    dropped_at: status === "dropped" ? "2026-07-04T18:00:00.000Z" : undefined,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function salesLead(
+  id: string,
+  leadType: BetaParticipantType,
+  businessName: string,
+  contactName: string,
+  phone: string,
+  email: string,
+  region: string,
+  category: string,
+  source: BetaParticipantSource,
+  stage: SalesLeadStage,
+  priority: SalesLeadPriority,
+  nextAction: string,
+  nextActionDate: string,
+  memo: string,
+): SalesLead {
+  return {
+    id,
+    lead_type: leadType,
+    business_name: businessName,
+    contact_name: contactName,
+    phone,
+    email,
+    region,
+    category,
+    source,
+    stage,
+    priority,
+    assigned_admin_id: "admin-1",
+    next_action: nextAction,
+    next_action_date: nextActionDate,
+    memo,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function salesActivity(id: string, leadId: string, activityType: SalesActivityType, result: SalesActivityResult, memo: string, activityAt: string): SalesActivity {
+  return {
+    id,
+    lead_id: leadId,
+    activity_type: activityType,
+    result,
+    memo,
+    actor_id: "admin-1",
+    activity_at: activityAt,
+    created_at: activityAt,
+  };
+}
+
+function betaExperiment(
+  id: string,
+  name: string,
+  hypothesis: string,
+  targetGroup: BetaExperimentTargetGroup,
+  status: BetaExperimentStatus,
+  successMetric: string,
+  resultSummary: string,
+  nextAction: string,
+): BetaExperiment {
+  return {
+    id,
+    name,
+    hypothesis,
+    target_group: targetGroup,
+    start_date: "2026-07-01",
+    end_date: "2026-07-31",
+    status,
+    success_metric: successMetric,
+    result_summary: resultSummary,
+    next_action: nextAction,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function feedbackInsight(
+  id: string,
+  feedbackId: string,
+  category: BetaFeedbackInsightCategory,
+  severity: BetaFeedbackInsightSeverity,
+  impact: number,
+  frequency: number,
+  effort: number,
+  decision: BetaFeedbackDecision,
+  adminMemo: string,
+): BetaFeedbackInsight {
+  return {
+    id,
+    feedback_id: feedbackId,
+    category,
+    severity,
+    priority_score: calculateFeedbackPriorityScore(impact, frequency, effort),
+    impact,
+    frequency,
+    effort,
+    decision,
+    admin_memo: adminMemo,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function operatorTask(
+  id: string,
+  title: string,
+  description: string,
+  taskType: OperatorTaskType,
+  status: OperatorTaskStatus,
+  priority: SalesLeadPriority,
+  relatedEntityType: string,
+  relatedEntityId: string,
+  dueDate: string,
+): OperatorTask {
+  return {
+    id,
+    title,
+    description,
+    task_type: taskType,
+    status,
+    priority,
+    assigned_admin_id: "admin-1",
+    related_entity_type: relatedEntityType,
+    related_entity_id: relatedEntityId,
+    due_date: dueDate,
+    completed_at: status === "done" ? now : undefined,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function featureFlag(
+  id: string,
+  key: FeatureFlagKey,
+  name: string,
+  description: string,
+  enabled: boolean,
+  betaLabelEnabled: boolean,
+  adminOnly: boolean,
+): FeatureFlag {
+  return {
+    id,
+    key,
+    name,
+    description,
+    enabled,
+    beta_label_enabled: betaLabelEnabled,
+    admin_only: adminOnly,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function favoriteItemGroup(id: string, buyerId: string, name: string, categoryName: string, description: string): FavoriteItemGroup {
+  return {
+    id,
+    buyer_id: buyerId,
+    name,
+    category_name: categoryName,
+    description,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function favoriteItem(id: string, groupId: string, itemName: string, spec: string, quantity: number, unit: string, memo: string, allowAlternative: boolean): FavoriteItem {
+  return {
+    id,
+    group_id: groupId,
+    item_name: itemName,
+    spec,
+    quantity,
+    unit,
+    memo,
+    allow_alternative: allowAlternative,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function categoryPlaybook(
+  id: string,
+  categoryName: string,
+  targetBuyers: string[],
+  supplierTypes: string[],
+  representativeItems: string[],
+  requestTemplate: string,
+  supplierSalesPoints: string[],
+  buyerMessage: string,
+  commonIssues: string[],
+  operatorResponse: string[],
+  successKpis: string[],
+): CategoryPlaybook {
+  return {
+    id,
+    category_name: categoryName,
+    target_buyers: targetBuyers,
+    supplier_types: supplierTypes,
+    representative_items: representativeItems,
+    request_template: requestTemplate,
+    supplier_sales_points: supplierSalesPoints,
+    buyer_message: buyerMessage,
+    common_issues: commonIssues,
+    operator_response: operatorResponse,
+    success_kpis: successKpis,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function roadmapItem(
+  id: string,
+  title: string,
+  description: string,
+  week: RoadmapItem["week"],
+  priority: SalesLeadPriority,
+  ownerId: string,
+  status: RoadmapItemStatus,
+  successMetric: string,
+): RoadmapItem {
+  return {
+    id,
+    title,
+    description,
+    week,
+    priority,
+    owner_id: ownerId,
+    status,
+    success_metric: successMetric,
+    created_at: now,
+    updated_at: now,
+  };
 }
 
 function supplier(
@@ -5631,6 +6907,20 @@ function normalizeData(data: Partial<AppData>): AppData {
     blacklist_entries: data.blacklist_entries ?? initialData.blacklist_entries,
     feedbacks: data.feedbacks ?? initialData.feedbacks,
     qa_checklists: data.qa_checklists ?? initialData.qa_checklists,
+    beta_targets: data.beta_targets ?? initialData.beta_targets,
+    beta_participants: data.beta_participants ?? initialData.beta_participants,
+    sales_leads: data.sales_leads ?? initialData.sales_leads,
+    sales_activities: data.sales_activities ?? initialData.sales_activities,
+    beta_experiments: data.beta_experiments ?? initialData.beta_experiments,
+    beta_feedback_insights: data.beta_feedback_insights ?? initialData.beta_feedback_insights,
+    operator_tasks: data.operator_tasks ?? initialData.operator_tasks,
+    business_validation_reports: data.business_validation_reports ?? initialData.business_validation_reports,
+    focus_settings: data.focus_settings ?? initialData.focus_settings,
+    feature_flags: data.feature_flags ?? initialData.feature_flags,
+    favorite_item_groups: data.favorite_item_groups ?? initialData.favorite_item_groups,
+    favorite_items: data.favorite_items ?? initialData.favorite_items,
+    category_playbooks: data.category_playbooks ?? initialData.category_playbooks,
+    roadmap_items: data.roadmap_items ?? initialData.roadmap_items,
     deal_status_logs: data.deal_status_logs ?? initialData.deal_status_logs,
   };
 

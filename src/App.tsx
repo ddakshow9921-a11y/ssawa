@@ -10,9 +10,20 @@ import {
   analysisStatusLabels,
   accountingStatusLabels,
   applyUserSanction,
+  betaExperimentStatusLabels,
+  betaExperimentTargetGroupLabels,
+  betaFeedbackDecisionLabels,
+  betaFeedbackInsightCategoryLabels,
+  betaFeedbackInsightSeverityLabels,
+  betaParticipantSourceLabels,
+  betaParticipantStatusLabels,
+  betaParticipantTypeLabels,
   blacklistStatusLabels,
   blacklistTargetTypeLabels,
   archiveNotification,
+  businessValidationDecisionLabels,
+  calculateBetaKpis,
+  calculateCategoryFocusScores,
   calculateEstimatedSavings,
   calculateEstimatedSavingsSummary,
   calculateCommissionAmount,
@@ -20,6 +31,7 @@ import {
   calculateRequestQuality,
   calculateSupplierMatchScore,
   canSubmitQuoteByPlan,
+  categoryFocusStatusLabels,
   categoryDescriptions,
   commissionFeeTypeLabels,
   convertAnalysisToPurchaseRecord,
@@ -41,14 +53,25 @@ import {
   estimateSupplierMatches,
   getAccountingCategory,
   getCategoryRevenueBreakdown,
+  getCategoryPerformance,
+  getActiveFocusSetting,
+  getBuyerDropoffMetrics,
   getCommissionPolicyForCategory,
+  getDataQualityChecks,
+  getFunnelMetrics,
+  getImprovementPriorities,
   getMonthlyRevenueTrend,
   getMatchedSuppliersForRequest,
   getNotificationsForUser,
   getOperationsSummary,
   getPlatformFeesBySupplier,
+  getQuoteRequestOpsInsights,
+  getRepeatUsageInsights,
   getRevenueSummary,
+  getSupplierDropoffMetrics,
+  getSupplierMatchCandidates,
   getSupplierReputation,
+  getSupplierResponseOps,
   getSupplierCurrentPlan,
   getSupplierSettlements,
   getSupplierSubscription,
@@ -60,6 +83,7 @@ import {
   environmentLabels,
   feedbackStatusLabels,
   feedbackTypeLabels,
+  featureFlagKeyLabels,
   groupPurchasesByCategory,
   groupPurchasesBySupplier,
   isDemoMode,
@@ -73,6 +97,8 @@ import {
   notificationEntityLabels,
   notificationPriorityLabels,
   notificationTypeLabels,
+  operatorTaskStatusLabels,
+  operatorTaskTypeLabels,
   operationalStatusLabels,
   paymentMethodLabels,
   paymentMethodStatusLabels,
@@ -81,6 +107,8 @@ import {
   purchaseDocumentStatusLabels,
   purchaseDocumentTypeLabels,
   quoteStatusLabels,
+  quoteRequestOpsStatusLabels,
+  quoteRiskLevelLabels,
   qaChecklistStatusLabels,
   receiptStatusLabels,
   recalculateSupplierReputation,
@@ -97,13 +125,19 @@ import {
   reportTypeLabels,
   reviewReportStatusLabels,
   reviewStatusLabels,
+  roadmapItemStatusLabels,
   runMockAnalysis,
+  salesActivityResultLabels,
+  salesActivityTypeLabels,
+  salesLeadPriorityLabels,
+  salesLeadStageLabels,
   sendThreadMessage,
   settlementModeLabels,
   settlementStatusLabels,
   sanctionStatusLabels,
   sanctionTypeLabels,
   supplierGradeLabels,
+  supplierResponseStatusLabels,
   supplierApprovalLabels,
   supplierDocumentStatusLabels,
   supplierDocumentTypeLabels,
@@ -287,6 +321,9 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/onboarding" || path === "/app/buyer/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="buyer" />;
   if (path === "/app/supplier/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="supplier" />;
   if (path === "/app/beta") return <BetaNoticePage navigate={navigate} appMode />;
+  if (path === "/app/beta-guide") return <BuyerBetaGuidePage navigate={navigate} />;
+  if (path === "/app/quick-reorder") return <QuickReorderPage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/favorites/items") return <FavoriteItemsPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/feedback") return <FeedbackPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/notifications/settings") return <NotificationSettingsPage data={data} setData={setData} userId="buyer-1" navigate={navigate} />;
   if (path === "/app/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId="buyer-1" userRole="buyer" />;
@@ -320,6 +357,8 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/supplier/billing") return <SupplierBillingPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/usage") return <SupplierUsagePage data={data} navigate={navigate} />;
   if (path === "/app/supplier/settlements") return <SupplierSettlementsPage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/supplier/beta-guide") return <SupplierBetaGuidePage navigate={navigate} />;
+  if (path === "/app/supplier/response-guide") return <SupplierResponseGuidePage data={data} navigate={navigate} />;
   if (path === "/app/supplier/apply") return <SupplierApplyPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/profile") return <SupplierProfilePage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/settings") return <SupplierSettingsPage data={data} navigate={navigate} setData={setData} />;
@@ -328,6 +367,25 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path.startsWith("/app/supplier/requests/")) return <SupplierRequestDetailPage data={data} navigate={navigate} setData={setData} requestId={path.split("/").pop() ?? ""} />;
   if (path === "/app/supplier/quotes") return <SupplierQuotesPage data={data} navigate={navigate} />;
   if (path === "/app/admin") return <AdminDashboard data={data} navigate={navigate} />;
+  if (path === "/app/admin/product-focus") return <AdminProductFocusPage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/admin/matching-assist") return <AdminMatchingAssistPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/response-ops") return <AdminResponseOpsPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/repeat-insights") return <AdminRepeatInsightsPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/dropoff") return <AdminDropoffPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/improvement-priorities") return <AdminImprovementPrioritiesPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/mvp-cleanup") return <AdminMvpCleanupPage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/admin/playbooks") return <AdminPlaybooksPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta") return <AdminBetaDashboardPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta/kpi") return <AdminBetaKpiPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta/buyers") return <AdminBetaParticipantsPage data={data} navigate={navigate} type="buyer" />;
+  if (path === "/app/admin/beta/suppliers") return <AdminBetaParticipantsPage data={data} navigate={navigate} type="supplier" />;
+  if (path === "/app/admin/beta/pipeline") return <AdminBetaPipelinePage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta/campaigns") return <AdminBetaCampaignsPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta/cs") return <AdminBetaCsPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta/tasks") return <AdminBetaTasksPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta/reports") return <AdminBetaReportsPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta/decision") return <AdminBetaDecisionPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta/scripts") return <AdminBetaScriptsPage navigate={navigate} />;
   if (path === "/app/admin/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId="admin-1" userRole="admin" admin />;
   if (path === "/app/admin/messages") return <AdminMessagesPage data={data} navigate={navigate} />;
   if (path.startsWith("/app/admin/messages/")) return <AdminMessageDetailPage data={data} navigate={navigate} setData={setData} threadId={path.split("/").pop() ?? ""} />;
@@ -660,6 +718,7 @@ function HomePage({ data, navigate }: PageProps) {
   const submittedQuotes = data.quotes.length;
   const approvedSuppliers = data.supplier_profiles.filter((supplier) => supplier.approval_status === "approved").length;
   const purchaseSummary = calculatePurchaseSummary(data.purchase_records.filter((record) => record.buyer_id === "buyer-1"));
+  const focusSetting = getActiveFocusSetting(data);
 
   return (
     <Page>
@@ -667,7 +726,7 @@ function HomePage({ data, navigate }: PageProps) {
         <div className="heroCopy">
           <img src="/로고.png" alt="싸와!" className="heroLogo" />
           <h1 className="heroLead">필요한 자재를 올리면, 업체들이 견적합니다.</h1>
-          <p className="heroSub">식자재부터 포장재, 소모품, 설비자재까지 사업자 구매견적을 한 번에 비교하세요.</p>
+          <p className="heroSub">뭐가 필요하세요? 사진이나 거래명세서만 올려도 견적요청을 만들 수 있어요.</p>
           <div className="heroActions">
             <button className="primaryButton" type="button" onClick={() => navigate("/app/requests/new")}>
               <FilePlus2 size={18} />
@@ -689,12 +748,25 @@ function HomePage({ data, navigate }: PageProps) {
 
       <BetaLimitationsNotice navigate={navigate} context="home" />
 
+      {focusSetting.focus_mode_enabled && (
+        <section className="dealNotice">
+          <div>
+            <span className="eyebrow">집중 카테고리 · {focusSetting.focus_category_name}</span>
+            <h2>{focusSetting.buyer_home_message}</h2>
+            <p>{focusSetting.priority_template_names.join(", ")} 템플릿을 우선 추천합니다.</p>
+          </div>
+          <button className="primaryButton" type="button" onClick={() => navigate("/app/quick-reorder")}>지난 구매 다시 견적</button>
+        </section>
+      )}
+
       <section className="quickGrid" aria-label="주요 작업">
         <ActionTile title="견적요청하기" desc="필요한 자재와 납품 조건을 등록합니다." icon={<FilePlus2 />} onClick={() => navigate("/app/requests/new")} />
+        <ActionTile title="거래명세서 올리기" desc="사진이나 파일을 품목으로 정리해 견적요청을 만듭니다." icon={<Upload />} onClick={() => navigate("/app/analyze")} />
+        <ActionTile title="지난 구매 다시 견적" desc="수량과 납품일만 바꿔 반복 요청을 생성합니다." icon={<RefreshCcw />} onClick={() => navigate("/app/quick-reorder")} />
+        <ActionTile title="자주 쓰는 품목" desc="치킨집/카페 포장재 묶음을 저장하고 재사용합니다." icon={<Boxes />} onClick={() => navigate("/app/favorites/items")} />
         <ActionTile title="자료 자동분석" desc="거래명세서, 견적서, 카톡 내용을 품목으로 정리합니다." icon={<SearchCheck />} onClick={() => navigate("/app/analyze")} />
         <ActionTile title="구매내역 보기" desc="완료 거래와 수동 등록 매입을 장부 기준으로 정리합니다." icon={<ReceiptText />} onClick={() => navigate("/app/purchases")} />
         <ActionTile title="오늘장사 장부" desc="매입비 반영 대기 건을 확인하고 mock 반영합니다." icon={<Landmark />} onClick={() => navigate("/app/accounting")} />
-        <ActionTile title="지난 구매 다시 견적" desc="반복 구매 재견적 흐름을 준비합니다." icon={<RefreshCcw />} disabled />
         <ActionTile title="공급업체 입점하기" desc="지역과 카테고리 기반 요청을 확인합니다." icon={<Store />} onClick={() => navigate("/app/supplier")} />
       </section>
 
@@ -3701,7 +3773,7 @@ function notificationCategory(notification: Notification) {
   return "시스템";
 }
 
-function priorityTone(priority: NotificationPriority): "orange" | "blue" | "green" | "gray" {
+function priorityTone(priority: string): "orange" | "blue" | "green" | "gray" {
   if (priority === "urgent" || priority === "high") return "orange";
   if (priority === "low") return "gray";
   return "blue";
@@ -4166,6 +4238,7 @@ function SupplierPublicProfilePage({ data, navigate, supplierId }: PageProps & {
 function SupplierDashboard({ data, navigate }: PageProps) {
   const supplier = getActiveSupplier(data);
   const stats = supplierStatsFor(data, supplier.id);
+  const focusSetting = getActiveFocusSetting(data);
   const matchingRequests = getVisibleRequestsForSupplier(supplier, data.quote_requests);
   const myQuotes = data.quotes.filter((quoteEntry) => quoteEntry.supplier_id === supplier.id);
   const selectedQuotes = myQuotes.filter((quoteEntry) => quoteEntry.status === "selected").length;
@@ -4176,6 +4249,16 @@ function SupplierDashboard({ data, navigate }: PageProps) {
     <Page>
       <PageTitle eyebrow="공급업체" title="구매 의사가 있는 사장님을 만나보세요." desc={`${supplier.business_name} 기준으로 지역과 카테고리에 맞는 견적요청을 확인합니다.`} />
       <SupplierStatusNotice supplier={supplier} navigate={navigate} />
+      {focusSetting.focus_mode_enabled && supplier.categories.includes(focusSetting.focus_category_name) && (
+        <section className="dealNotice">
+          <div>
+            <span className="eyebrow">집중 카테고리 · {focusSetting.focus_category_name}</span>
+            <h2>{focusSetting.supplier_home_message}</h2>
+            <p>응답 가능한 요청을 먼저 확인하고 빠른 견적으로 신규 거래처를 확보하세요.</p>
+          </div>
+          <button className="primaryButton" type="button" onClick={() => navigate("/app/supplier/requests")}>빠른 견적 제출</button>
+        </section>
+      )}
       <div className="dashboardGrid">
         <Metric label="오늘 도착한 요청" value={`${todayRequests}건`} icon={<ClipboardList />} />
         <Metric label="견적 제출 대기" value={`${pendingQuoteRequests.length}건`} icon={<SearchCheck />} />
@@ -4196,6 +4279,7 @@ function SupplierDashboard({ data, navigate }: PageProps) {
       </section>
       <div className="twoColumn">
         <ActionTile title="견적 가능한 요청" desc="지역과 카테고리에 맞는 요청을 봅니다." icon={<SearchCheck />} onClick={() => navigate("/app/supplier/requests")} />
+        <ActionTile title="응답 개선 가이드" desc="선택되는 견적 작성 기준과 응답률 개선 방법을 봅니다." icon={<BadgeCheck />} onClick={() => navigate("/app/supplier/response-guide")} />
         <ActionTile title="제출한 견적" desc="내가 제출한 견적과 선택 여부를 확인합니다." icon={<ReceiptText />} onClick={() => navigate("/app/supplier/quotes")} />
         <ActionTile title="거래관리" desc="선택된 거래의 납품 상태를 관리합니다." icon={<PackageCheck />} onClick={() => navigate("/app/supplier/deals")} />
         <ActionTile title="신뢰도/후기" desc="내 업체 신뢰도, 후기, 운영 가이드를 봅니다." icon={<ShieldCheck />} onClick={() => navigate("/app/supplier/reputation")} />
@@ -4682,6 +4766,15 @@ function AdminDashboard({ data, navigate }: PageProps) {
         <StatList title="지역별 요청" items={regionCounts} />
       </div>
       <div className="quickGrid">
+        <ActionTile title="제품 집중 보드" desc="핵심 카테고리와 집중 모드를 결정합니다." icon={<Boxes />} onClick={() => navigate("/app/admin/product-focus")} />
+        <ActionTile title="수동 매칭 보조" desc="견적 미도착 요청에 추천 공급업체를 연결합니다." icon={<SearchCheck />} onClick={() => navigate("/app/admin/matching-assist")} />
+        <ActionTile title="응답률 운영" desc="공급업체 응답 상태와 독려 액션을 봅니다." icon={<BadgeCheck />} onClick={() => navigate("/app/admin/response-ops")} />
+        <ActionTile title="반복 사용 분석" desc="재요청/반복구매 가능성을 확인합니다." icon={<RefreshCcw />} onClick={() => navigate("/app/admin/repeat-insights")} />
+        <ActionTile title="이탈 구간 분석" desc="구매자와 공급업체의 막힌 구간을 봅니다." icon={<Bell />} onClick={() => navigate("/app/admin/dropoff")} />
+        <ActionTile title="개선 우선순위" desc="피드백을 제품 개선과 로드맵에 연결합니다." icon={<Check />} onClick={() => navigate("/app/admin/improvement-priorities")} />
+        <ActionTile title="MVP 기능 정리" desc="기능 숨김, 베타 표시, 관리자 전용 상태를 봅니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/mvp-cleanup")} />
+        <ActionTile title="운영 플레이북" desc="카테고리별 영업/운영 대응 기준을 봅니다." icon={<ClipboardList />} onClick={() => navigate("/app/admin/playbooks")} />
+        <ActionTile title="베타 운영" desc="KPI, CRM, CS, 실험, 의사결정 보드를 봅니다." icon={<UsersRound />} onClick={() => navigate("/app/admin/beta")} />
         <ActionTile title="운영 대시보드" desc="신고, 후기, 신뢰도, 제재 지표를 봅니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/operations")} />
         <ActionTile title="QA 체크리스트" desc="베타 출시 전 기능별 점검 상태를 관리합니다." icon={<Check />} onClick={() => navigate("/app/admin/qa")} />
         <ActionTile title="Supabase/배포 준비" desc="DB, RLS, Storage, 환경변수 상태를 점검합니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/supabase")} />
@@ -4731,7 +4824,7 @@ function AdminSupabasePage({ data, navigate }: PageProps) {
         <Metric label="Publishable key" value={configured ? "설정됨" : "미입력"} icon={<BadgeCheck />} />
         <Metric label="Live 전환" value={liveReady ? "가능" : "대기"} icon={<RefreshCcw />} />
         <Metric label="Storage bucket" value={`${buckets.length}개`} icon={<Upload />} />
-        <Metric label="작성 migration" value="5개" icon={<ClipboardList />} />
+        <Metric label="작성 migration" value="7개" icon={<ClipboardList />} />
         <Metric label="현재 앱 데이터" value={data.is_demo ? "demo" : data.environment} icon={<PackageCheck />} />
       </div>
 
@@ -4763,6 +4856,8 @@ function AdminSupabasePage({ data, navigate }: PageProps) {
               "003_storage_buckets.sql",
               "004_seed_beta_data.sql",
               "005_beta_operations.sql",
+              "006_beta_kpi_crm.sql",
+              "007_product_focus_repeat_ops.sql",
             ].map((file, index) => (
               <div className="stackRow" key={file}>
                 <strong>{index + 1}. {file}</strong>
@@ -4809,6 +4904,604 @@ function AdminSupabasePage({ data, navigate }: PageProps) {
           </div>
         </section>
       </div>
+    </Page>
+  );
+}
+
+function AdminProductFocusPage({ data, navigate, setData }: MutatingPageProps) {
+  const focusScores = calculateCategoryFocusScores(data);
+  const activeFocus = getActiveFocusSetting(data);
+  const selectedScore = focusScores.find((entry) => entry.category === activeFocus.focus_category_name) ?? focusScores[0];
+  const dataQuality = getDataQualityChecks(data);
+
+  function saveFocus(categoryName: string) {
+    const nextFocus = {
+      ...activeFocus,
+      focus_category_name: categoryName,
+      focus_mode_enabled: true,
+      updated_at: new Date().toISOString(),
+    };
+    setData({
+      ...data,
+      focus_settings: data.focus_settings.some((entry) => entry.id === nextFocus.id)
+        ? data.focus_settings.map((entry) => (entry.id === nextFocus.id ? nextFocus : entry))
+        : [nextFocus, ...data.focus_settings],
+    });
+  }
+
+  function toggleFocusMode(enabled: boolean) {
+    setData({
+      ...data,
+      focus_settings: data.focus_settings.map((entry) => (entry.id === activeFocus.id ? { ...entry, focus_mode_enabled: enabled, updated_at: new Date().toISOString() } : entry)),
+    });
+  }
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <PageTitle eyebrow="Product Focus" title="핵심 카테고리 선택 보드" desc="베타 데이터로 1차 집중 카테고리와 집중 모드 메시지를 결정합니다." />
+      <div className="dashboardGrid">
+        <Metric label="현재 집중 카테고리" value={activeFocus.focus_category_name} icon={<Boxes />} />
+        <Metric label="집중 지역" value={activeFocus.focus_region} icon={<Store />} />
+        <Metric label="집중 점수" value={`${selectedScore?.focusScore ?? 0}점`} icon={<BadgeCheck />} />
+        <Metric label="데이터 품질 점검" value={`${dataQuality.filter((entry) => entry.status !== "good").length}건`} icon={<ShieldCheck />} />
+      </div>
+      <section className="dealNotice">
+        <div>
+          <span className="eyebrow">집중 모드</span>
+          <h2>{activeFocus.buyer_home_message}</h2>
+          <p>{activeFocus.supplier_home_message}</p>
+          <div className="chipLine">{activeFocus.priority_template_names.map((name) => <span className="chip" key={name}>{name}</span>)}</div>
+        </div>
+        <Toggle checked={activeFocus.focus_mode_enabled} label={activeFocus.focus_mode_enabled ? "집중 모드 ON" : "집중 모드 OFF"} onChange={toggleFocusMode} />
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="카테고리 집중 점수" action="운영 플레이북" onAction={() => navigate("/app/admin/playbooks")} />
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>카테고리</th><th>총점</th><th>상태</th><th>수요</th><th>공급</th><th>응답</th><th>거래</th><th>반복</th><th>수익성</th><th>리스크</th><th>액션</th></tr></thead>
+            <tbody>
+              {focusScores.map((entry) => (
+                <tr key={entry.category}>
+                  <td><strong>{entry.category}</strong><br /><small>{entry.reason}</small></td>
+                  <td>{entry.focusScore}</td>
+                  <td><StatusBadge tone={focusStatusTone(entry.status)}>{categoryFocusStatusLabels[entry.status]}</StatusBadge></td>
+                  <td>{entry.requestCount}건</td>
+                  <td>{entry.activeSupplierCount}곳</td>
+                  <td>{entry.averageQuotes}개</td>
+                  <td>{entry.selectionRate}%</td>
+                  <td>{entry.repeatRate}%</td>
+                  <td>{money(entry.averageDealAmount)}</td>
+                  <td>{entry.riskRate}%</td>
+                  <td><button className="ghostButton compact" type="button" onClick={() => saveFocus(entry.category)}>집중 선택</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="데이터 품질 필터" />
+        <div className="quickGrid">
+          {dataQuality.map((entry) => (
+            <article className="actionTile" key={entry.label}>
+              <div className="actionIcon"><ShieldCheck /></div>
+              <strong>{entry.label}</strong>
+              <p>{entry.value}</p>
+              <StatusBadge tone={qualityTone(entry.status)}>{entry.status === "good" ? "정상" : entry.status === "warning" ? "주의" : "검토 필요"}</StatusBadge>
+              <small>{entry.action}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminMatchingAssistPage({ data, navigate }: PageProps) {
+  const riskyRequests = getQuoteRequestOpsInsights(data).filter((entry) => entry.quoteCount === 0);
+  const [selectedRequestId, setSelectedRequestId] = useState(riskyRequests[0]?.request.id ?? data.quote_requests[0]?.id ?? "");
+  const selectedInsight = riskyRequests.find((entry) => entry.request.id === selectedRequestId) ?? riskyRequests[0];
+  const candidates = getSupplierMatchCandidates(data, selectedInsight?.request.id ?? selectedRequestId).slice(0, 6);
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <PageTitle eyebrow="Matching Assist" title="견적 미도착 수동 매칭 보조" desc="위험 요청을 자동 분류하고 운영자가 추천 공급업체를 직접 독려합니다." />
+      <div className="twoColumn wideLeft">
+        <section className="toolPanel">
+          <SectionHeader title="견적 미도착 요청" />
+          <div className="stackList">
+            {riskyRequests.map((entry) => (
+              <button className={entry.request.id === selectedRequestId ? "listButton active" : "listButton"} type="button" onClick={() => setSelectedRequestId(entry.request.id)} key={entry.request.id}>
+                <div>
+                  <strong>{entry.request.title}</strong>
+                  <p>{entry.buyerName} · {entry.request.category_name} · {entry.request.delivery_region}</p>
+                </div>
+                <StatusBadge tone={riskTone(entry.riskLevel)}>{quoteRiskLevelLabels[entry.riskLevel]}</StatusBadge>
+              </button>
+            ))}
+          </div>
+        </section>
+        <section className="toolPanel">
+          <SectionHeader title="추천 공급업체" action="응답 운영" onAction={() => navigate("/app/admin/response-ops")} />
+          {selectedInsight && (
+            <div className="betaDecisionBox">
+              <strong>{selectedInsight.request.title}</strong>
+              <p>등록 후 {selectedInsight.elapsedHours}시간 · 매칭 {selectedInsight.matchingSupplierCount}곳 · 견적 {selectedInsight.quoteCount}건 · {selectedInsight.nextAction}</p>
+            </div>
+          )}
+          <div className="stackList">
+            {candidates.map((candidate) => (
+              <article className="leadCard" key={candidate.supplier.id}>
+                <div className="cardTopline">
+                  <strong>{candidate.supplier.business_name}</strong>
+                  <StatusBadge tone={candidate.score >= 70 ? "green" : candidate.score >= 50 ? "orange" : "gray"}>{candidate.label}</StatusBadge>
+                </div>
+                <p>{candidate.supplier.categories.join(", ")} · {candidate.supplier.service_regions.slice(0, 2).join(", ")}</p>
+                <div className="miniMeta">
+                  <span>매칭 {candidate.score}점</span>
+                  <span>응답률 {candidate.responseRate}%</span>
+                  <span>평균 {candidate.averageResponseMinutes}분</span>
+                  <span>한도 {candidate.remainingCredits}건</span>
+                  <span>신뢰도 {candidate.trustScore}점</span>
+                </div>
+                <div className="chipLine">{candidate.reasons.map((reason) => <span className="chip" key={reason}>{reason}</span>)}</div>
+                <div className="formActions">
+                  <button className="ghostButton compact" type="button">수동 알림 mock</button>
+                  <button className="secondaryButton compact" type="button">연락 태스크 mock</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </Page>
+  );
+}
+
+function AdminResponseOpsPage({ data, navigate }: PageProps) {
+  const rows = getSupplierResponseOps(data);
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <PageTitle eyebrow="Response Ops" title="공급업체 응답률 개선 운영" desc="공급업체를 응답 상태별로 분류하고 독려 액션을 관리합니다." />
+      <div className="dashboardGrid">
+        <Metric label="관리 대상" value={`${rows.length}곳`} icon={<Store />} />
+        <Metric label="느린 응답" value={`${rows.filter((entry) => ["slow", "low_participation", "needs_contact", "needs_education"].includes(entry.status)).length}곳`} icon={<Bell />} />
+        <Metric label="평균 제출률" value={`${Math.round(rows.reduce((sum, entry) => sum + entry.quoteSubmitRate, 0) / Math.max(1, rows.length))}%`} icon={<BadgeCheck />} />
+        <Metric label="가이드" value="준비됨" icon={<ClipboardList />} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="응답 상태별 운영 표" action="공급업체 가이드" onAction={() => navigate("/app/supplier/response-guide")} />
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>공급업체</th><th>상태</th><th>매칭 요청</th><th>조회</th><th>견적</th><th>제출률</th><th>평균 응답</th><th>성사율</th><th>운영 액션</th></tr></thead>
+            <tbody>
+              {rows.map((entry) => (
+                <tr key={entry.supplier.id}>
+                  <td><strong>{entry.supplier.business_name}</strong><br /><small>{entry.supplier.categories.join(", ")}</small></td>
+                  <td><StatusBadge tone={responseStatusTone(entry.status)}>{supplierResponseStatusLabels[entry.status]}</StatusBadge></td>
+                  <td>{entry.matchedRequestCount}</td>
+                  <td>{entry.viewedRequestCount}</td>
+                  <td>{entry.quoteCount}</td>
+                  <td>{entry.quoteSubmitRate}%</td>
+                  <td>{entry.averageResponseMinutes}분</td>
+                  <td>{entry.dealWinRate}%</td>
+                  <td>{entry.action}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminRepeatInsightsPage({ data, navigate }: PageProps) {
+  const insights = getRepeatUsageInsights(data);
+  const repeatBuyers = insights.filter((entry) => entry.requestCount >= 2).length;
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <PageTitle eyebrow="Repeat" title="반복 사용/재요청 분석" desc="구매자가 다시 견적요청할 가능성과 이탈 위험을 봅니다." />
+      <div className="dashboardGrid">
+        <Metric label="반복 구매자" value={`${repeatBuyers}명`} icon={<RefreshCcw />} />
+        <Metric label="재요청 유도" value={`${insights.filter((entry) => entry.requestCount === 1).length}명`} icon={<Bell />} />
+        <Metric label="즐겨쓰는 묶음" value={`${data.favorite_item_groups.length}개`} icon={<Boxes />} />
+        <Metric label="빠른 재요청" value="활성" icon={<FilePlus2 />} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="구매자 반복 사용 신호" action="구매자 화면" onAction={() => navigate("/app/quick-reorder")} />
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>구매자</th><th>요청</th><th>구매</th><th>최근 카테고리</th><th>상태</th><th>추천 액션</th></tr></thead>
+            <tbody>
+              {insights.map((entry) => (
+                <tr key={entry.buyerId}>
+                  <td><strong>{entry.buyerName}</strong></td>
+                  <td>{entry.requestCount}</td>
+                  <td>{entry.purchaseCount}</td>
+                  <td>{entry.lastCategory}</td>
+                  <td>{entry.riskLabel}</td>
+                  <td>{entry.recommendedAction}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminDropoffPage({ data, navigate }: PageProps) {
+  const buyerDropoffs = getBuyerDropoffMetrics(data);
+  const supplierDropoffs = getSupplierDropoffMetrics(data);
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <PageTitle eyebrow="Drop-off" title="구매자/공급업체 이탈 구간 분석" desc="퍼널 구간별 이탈 원인과 다음 운영 액션을 정리합니다." />
+      <div className="twoColumn">
+        <DropoffTable title="구매자 이탈 구간" rows={buyerDropoffs} />
+        <DropoffTable title="공급업체 이탈 구간" rows={supplierDropoffs} />
+      </div>
+    </Page>
+  );
+}
+
+function DropoffTable({ title, rows }: { title: string; rows: ReturnType<typeof getBuyerDropoffMetrics> }) {
+  return (
+    <section className="toolPanel">
+      <SectionHeader title={title} />
+      <div className="stackList">
+        {rows.map((entry) => (
+          <article className="signalCard" key={entry.stage}>
+            <div className="cardTopline">
+              <strong>{entry.stage}</strong>
+              <StatusBadge tone={entry.rate >= 50 ? "orange" : "blue"}>{entry.rate}%</StatusBadge>
+            </div>
+            <p>{entry.count}명/건 · {entry.reason}</p>
+            <small>{entry.action}</small>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AdminImprovementPrioritiesPage({ data, navigate }: PageProps) {
+  const priorities = getImprovementPriorities(data);
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <PageTitle eyebrow="Product Priorities" title="피드백 기반 개선 우선순위" desc="베타 피드백을 실제 제품 개선 항목과 다음 30일 로드맵에 연결합니다." />
+      <section className="toolPanel">
+        <SectionHeader title="개선 우선순위" />
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>피드백</th><th>유형</th><th>심각도</th><th>점수</th><th>결정</th><th>상태</th><th>연결 개선</th></tr></thead>
+            <tbody>
+              {priorities.map((entry) => (
+                <tr key={entry.id}>
+                  <td><strong>{entry.title}</strong></td>
+                  <td>{betaFeedbackInsightCategoryLabels[entry.category]}</td>
+                  <td>{betaFeedbackInsightSeverityLabels[entry.severity]}</td>
+                  <td>{entry.score}</td>
+                  <td>{betaFeedbackDecisionLabels[entry.decision]}</td>
+                  <td><StatusBadge tone={improvementTone(entry.status)}>{entry.status === "apply_now" ? "이번 단계" : entry.status === "apply_next" ? "다음 단계" : entry.status === "done" ? "완료" : entry.status === "rejected" ? "기각" : "검토"}</StatusBadge></td>
+                  <td>{entry.linkedWork.join(", ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="다음 30일 개선 로드맵" action="의사결정 보드" onAction={() => navigate("/app/admin/beta/decision")} />
+        <div className="roadmapGrid">
+          {[1, 2, 3, 4].map((week) => (
+            <article className="pipelineColumn" key={week}>
+              <h3>{week}주차</h3>
+              {data.roadmap_items.filter((item) => item.week === week).map((item) => (
+                <div className="leadCard" key={item.id}>
+                  <div className="cardTopline">
+                    <strong>{item.title}</strong>
+                    <StatusBadge tone={roadmapTone(item.status)}>{roadmapItemStatusLabels[item.status]}</StatusBadge>
+                  </div>
+                  <p>{item.description}</p>
+                  <small>{item.success_metric}</small>
+                </div>
+              ))}
+            </article>
+          ))}
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminMvpCleanupPage({ data, navigate, setData }: MutatingPageProps) {
+  function updateFlag(flagId: string, field: "enabled" | "beta_label_enabled" | "admin_only", value: boolean) {
+    setData({
+      ...data,
+      feature_flags: data.feature_flags.map((flag) => (flag.id === flagId ? { ...flag, [field]: value, updated_at: new Date().toISOString() } : flag)),
+    });
+  }
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <PageTitle eyebrow="MVP Cleanup" title="MVP 기능 정리/숨김 설정" desc="베타 사용자에게 핵심 흐름을 먼저 보이게 하고 복잡한 기능은 베타/관리자 전용으로 둡니다." />
+      <div className="twoColumn">
+        <InfoPanel title="핵심 우선 기능" items={["견적요청", "견적비교", "거래관리", "빠른 재요청"]} />
+        <InfoPanel title="보조/숨김 후보" items={["복잡한 정산", "고급 리포트", "상용 AI 분석", "검증 전 카테고리 확장"]} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="Feature flags" />
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>기능</th><th>설명</th><th>사용</th><th>베타 표시</th><th>관리자 전용</th></tr></thead>
+            <tbody>
+              {data.feature_flags.map((flag) => (
+                <tr key={flag.id}>
+                  <td><strong>{featureFlagKeyLabels[flag.key]}</strong><br /><small>{flag.name}</small></td>
+                  <td>{flag.description}</td>
+                  <td><Toggle checked={flag.enabled} label={flag.enabled ? "ON" : "OFF"} onChange={(checked) => updateFlag(flag.id, "enabled", checked)} /></td>
+                  <td><Toggle checked={flag.beta_label_enabled} label={flag.beta_label_enabled ? "표시" : "숨김"} onChange={(checked) => updateFlag(flag.id, "beta_label_enabled", checked)} /></td>
+                  <td><Toggle checked={flag.admin_only} label={flag.admin_only ? "전용" : "공개"} onChange={(checked) => updateFlag(flag.id, "admin_only", checked)} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminPlaybooksPage({ data, navigate }: PageProps) {
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <PageTitle eyebrow="Playbooks" title="카테고리별 운영 플레이북" desc="집중 카테고리별 구매자 유도 문구, 공급업체 영업 포인트, 운영 대응 방법을 정리합니다." />
+      <div className="playbookGrid">
+        {data.category_playbooks.map((playbook) => (
+          <article className="toolPanel" key={playbook.id}>
+            <div className="cardTopline">
+              <h2>{playbook.category_name}</h2>
+              <StatusBadge tone={playbook.category_name === getActiveFocusSetting(data).focus_category_name ? "green" : "blue"}>{playbook.category_name === getActiveFocusSetting(data).focus_category_name ? "집중" : "운영"}</StatusBadge>
+            </div>
+            <InfoPanel title="타깃 구매자" items={playbook.target_buyers} />
+            <InfoPanel title="대표 품목" items={playbook.representative_items} />
+            <InfoPanel title="공급업체 영업 포인트" items={playbook.supplier_sales_points} />
+            <InfoPanel title="자주 발생하는 문제" items={playbook.common_issues} />
+            <InfoPanel title="운영 대응" items={playbook.operator_response} />
+            <InfoPanel title="성공 기준 KPI" items={playbook.success_kpis} />
+          </article>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
+function QuickReorderPage({ data, navigate, setData }: MutatingPageProps) {
+  const buyerRequests = data.quote_requests.filter((entry) => entry.buyer_id === "buyer-1");
+  const buyerPurchases = data.purchase_records.filter((entry) => entry.buyer_id === "buyer-1");
+  const groups = data.favorite_item_groups.filter((entry) => entry.buyer_id === "buyer-1");
+  const [createdId, setCreatedId] = useState("");
+
+  function createFromRequest(request: QuoteRequest) {
+    const category = data.categories.find((entry) => entry.name === request.category_name) ?? data.categories[0];
+    const items = data.quote_request_items.filter((item) => item.quote_request_id === request.id);
+    const result = createQuoteRequest(data, {
+      title: `${request.title} 재요청`,
+      category_id: category.id,
+      delivery_region: request.delivery_region,
+      delivery_address: request.delivery_address ?? request.delivery_region,
+      desired_delivery_date: "2026-07-15",
+      need_tax_invoice: request.need_tax_invoice,
+      card_payment_required: request.card_payment_required,
+      description: `${request.description}\n지난 요청을 기반으로 수량과 납품일만 조정합니다.`,
+      attachment_note: request.attachment_note ?? "",
+      previous_amount: request.previous_amount ?? 0,
+      input_method: "repeat",
+      original_text_input: "",
+      template_name: request.template_name ?? "",
+      previous_request_id: request.id,
+      urgent: false,
+      preferred_delivery_time: request.preferred_delivery_time ?? "",
+      budget_min: request.budget_min ?? 0,
+      budget_max: request.budget_max ?? 0,
+      preferred_brand: request.preferred_brand ?? "",
+      allow_alternatives: request.allow_alternatives ?? true,
+      include_delivery_fee: request.include_delivery_fee ?? true,
+      items: items.map((item) => ({ item_name: item.item_name, spec: item.spec, quantity: item.quantity, unit: item.unit, memo: item.memo, is_required: true, allow_alternative: item.allow_alternative ?? true, confidence_score: 96, needs_review: false, review_reason: "" })),
+      attachments: [],
+    });
+    setData(result.data);
+    setCreatedId(result.requestId);
+  }
+
+  function createFromGroup(groupId: string) {
+    const group = data.favorite_item_groups.find((entry) => entry.id === groupId);
+    if (!group) return;
+    const category = data.categories.find((entry) => entry.name === group.category_name) ?? data.categories[0];
+    const items = data.favorite_items.filter((entry) => entry.group_id === groupId);
+    const result = createQuoteRequest(data, {
+      title: `${group.name} 견적요청`,
+      category_id: category.id,
+      delivery_region: "서울 노원구",
+      delivery_address: "서울 노원구",
+      desired_delivery_date: "2026-07-15",
+      need_tax_invoice: true,
+      card_payment_required: true,
+      description: group.description,
+      attachment_note: "",
+      previous_amount: 0,
+      input_method: "repeat",
+      original_text_input: "",
+      template_name: group.name,
+      previous_request_id: "",
+      urgent: false,
+      preferred_delivery_time: "오전 납품 선호",
+      budget_min: 0,
+      budget_max: 0,
+      preferred_brand: "",
+      allow_alternatives: true,
+      include_delivery_fee: true,
+      items: items.map((item) => ({ item_name: item.item_name, spec: item.spec, quantity: item.quantity, unit: item.unit, memo: item.memo, is_required: true, allow_alternative: item.allow_alternative, confidence_score: 96, needs_review: false, review_reason: "" })),
+      attachments: [],
+    });
+    setData(result.data);
+    setCreatedId(result.requestId);
+  }
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app")} label="앱 홈" />
+      <PageTitle eyebrow="Quick Reorder" title="자주 사는 품목은 다시 입력하지 마세요." desc="지난 요청/구매/품목 묶음에서 수량과 납품일만 바꿔 빠르게 견적받습니다." />
+      {createdId && <p className="savingText">재요청이 생성되었습니다. 요청번호 {createdId}</p>}
+      <div className="twoColumn">
+        <section className="toolPanel">
+          <SectionHeader title="최근 요청 다시 사용" />
+          <div className="stackList">
+            {buyerRequests.map((request) => (
+              <article className="leadCard" key={request.id}>
+                <div className="cardTopline"><strong>{request.title}</strong><StatusBadge tone="blue">{request.category_name}</StatusBadge></div>
+                <p>{request.delivery_region} · {request.desired_delivery_date}</p>
+                <button className="primaryButton compact" type="button" onClick={() => createFromRequest(request)}>수량만 바꿔 재요청</button>
+              </article>
+            ))}
+          </div>
+        </section>
+        <section className="toolPanel">
+          <SectionHeader title="자주 쓰는 품목 묶음" action="묶음 관리" onAction={() => navigate("/app/favorites/items")} />
+          <div className="stackList">
+            {groups.map((group) => (
+              <article className="leadCard" key={group.id}>
+                <div className="cardTopline"><strong>{group.name}</strong><StatusBadge tone="green">{group.category_name}</StatusBadge></div>
+                <p>{data.favorite_items.filter((item) => item.group_id === group.id).map((item) => item.item_name).join(", ")}</p>
+                <button className="primaryButton compact" type="button" onClick={() => createFromGroup(group.id)}>묶음으로 견적요청</button>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="최근 구매 다시 견적" />
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>구매</th><th>카테고리</th><th>금액</th><th>공급업체</th><th>추천 액션</th></tr></thead>
+            <tbody>
+              {buyerPurchases.slice(0, 5).map((record) => (
+                <tr key={record.id}>
+                  <td><strong>{record.purchase_title}</strong></td>
+                  <td>{record.category_name}</td>
+                  <td>{money(record.total_amount)}</td>
+                  <td>{record.supplier_name}</td>
+                  <td>가격 변동 확인 요청 · 같은 업체 재견적 · 다른 업체 비교</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function FavoriteItemsPage({ data, navigate, setData }: MutatingPageProps) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("포장재");
+
+  function addGroup() {
+    if (!name.trim()) return;
+    const createdAt = new Date().toISOString();
+    setData({
+      ...data,
+      favorite_item_groups: [{
+        id: `fav-group-${Date.now()}`,
+        buyer_id: "buyer-1",
+        name: name.trim(),
+        category_name: category,
+        description: "베타에서 추가한 자주 쓰는 품목 묶음",
+        created_at: createdAt,
+        updated_at: createdAt,
+      }, ...data.favorite_item_groups],
+    });
+    setName("");
+  }
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/quick-reorder")} label="빠른 재요청" />
+      <PageTitle eyebrow="Favorites" title="자주 쓰는 품목 묶음" desc="반복 구매 품목을 묶음으로 저장하고 견적요청 시작점으로 사용합니다." />
+      <section className="toolPanel">
+        <SectionHeader title="묶음 생성" />
+        <div className="conditionGrid">
+          <Field label="묶음명"><input value={name} onChange={(event) => setName(event.target.value)} placeholder="예: 치킨집 월간 포장재" /></Field>
+          <Field label="카테고리">
+            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+              {data.categories.map((entry) => <option key={entry.id}>{entry.name}</option>)}
+            </select>
+          </Field>
+        </div>
+        <button className="primaryButton compact" type="button" onClick={addGroup}>묶음 추가</button>
+      </section>
+      <div className="playbookGrid">
+        {data.favorite_item_groups.filter((group) => group.buyer_id === "buyer-1").map((group) => (
+          <article className="toolPanel" key={group.id}>
+            <div className="cardTopline"><h2>{group.name}</h2><StatusBadge tone="green">{group.category_name}</StatusBadge></div>
+            <p>{group.description}</p>
+            <div className="tableWrap">
+              <table>
+                <thead><tr><th>품목</th><th>규격</th><th>수량</th><th>대체품</th><th>메모</th></tr></thead>
+                <tbody>
+                  {data.favorite_items.filter((item) => item.group_id === group.id).map((item) => (
+                    <tr key={item.id}>
+                      <td><strong>{item.item_name}</strong></td>
+                      <td>{item.spec}</td>
+                      <td>{item.quantity.toLocaleString()} {item.unit}</td>
+                      <td>{yesNo(item.allow_alternative)}</td>
+                      <td>{item.memo}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
+function SupplierResponseGuidePage({ data, navigate }: PageProps) {
+  const supplier = getActiveSupplier(data);
+  const row = getSupplierResponseOps(data).find((entry) => entry.supplier.id === supplier.id);
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/supplier")} label="공급업체 홈" />
+      <PageTitle eyebrow="Response Guide" title="선택되는 견적은 빠르고 정확합니다." desc="공급업체가 응답률을 높이고 반복 거래로 이어가기 위한 운영 가이드입니다." />
+      <div className="dashboardGrid">
+        <Metric label="응답 상태" value={row ? supplierResponseStatusLabels[row.status] : "확인 중"} icon={<BadgeCheck />} />
+        <Metric label="견적 제출률" value={row ? `${row.quoteSubmitRate}%` : "-"} icon={<ReceiptText />} />
+        <Metric label="평균 응답" value={row ? `${row.averageResponseMinutes}분` : "-"} icon={<RefreshCcw />} />
+        <Metric label="추천 액션" value={row?.action ?? "첫 견적 제출"} icon={<Bell />} />
+      </div>
+      <GuideSteps
+        title="응답 개선 흐름"
+        steps={[
+          ["빠른 응답", "첫 견적 도착 시간이 짧을수록 구매자가 비교를 시작하고 선택 가능성이 높아집니다."],
+          ["금액 외 조건", "배송일, 배송비, 세금계산서, 카드 가능 여부를 정확히 입력합니다."],
+          ["대체품 제안", "재고가 부족하면 동일 규격 또는 유사 품목을 함께 제안합니다."],
+          ["반복 거래", "선택되지 않은 견적도 개선 포인트를 확인하고 다음 요청에 다시 참여합니다."],
+          ["카테고리 설정", "취급 카테고리와 납품 가능 지역을 실제 응답 가능한 범위로 유지합니다."],
+        ]}
+      />
+      <InfoPanel title="선택되는 견적 체크리스트" items={["총액과 배송비가 분리되어 있다.", "희망 납품일에 맞는 가능 날짜가 있다.", "세금계산서/카드 조건이 구매자 요청과 맞다.", "품목별 단가 메모가 있다.", "대체품 제안이 필요한 경우 이유가 적혀 있다."]} />
     </Page>
   );
 }
@@ -5071,6 +5764,599 @@ function AdminSettlementsPage({ data, setData }: { data: AppData; setData: (data
   );
 }
 
+function AdminBetaDashboardPage({ data, navigate }: PageProps) {
+  const kpis = calculateBetaKpis(data);
+  const funnel = getFunnelMetrics(data);
+  const categoryPerformance = getCategoryPerformance(data);
+  const urgentTasks = data.operator_tasks.filter((entry) => entry.status !== "done").sort((a, b) => priorityRank(b.priority) - priorityRank(a.priority)).slice(0, 5);
+  const topInsights = data.beta_feedback_insights.sort((a, b) => b.priority_score - a.priority_score).slice(0, 4);
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <PageTitle eyebrow="Beta Ops" title="베타 운영 대시보드" desc="구매자 100명, 승인 공급업체 30곳, 실제 거래 15건 목표를 매일 추적합니다." />
+      <BetaOpsNav navigate={navigate} />
+      <div className="dashboardGrid">
+        <Metric label="구매자 테스트" value={`${kpis.buyerCount}/${kpis.target.target_buyers}명`} icon={<UsersRound />} />
+        <Metric label="승인 공급업체" value={`${kpis.approvedSupplierCount}/${kpis.target.target_suppliers}곳`} icon={<Store />} />
+        <Metric label="견적요청" value={`${kpis.quoteRequestCount}/${kpis.target.target_quote_requests}건`} icon={<ClipboardList />} />
+        <Metric label="도착 견적" value={`${kpis.quoteCount}/${kpis.target.target_quotes}건`} icon={<ReceiptText />} />
+        <Metric label="거래 생성" value={`${data.deals.length}/${kpis.target.target_deals}건`} icon={<PackageCheck />} />
+        <Metric label="거래 완료" value={`${data.deals.filter((entry) => ["completed", "closed"].includes(entry.status)).length}/${kpis.target.target_completed_deals}건`} icon={<Check />} />
+        <Metric label="목표 달성률" value={`${kpis.goalAchievementRate}%`} icon={<BadgeCheck />} />
+        <Metric label="운영 이슈" value={`${kpis.openIssueCount}건`} icon={<Bell />} />
+      </div>
+
+      <div className="twoColumn">
+        <section className="toolPanel">
+          <SectionHeader title="목표 대비 진행률" action="KPI 상세" onAction={() => navigate("/app/admin/beta/kpi")} />
+          <TargetProgress label="구매자 모집" value={kpis.buyerCount} target={kpis.target.target_buyers} />
+          <TargetProgress label="공급업체 승인" value={kpis.approvedSupplierCount} target={kpis.target.target_suppliers} />
+          <TargetProgress label="견적요청" value={kpis.quoteRequestCount} target={kpis.target.target_quote_requests} />
+          <TargetProgress label="도착 견적" value={kpis.quoteCount} target={kpis.target.target_quotes} />
+          <TargetProgress label="거래 생성" value={data.deals.length} target={kpis.target.target_deals} />
+        </section>
+
+        <section className="toolPanel">
+          <SectionHeader title="오늘 운영자가 볼 일" action="할 일 전체" onAction={() => navigate("/app/admin/beta/tasks")} />
+          <div className="stackList">
+            {urgentTasks.map((task) => (
+              <div className="stackRow" key={task.id}>
+                <strong>{task.title}</strong>
+                <span>{salesLeadPriorityLabels[task.priority]} · {operatorTaskStatusLabels[task.status]} · {task.due_date}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="twoColumn">
+        <section className="toolPanel">
+          <SectionHeader title="베타 퍼널" action="퍼널 상세" onAction={() => navigate("/app/admin/beta/kpi")} />
+          <div className="betaFunnel">
+            {funnel.slice(0, 7).map((step) => <FunnelStep key={step.label} step={step} />)}
+          </div>
+        </section>
+        <section className="toolPanel">
+          <SectionHeader title="우선 처리 피드백" action="CS 보기" onAction={() => navigate("/app/admin/beta/cs")} />
+          <div className="stackList">
+            {topInsights.map((insight) => {
+              const feedback = data.feedbacks.find((entry) => entry.id === insight.feedback_id);
+              return (
+                <div className="stackRow" key={insight.id}>
+                  <strong>{feedback?.title ?? insight.feedback_id}</strong>
+                  <span>{betaFeedbackDecisionLabels[insight.decision]} · 점수 {insight.priority_score}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+
+      <section className="toolPanel">
+        <SectionHeader title="카테고리별 사업성 신호" action="리포트 보기" onAction={() => navigate("/app/admin/beta/reports")} />
+        <div className="categorySignalGrid">
+          {categoryPerformance.map((entry) => (
+            <article className="signalCard" key={entry.category}>
+              <div className="cardTopline">
+                <strong>{entry.category}</strong>
+                <StatusBadge tone={categoryRecommendationTone(entry.recommendation)}>{entry.recommendation}</StatusBadge>
+              </div>
+              <p>요청 {entry.requestCount}건 · 견적 {entry.quoteCount}건 · 평균 {entry.averageQuotes}개</p>
+              <small>거래 {entry.dealCount}건 · 평균 거래액 {money(entry.averageDealAmount)}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminBetaKpiPage({ data, navigate }: PageProps) {
+  const kpis = calculateBetaKpis(data);
+  const funnel = getFunnelMetrics(data);
+  const categoryPerformance = getCategoryPerformance(data);
+  const supplierResponseRows = data.supplier_profiles
+    .filter((supplier) => supplier.approval_status === "approved")
+    .map((supplier) => {
+      const targetRequests = data.quote_requests.filter((request) => supplier.categories.includes(request.category_name)).length;
+      const submittedQuotes = data.quotes.filter((quote) => quote.supplier_id === supplier.id).length;
+      const responseRate = Math.round((submittedQuotes / Math.max(1, targetRequests)) * 100);
+      return { supplier, targetRequests, submittedQuotes, responseRate };
+    })
+    .sort((a, b) => a.responseRate - b.responseRate);
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin/beta")} label="베타 운영" />
+      <PageTitle eyebrow="Core KPI" title="핵심 KPI 대시보드" desc="견적요청, 공급업체 응답, 거래 전환, 반복 사용률을 한 화면에서 봅니다." />
+      <div className="dashboardGrid">
+        <Metric label="요청 전환율" value={`${kpis.quoteRequestConversionRate}%`} icon={<ClipboardList />} />
+        <Metric label="공급 응답률" value={`${kpis.quoteResponseRate}%`} icon={<Store />} />
+        <Metric label="요청당 견적" value={`${kpis.averageQuotesPerRequest}개`} icon={<ReceiptText />} />
+        <Metric label="첫 견적 시간" value={`${kpis.averageFirstQuoteHours}h`} icon={<CalendarDays />} />
+        <Metric label="견적 선택률" value={`${kpis.quoteSelectionRate}%`} icon={<Check />} />
+        <Metric label="거래 전환율" value={`${kpis.dealConversionRate}%`} icon={<PackageCheck />} />
+        <Metric label="반복 구매자율" value={`${kpis.repeatBuyerRate}%`} icon={<RefreshCcw />} />
+        <Metric label="활성 공급업체율" value={`${kpis.activeSupplierRate}%`} icon={<BadgeCheck />} />
+      </div>
+
+      <div className="twoColumn">
+        <section className="toolPanel">
+          <SectionHeader title="구매자/거래 전환 퍼널" />
+          <div className="betaFunnel">
+            {funnel.slice(0, 7).map((step) => <FunnelStep key={step.label} step={step} />)}
+          </div>
+        </section>
+        <section className="toolPanel">
+          <SectionHeader title="공급업체 퍼널" />
+          <div className="betaFunnel">
+            {funnel.slice(7).map((step) => <FunnelStep key={step.label} step={step} />)}
+          </div>
+        </section>
+      </div>
+
+      <section className="toolPanel">
+        <SectionHeader title="공급업체 응답률 관리" />
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>공급업체</th><th>카테고리</th><th>대상 요청</th><th>제출 견적</th><th>응답률</th><th>운영 액션</th></tr></thead>
+            <tbody>
+              {supplierResponseRows.map(({ supplier, targetRequests, submittedQuotes, responseRate }) => (
+                <tr key={supplier.id}>
+                  <td><strong>{supplier.business_name}</strong></td>
+                  <td>{supplier.categories.join(", ")}</td>
+                  <td>{targetRequests}</td>
+                  <td>{submittedQuotes}</td>
+                  <td><StatusBadge tone={responseRate >= 60 ? "green" : "orange"}>{responseRate}%</StatusBadge></td>
+                  <td>{responseRate >= 60 ? "우수 응답 유지" : responseRate > 0 ? "응답 지연 리마인드" : "첫 견적 제출 교육"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="toolPanel">
+        <SectionHeader title="카테고리별 성과" />
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>카테고리</th><th>요청</th><th>견적</th><th>요청당 견적</th><th>선택</th><th>거래</th><th>완료</th><th>평균 거래액</th><th>판단</th></tr></thead>
+            <tbody>
+              {categoryPerformance.map((entry) => (
+                <tr key={entry.category}>
+                  <td><strong>{entry.category}</strong></td>
+                  <td>{entry.requestCount}</td>
+                  <td>{entry.quoteCount}</td>
+                  <td>{entry.averageQuotes}</td>
+                  <td>{entry.selectedCount}</td>
+                  <td>{entry.dealCount}</td>
+                  <td>{entry.completedDealCount}</td>
+                  <td>{money(entry.averageDealAmount)}</td>
+                  <td><StatusBadge tone={categoryRecommendationTone(entry.recommendation)}>{entry.recommendation}</StatusBadge></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="toolPanel">
+        <SectionHeader title="계산 기준" />
+        <div className="formulaGrid">
+          <InfoPanel title="전환" items={["요청 전환율 = 견적요청 구매자 / 가입·온보딩 구매자", "거래 전환율 = 거래 생성 / 견적요청", "반복 구매자율 = 2회 이상 요청 구매자 / 요청 구매자"]} />
+          <InfoPanel title="공급" items={["공급 응답률 = 견적 도착 요청 / 전체 요청", "활성 공급업체율 = 견적 제출 승인업체 / 승인업체", "첫 견적 시간 = 요청 생성부터 첫 견적까지 평균"]} />
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminBetaParticipantsPage({ data, navigate, type }: PageProps & { type: "buyer" | "supplier" }) {
+  const [filter, setFilter] = useState("전체");
+  const participants = data.beta_participants
+    .filter((entry) => entry.participant_type === type)
+    .filter((entry) => filter === "전체" || betaParticipantStatusLabels[entry.status] === filter);
+  const title = type === "buyer" ? "구매자 베타 테스트 관리" : "공급업체 베타 온보딩 관리";
+  const desc = type === "buyer" ? "구매자 100명 모집, 첫 견적요청, 반복 사용 가능성을 추적합니다." : "공급업체 30곳 승인, 첫 견적 제출, 응답 지속성을 추적합니다.";
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin/beta")} label="베타 운영" />
+      <PageTitle eyebrow={betaParticipantTypeLabels[type]} title={title} desc={desc} />
+      <div className="dashboardGrid">
+        <Metric label="전체" value={`${participants.length}곳`} icon={<UsersRound />} />
+        <Metric label="활성" value={`${participants.filter((entry) => entry.status === "active").length}곳`} icon={<BadgeCheck />} />
+        <Metric label="후속 필요" value={`${participants.filter((entry) => ["invited", "signed_up", "inactive"].includes(entry.status)).length}곳`} icon={<Bell />} />
+        <Metric label={type === "buyer" ? "요청 합계" : "거래 연결"} value={`${participants.reduce((sum, entry) => sum + (type === "buyer" ? entry.quote_request_count : entry.deal_count), 0)}건`} icon={<ClipboardList />} />
+      </div>
+      <FilterTabs options={["전체", ...Object.values(betaParticipantStatusLabels)]} active={filter} onChange={setFilter} />
+      <div className="tableWrap">
+        <table>
+          <thead><tr><th>업체</th><th>담당자</th><th>지역</th><th>관심 카테고리</th><th>유입</th><th>상태</th><th>요청/거래</th><th>태그</th><th>메모</th></tr></thead>
+          <tbody>
+            {participants.map((entry) => (
+              <tr key={entry.id}>
+                <td><strong>{entry.business_name}</strong><br /><small>{entry.phone}</small></td>
+                <td>{entry.contact_name}<br /><small>{entry.email}</small></td>
+                <td>{entry.region}</td>
+                <td>{entry.category_interest}</td>
+                <td>{betaParticipantSourceLabels[entry.source]}</td>
+                <td><StatusBadge tone={participantStatusTone(entry.status)}>{betaParticipantStatusLabels[entry.status]}</StatusBadge></td>
+                <td>{entry.quote_request_count} / {entry.deal_count}</td>
+                <td>{entry.tags.slice(0, 2).join(", ")}</td>
+                <td>{entry.memo}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Page>
+  );
+}
+
+function AdminBetaPipelinePage({ data, navigate }: PageProps) {
+  const stages = Object.keys(salesLeadStageLabels) as Array<keyof typeof salesLeadStageLabels>;
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin/beta")} label="베타 운영" />
+      <PageTitle eyebrow="CRM" title="영업 파이프라인" desc="구매자와 공급업체 리드를 한 파이프라인에서 관리합니다." />
+      <div className="pipelineBoard">
+        {stages.map((stage) => {
+          const leads = data.sales_leads.filter((entry) => entry.stage === stage);
+          return (
+            <section className="pipelineColumn" key={stage}>
+              <h2>{salesLeadStageLabels[stage]} <span>{leads.length}</span></h2>
+              {leads.map((lead) => (
+                <article className="leadCard" key={lead.id}>
+                  <div className="cardTopline">
+                    <StatusBadge tone={lead.lead_type === "buyer" ? "blue" : "green"}>{betaParticipantTypeLabels[lead.lead_type]}</StatusBadge>
+                    <StatusBadge tone={priorityTone(lead.priority)}>{salesLeadPriorityLabels[lead.priority]}</StatusBadge>
+                  </div>
+                  <strong>{lead.business_name}</strong>
+                  <p>{lead.category} · {lead.region}</p>
+                  <small>{lead.next_action} · {lead.next_action_date}</small>
+                </article>
+              ))}
+            </section>
+          );
+        })}
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="최근 영업 활동" />
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>시간</th><th>리드</th><th>활동</th><th>결과</th><th>메모</th></tr></thead>
+            <tbody>
+              {data.sales_activities.map((activity) => {
+                const lead = data.sales_leads.find((entry) => entry.id === activity.lead_id);
+                return (
+                  <tr key={activity.id}>
+                    <td>{activity.activity_at.slice(0, 16).replace("T", " ")}</td>
+                    <td><strong>{lead?.business_name ?? activity.lead_id}</strong></td>
+                    <td>{salesActivityTypeLabels[activity.activity_type]}</td>
+                    <td>{salesActivityResultLabels[activity.result]}</td>
+                    <td>{activity.memo}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminBetaCampaignsPage({ data, navigate }: PageProps) {
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin/beta")} label="베타 운영" />
+      <PageTitle eyebrow="Experiments" title="베타 캠페인/실험 관리" desc="베타 기간에 검증할 가설, 성공 지표, 다음 액션을 정리합니다." />
+      <div className="quickGrid">
+        {data.beta_experiments.map((experiment) => (
+          <article className="actionTile" key={experiment.id}>
+            <span className="tileIcon"><SearchCheck /></span>
+            <strong>{experiment.name}</strong>
+            <span>{experiment.hypothesis}</span>
+            <div className="chipLine">
+              <StatusBadge tone={experimentTone(experiment.status)}>{betaExperimentStatusLabels[experiment.status]}</StatusBadge>
+              <span className="chip">{betaExperimentTargetGroupLabels[experiment.target_group]}</span>
+            </div>
+            <small>{experiment.success_metric}</small>
+            <small>{experiment.next_action}</small>
+          </article>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
+function AdminBetaCsPage({ data, navigate }: PageProps) {
+  const tickets = [
+    ...data.feedbacks.map((entry) => ({ id: entry.id, type: feedbackTypeLabels[entry.feedback_type], title: entry.title, source: roleLabel(entry.user_role), priority: entry.feedback_type === "bug" ? "high" : "normal", status: feedbackStatusLabels[entry.status], created_at: entry.created_at })),
+    ...data.reports.map((entry) => ({ id: entry.id, type: reportTypeLabels[entry.report_type], title: entry.title, source: roleLabel(entry.reporter_role), priority: entry.priority, status: reportStatusLabels[entry.status], created_at: entry.created_at })),
+    ...data.message_reports.map((entry) => ({ id: entry.id, type: "메시지 신고", title: entry.reason, source: "메시지", priority: entry.status === "pending" ? "high" : "normal", status: entry.status, created_at: entry.created_at })),
+  ].sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin/beta")} label="베타 운영" />
+      <PageTitle eyebrow="CS" title="CS/운영 티켓 관리" desc="피드백, 신고, 메시지 신고를 통합해서 우선순위로 처리합니다." />
+      <div className="dashboardGrid">
+        <Metric label="통합 티켓" value={`${tickets.length}건`} icon={<Bell />} />
+        <Metric label="피드백" value={`${data.feedbacks.length}건`} icon={<Check />} />
+        <Metric label="신고/분쟁" value={`${data.reports.length}건`} icon={<ShieldCheck />} />
+        <Metric label="메시지 신고" value={`${data.message_reports.length}건`} icon={<ReceiptText />} />
+      </div>
+      <div className="twoColumn">
+        <section className="toolPanel">
+          <SectionHeader title="우선순위 TOP" />
+          <div className="stackList">
+            {data.beta_feedback_insights.sort((a, b) => b.priority_score - a.priority_score).map((insight) => {
+              const feedback = data.feedbacks.find((entry) => entry.id === insight.feedback_id);
+              return (
+                <div className="stackRow" key={insight.id}>
+                  <strong>{feedback?.title ?? insight.feedback_id}</strong>
+                  <span>{betaFeedbackInsightCategoryLabels[insight.category]} · {betaFeedbackInsightSeverityLabels[insight.severity]} · {betaFeedbackDecisionLabels[insight.decision]} · {insight.priority_score}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+        <section className="toolPanel">
+          <SectionHeader title="우선순위 계산" />
+          <InfoPanel title="공식" items={["priority_score = impact * 2 + frequency * 1.5 - effort", "치명/높음 이슈는 즉시 운영 태스크로 전환", "모바일 CTA와 무견적 요청을 베타 핵심 리스크로 관리"]} />
+        </section>
+      </div>
+      <div className="tableWrap">
+        <table>
+          <thead><tr><th>접수일</th><th>유형</th><th>제목</th><th>출처</th><th>우선순위</th><th>상태</th></tr></thead>
+          <tbody>
+            {tickets.map((ticket) => (
+              <tr key={`${ticket.type}-${ticket.id}`}>
+                <td>{ticket.created_at.slice(0, 10)}</td>
+                <td>{ticket.type}</td>
+                <td><strong>{ticket.title}</strong></td>
+                <td>{ticket.source}</td>
+                <td><StatusBadge tone={priorityTone(ticket.priority)}>{ticket.priority}</StatusBadge></td>
+                <td>{ticket.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Page>
+  );
+}
+
+function AdminBetaTasksPage({ data, navigate }: PageProps) {
+  const [filter, setFilter] = useState("전체");
+  const tasks = data.operator_tasks.filter((entry) => filter === "전체" || operatorTaskStatusLabels[entry.status] === filter);
+  const noQuoteRequests = data.quote_requests
+    .filter((request) => !data.quotes.some((quote) => quote.quote_request_id === request.id))
+    .slice(0, 8);
+  const countMatchingSuppliers = (categoryName: string) => data.supplier_profiles
+    .filter((supplier) => supplier.approval_status === "approved" && supplier.categories.includes(categoryName))
+    .length;
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin/beta")} label="베타 운영" />
+      <PageTitle eyebrow="Tasks" title="운영자 할 일 관리" desc="무견적 요청, 공급업체 온보딩, 베타 QA, 인터뷰를 놓치지 않게 관리합니다." />
+      <FilterTabs options={["전체", ...Object.values(operatorTaskStatusLabels)]} active={filter} onChange={setFilter} />
+      <div className="tableWrap">
+        <table>
+          <thead><tr><th>마감</th><th>제목</th><th>유형</th><th>우선순위</th><th>상태</th><th>관련</th><th>설명</th></tr></thead>
+          <tbody>
+            {tasks.map((task) => (
+              <tr key={task.id}>
+                <td>{task.due_date}</td>
+                <td><strong>{task.title}</strong></td>
+                <td>{operatorTaskTypeLabels[task.task_type]}</td>
+                <td><StatusBadge tone={priorityTone(task.priority)}>{salesLeadPriorityLabels[task.priority]}</StatusBadge></td>
+                <td><StatusBadge tone={taskStatusTone(task.status)}>{operatorTaskStatusLabels[task.status]}</StatusBadge></td>
+                <td>{task.related_entity_type} · {task.related_entity_id}</td>
+                <td>{task.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="견적 미도착 요청 관리" action="운영 문구" onAction={() => navigate("/app/admin/beta/scripts")} />
+        {noQuoteRequests.length > 0 ? (
+          <div className="tableWrap">
+            <table>
+              <thead><tr><th>요청</th><th>카테고리</th><th>지역</th><th>매칭 후보</th><th>상태</th><th>다음 액션</th></tr></thead>
+              <tbody>
+                {noQuoteRequests.map((request) => {
+                  const matches = countMatchingSuppliers(request.category_name);
+                  return (
+                    <tr key={request.id}>
+                      <td><strong>{request.title}</strong></td>
+                      <td>{request.category_name}</td>
+                      <td>{request.delivery_region}</td>
+                      <td>{matches}곳</td>
+                      <td><StatusBadge tone="orange">{matches > 0 ? "수동 독려" : "공급망 보강"}</StatusBadge></td>
+                      <td>{matches > 0 ? "승인 공급업체에 견적 제출 리마인드" : "CRM에서 신규 공급업체 리드 추가"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState icon={<SearchCheck />} title="견적 미도착 요청이 없습니다." desc="모든 요청에 최소 1개 이상의 견적이 도착했습니다." variant="compact" />
+        )}
+      </section>
+    </Page>
+  );
+}
+
+function AdminBetaReportsPage({ data, navigate }: PageProps) {
+  const report = data.business_validation_reports[0];
+  const kpis = calculateBetaKpis(data);
+  const categoryPerformance = getCategoryPerformance(data);
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin/beta")} label="베타 운영" />
+      <PageTitle eyebrow="Validation Report" title="사업검증 리포트" desc="베타 운영 데이터를 바탕으로 계속/전환/확장 판단을 정리합니다." />
+      <div className="dashboardGrid">
+        <Metric label="요청당 견적" value={`${kpis.averageQuotesPerRequest}개`} icon={<ReceiptText />} />
+        <Metric label="거래 전환" value={`${kpis.dealConversionRate}%`} icon={<PackageCheck />} />
+        <Metric label="반복 사용" value={`${kpis.repeatBuyerRate}%`} icon={<RefreshCcw />} />
+        <Metric label="예상 매출" value={money(kpis.estimatedRevenue)} icon={<Landmark />} />
+      </div>
+      {report && (
+        <section className="reportPanel">
+          <div className="cardTopline">
+            <span className="eyebrow">{report.period_start} ~ {report.period_end}</span>
+            <StatusBadge tone={decisionTone(report.decision)}>{businessValidationDecisionLabels[report.decision]}</StatusBadge>
+          </div>
+          <h2>{report.summary}</h2>
+          <div className="formulaGrid">
+            <InfoPanel title="구매자 인사이트" items={[report.buyer_findings]} />
+            <InfoPanel title="공급업체 인사이트" items={[report.supplier_findings]} />
+            <InfoPanel title="KPI 해석" items={[report.kpi_findings]} />
+            <InfoPanel title="리스크" items={[report.risk_findings]} />
+          </div>
+          <section className="betaDecisionBox">
+            <strong>추천</strong>
+            <p>{report.recommendation}</p>
+          </section>
+        </section>
+      )}
+      <section className="toolPanel">
+        <SectionHeader title="카테고리별 리포트" />
+        <div className="categorySignalGrid">
+          {categoryPerformance.map((entry) => (
+            <article className="signalCard" key={entry.category}>
+              <div className="cardTopline">
+                <strong>{entry.category}</strong>
+                <StatusBadge tone={categoryRecommendationTone(entry.recommendation)}>{entry.recommendation}</StatusBadge>
+              </div>
+              <p>요청 {entry.requestCount}건 · 견적 {entry.quoteCount}건 · 거래 {entry.dealCount}건</p>
+              <div className="miniMeta">
+                <span>요청당 견적 {entry.averageQuotes}개</span>
+                <span>평균 거래 {money(entry.averageDealAmount)}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminBetaDecisionPage({ data, navigate }: PageProps) {
+  const kpis = calculateBetaKpis(data);
+  const categoryPerformance = getCategoryPerformance(data);
+  const focusCategory = [...categoryPerformance].sort((a, b) => b.dealCount - a.dealCount || b.quoteCount - a.quoteCount)[0];
+  const decisions = [
+    { title: "계속 개발할 것인가?", data: `목표 달성률 ${kpis.goalAchievementRate}%`, interpretation: "핵심 퍼널은 작동하나 구매자 첫 요청 수 확대가 필요합니다.", action: "계속 진행하되 포장재/식자재 중심으로 범위를 좁힙니다.", status: "채택" },
+    { title: "집중 카테고리는?", data: `${focusCategory?.category ?? "포장재"} · 요청 ${focusCategory?.requestCount ?? 0}건`, interpretation: "요청과 공급 응답이 동시에 있는 카테고리가 초기 확장에 적합합니다.", action: `${focusCategory?.category ?? "포장재"} 공급망을 우선 보강합니다.`, status: "검토 중" },
+    { title: "공급업체 보강 지점은?", data: `활성 공급업체율 ${kpis.activeSupplierRate}%`, interpretation: "승인보다 첫 견적 제출까지의 교육과 리마인드가 중요합니다.", action: "응답 지연 업체에 견적 제출 교육 링크를 발송합니다.", status: "진행" },
+    { title: "유료화 가능성은?", data: `예상 매출 ${money(kpis.estimatedRevenue)}`, interpretation: "공급업체는 실제 요청 수가 보이면 구독보다 성과형 비용을 더 쉽게 받아들입니다.", action: "유료 의향 인터뷰 5곳을 이번 주 안에 완료합니다.", status: "대기" },
+  ];
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin/beta")} label="베타 운영" />
+      <PageTitle eyebrow="Decision" title="런칭 전 의사결정 보드" desc="베타 데이터로 다음 투자, 개발, 영업 우선순위를 정합니다." />
+      <div className="decisionGrid">
+        {decisions.map((decision) => (
+          <article className="decisionCard" key={decision.title}>
+            <div className="cardTopline">
+              <strong>{decision.title}</strong>
+              <StatusBadge tone={decision.status === "채택" ? "green" : decision.status === "진행" ? "blue" : "orange"}>{decision.status}</StatusBadge>
+            </div>
+            <p><b>데이터:</b> {decision.data}</p>
+            <p><b>해석:</b> {decision.interpretation}</p>
+            <p><b>액션:</b> {decision.action}</p>
+          </article>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
+function AdminBetaScriptsPage({ navigate }: { navigate: Navigate }) {
+  const scripts = [
+    { category: "구매자 초대", text: "기존 거래명세서만 올려보세요. 싸와!에서 더 나은 견적을 받을 수 있는지 무료로 비교해드립니다." },
+    { category: "공급업체 입점", text: "실제 구매 의사가 있는 사장님의 견적요청을 공급업체와 연결하는 베타입니다. 초기 기간에는 무료 입점으로 테스트하실 수 있습니다." },
+    { category: "첫 견적요청 유도", text: "품목을 정확히 몰라도 괜찮습니다. 사진이나 거래명세서를 올려주시면 운영팀이 첫 요청 작성을 도와드립니다." },
+    { category: "견적 미도착 안내", text: "현재 매칭 가능한 공급업체를 수동 확인 중입니다. 견적이 늦어지는 요청은 운영자가 우선 처리합니다." },
+    { category: "공급업체 응답 독려", text: "사장님이 견적을 기다리고 있습니다. 빠른 응답은 선택 확률을 높입니다." },
+    { category: "피드백 요청", text: "사용 중 불편했던 점을 알려주시면 다음 개선에 우선 반영하겠습니다." },
+    { category: "유료화 인터뷰", text: "베타 운영 후 어떤 방식의 비용 구조가 합리적인지 10분 정도 의견을 듣고 싶습니다." },
+  ];
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin/beta")} label="베타 운영" />
+      <PageTitle eyebrow="Scripts" title="영업 스크립트/운영 문구" desc="운영자가 바로 복사해 사용할 수 있는 베타 영업·CS 문구입니다." />
+      <div className="scriptGrid">
+        {scripts.map((script) => (
+          <article className="scriptCard" key={script.category}>
+            <span className="eyebrow">{script.category}</span>
+            <p>{script.text}</p>
+          </article>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
+function BuyerBetaGuidePage({ navigate }: { navigate: Navigate }) {
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/beta")} label="베타 안내" />
+      <PageTitle eyebrow="Buyer Guide" title="구매자 베타 참여 가이드" desc="견적요청부터 비교, 선택, 거래 이력 정리까지 베타에서 확인할 흐름입니다." />
+      <GuideSteps
+        title="베타 참여 흐름"
+        steps={[
+          ["견적요청 등록", "필요한 자재, 납품 지역, 희망일을 입력합니다. 거래명세서나 사진만 있어도 시작할 수 있습니다."],
+          ["견적 비교", "공급업체가 제출한 금액, 납품일, 세금계산서, 카드 가능 여부를 비교합니다."],
+          ["업체 선택", "조건이 맞는 견적을 선택하면 거래가 생성되고 이후 상태를 기록합니다."],
+          ["구매내역 확인", "완료 거래와 수동 등록 매입을 장부 기준으로 정리합니다."],
+          ["피드백/신고", "불편한 점, 오류, 공급업체 문제는 베타 피드백과 신고로 남깁니다."],
+        ]}
+      />
+      <section className="betaLimitNotice">
+        <ShieldCheck size={20} />
+        <div>
+          <strong>베타 제한사항</strong>
+          <p>실제 결제와 세금계산서 자동 발행은 제공하지 않습니다. 견적 금액과 납품 조건은 공급업체와 최종 확인해야 합니다.</p>
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function SupplierBetaGuidePage({ navigate }: { navigate: Navigate }) {
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/supplier")} label="공급업체 홈" />
+      <PageTitle eyebrow="Supplier Guide" title="공급업체 베타 참여 가이드" desc="입점 신청, 승인, 요청 확인, 견적 제출, 거래 상태 관리 흐름을 안내합니다." />
+      <GuideSteps
+        title="온보딩 흐름"
+        steps={[
+          ["입점 신청", "사업자 정보, 취급 카테고리, 납품 가능 지역, 인증자료를 등록합니다."],
+          ["관리자 승인", "운영팀이 자료를 확인하고 승인/보완/반려 상태를 안내합니다."],
+          ["요청 확인", "지역과 카테고리가 맞는 구매자 견적요청을 확인합니다."],
+          ["견적 제출", "실제 납품 가능한 금액, 배송비, 세금계산서, 결제 조건을 입력합니다."],
+          ["거래 관리", "선택된 견적은 거래로 전환되고 납품 준비부터 완료까지 상태를 관리합니다."],
+        ]}
+      />
+      <section className="betaLimitNotice">
+        <ShieldCheck size={20} />
+        <div>
+          <strong>베타 제한사항</strong>
+          <p>초기 베타 기간에는 입점비 없이 테스트할 수 있지만, 허위 견적, 외부 결제 유도, 반복 취소는 제한 사유가 될 수 있습니다.</p>
+        </div>
+      </section>
+    </Page>
+  );
+}
+
 function AdminBillingPage({ data, navigate, setData }: MutatingPageProps) {
   const summary = getRevenueSummary(data);
   const [feeStatus, setFeeStatus] = useState<PlatformFeeStatus>("confirmed");
@@ -5329,6 +6615,75 @@ function SupplierRequestList({ data, supplier, requests, navigate }: { data: App
         );
       })}
     </div>
+  );
+}
+
+function BetaOpsNav({ navigate }: { navigate: Navigate }) {
+  const items = [
+    ["KPI", "/app/admin/beta/kpi", "핵심 지표"],
+    ["구매자", "/app/admin/beta/buyers", "테스터 관리"],
+    ["공급업체", "/app/admin/beta/suppliers", "온보딩 관리"],
+    ["CRM", "/app/admin/beta/pipeline", "영업 파이프라인"],
+    ["실험", "/app/admin/beta/campaigns", "캠페인"],
+    ["CS", "/app/admin/beta/cs", "티켓/피드백"],
+    ["할 일", "/app/admin/beta/tasks", "운영 업무"],
+    ["리포트", "/app/admin/beta/reports", "사업검증"],
+    ["결정", "/app/admin/beta/decision", "의사결정"],
+    ["문구", "/app/admin/beta/scripts", "스크립트"],
+  ];
+  return (
+    <div className="betaOpsNav">
+      {items.map(([label, path, desc]) => (
+        <button type="button" key={path} onClick={() => navigate(path)}>
+          <strong>{label}</strong>
+          <span>{desc}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TargetProgress({ label, value, target }: { label: string; value: number; target: number }) {
+  const ratio = Math.min(100, Math.round((value / Math.max(1, target)) * 100));
+  return (
+    <div className="targetProgress">
+      <div>
+        <strong>{label}</strong>
+        <span>{value} / {target} · {ratio}%</span>
+      </div>
+      <div className="usageBar"><span style={{ width: `${ratio}%` }} /></div>
+    </div>
+  );
+}
+
+function FunnelStep({ step }: { step: ReturnType<typeof getFunnelMetrics>[number] }) {
+  return (
+    <div className={step.warning ? "funnelStep warning" : "funnelStep"}>
+      <div>
+        <strong>{step.label}</strong>
+        <span>{step.count}건</span>
+      </div>
+      <small>{step.conversionRate}% 전환</small>
+    </div>
+  );
+}
+
+function GuideSteps({ steps, title }: { steps: Array<[string, string]>; title?: string }) {
+  return (
+    <>
+      {title ? <SectionHeader title={title} /> : null}
+      <section className="guideSteps">
+      {steps.map(([stepTitle, body], index) => (
+        <article className="guideStep" key={stepTitle}>
+          <span>{index + 1}</span>
+          <div>
+            <h2>{stepTitle}</h2>
+            <p>{body}</p>
+          </div>
+        </article>
+      ))}
+      </section>
+    </>
   );
 }
 
@@ -6415,6 +7770,88 @@ function qaStatusTone(status: QaChecklistStatus): "orange" | "blue" | "green" | 
   if (status === "failed") return "orange";
   if (status === "skipped") return "gray";
   return "blue";
+}
+
+function participantStatusTone(status: AppData["beta_participants"][number]["status"]): "orange" | "blue" | "green" | "gray" {
+  if (status === "active" || status === "onboarded") return "green";
+  if (status === "dropped" || status === "inactive") return "gray";
+  if (status === "invited") return "orange";
+  return "blue";
+}
+
+function priorityRank(priority: string) {
+  if (priority === "urgent") return 4;
+  if (priority === "high") return 3;
+  if (priority === "normal") return 2;
+  return 1;
+}
+
+function taskStatusTone(status: AppData["operator_tasks"][number]["status"]): "orange" | "blue" | "green" | "gray" {
+  if (status === "done") return "green";
+  if (status === "blocked" || status === "cancelled") return "gray";
+  if (status === "todo") return "orange";
+  return "blue";
+}
+
+function experimentTone(status: AppData["beta_experiments"][number]["status"]): "orange" | "blue" | "green" | "gray" {
+  if (status === "completed") return "green";
+  if (status === "stopped") return "gray";
+  if (status === "running") return "blue";
+  return "orange";
+}
+
+function decisionTone(decision: AppData["business_validation_reports"][number]["decision"]): "orange" | "blue" | "green" | "gray" {
+  if (decision === "continue" || decision === "expand") return "green";
+  if (decision === "pause") return "gray";
+  if (decision === "pivot") return "orange";
+  return "blue";
+}
+
+function categoryRecommendationTone(recommendation: ReturnType<typeof getCategoryPerformance>[number]["recommendation"]): "orange" | "blue" | "green" | "gray" {
+  if (recommendation === "집중") return "green";
+  if (recommendation === "공급망 보강") return "orange";
+  if (recommendation === "유지") return "blue";
+  return "gray";
+}
+
+function focusStatusTone(status: ReturnType<typeof calculateCategoryFocusScores>[number]["status"]): "orange" | "blue" | "green" | "gray" {
+  if (status === "recommended") return "green";
+  if (status === "need_supply" || status === "hold") return "orange";
+  if (status === "expand_candidate") return "blue";
+  return "gray";
+}
+
+function riskTone(level: ReturnType<typeof getQuoteRequestOpsInsights>[number]["riskLevel"]): "orange" | "blue" | "green" | "gray" {
+  if (level === "urgent" || level === "high") return "orange";
+  if (level === "normal") return "blue";
+  return "green";
+}
+
+function responseStatusTone(status: ReturnType<typeof getSupplierResponseOps>[number]["status"]): "orange" | "blue" | "green" | "gray" {
+  if (status === "fast") return "green";
+  if (status === "normal") return "blue";
+  if (status === "slow" || status === "low_participation" || status === "needs_contact" || status === "needs_education") return "orange";
+  return "gray";
+}
+
+function qualityTone(status: ReturnType<typeof getDataQualityChecks>[number]["status"]): "orange" | "blue" | "green" | "gray" {
+  if (status === "good") return "green";
+  if (status === "warning") return "orange";
+  return "blue";
+}
+
+function improvementTone(status: ReturnType<typeof getImprovementPriorities>[number]["status"]): "orange" | "blue" | "green" | "gray" {
+  if (status === "apply_now" || status === "done") return "green";
+  if (status === "apply_next") return "blue";
+  if (status === "hold" || status === "rejected") return "gray";
+  return "orange";
+}
+
+function roadmapTone(status: AppData["roadmap_items"][number]["status"]): "orange" | "blue" | "green" | "gray" {
+  if (status === "done") return "green";
+  if (status === "doing") return "blue";
+  if (status === "blocked") return "orange";
+  return "gray";
 }
 
 function liveFeatureTone(status: (typeof liveFeatureMatrix)[number]["status"]): "orange" | "blue" | "green" | "gray" {

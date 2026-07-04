@@ -216,6 +216,60 @@ export type FeedbackStatus = "submitted" | "reviewing" | "planned" | "in_progres
 
 export type QaChecklistStatus = "unchecked" | "passed" | "failed" | "skipped";
 
+export type BetaParticipantType = "buyer" | "supplier";
+
+export type BetaParticipantSource = "direct_sales" | "referral" | "community" | "partner" | "landing" | "manual" | "etc";
+
+export type BetaParticipantStatus = "invited" | "signed_up" | "onboarded" | "active" | "inactive" | "dropped";
+
+export type SalesLeadStage = "new" | "contacted" | "interested" | "invited" | "signed_up" | "onboarded" | "active" | "rejected" | "lost";
+
+export type SalesLeadPriority = "low" | "normal" | "high" | "urgent";
+
+export type SalesActivityType = "call" | "sms" | "kakao" | "visit" | "email" | "meeting" | "demo" | "follow_up" | "note";
+
+export type SalesActivityResult = "success" | "no_answer" | "interested" | "not_interested" | "need_follow_up" | "signed_up" | "rejected";
+
+export type BetaExperimentTargetGroup = "buyers" | "suppliers" | "both";
+
+export type BetaExperimentStatus = "planned" | "running" | "completed" | "stopped";
+
+export type BetaFeedbackInsightCategory = "ux" | "bug" | "pricing" | "supplier_quality" | "buyer_need" | "feature_request" | "onboarding" | "trust" | "etc";
+
+export type BetaFeedbackInsightSeverity = "low" | "normal" | "high" | "critical";
+
+export type BetaFeedbackDecision = "do_now" | "do_later" | "reject" | "needs_research";
+
+export type OperatorTaskType = "sales" | "cs" | "qa" | "supplier_onboarding" | "buyer_followup" | "bug_check" | "report" | "etc";
+
+export type OperatorTaskStatus = "todo" | "doing" | "done" | "blocked" | "cancelled";
+
+export type BusinessValidationDecision = "continue" | "pivot" | "pause" | "expand" | "needs_more_data";
+
+export type CategoryFocusStatus = "recommended" | "maintain" | "need_supply" | "need_demand" | "hold" | "expand_candidate";
+
+export type QuoteRiskLevel = "low" | "normal" | "high" | "urgent";
+
+export type QuoteRequestOpsStatus = "normal" | "needs_supplier_match" | "waiting_quotes" | "no_quotes_risk" | "operator_assisting" | "resolved" | "failed";
+
+export type SupplierResponseStatus = "fast" | "normal" | "slow" | "low_participation" | "dormant_risk" | "needs_contact" | "needs_education";
+
+export type ImprovementPriorityStatus = "reviewing" | "apply_now" | "apply_next" | "hold" | "rejected" | "done";
+
+export type FeatureFlagKey =
+  | "enable_analysis"
+  | "enable_accounting_sync"
+  | "enable_supplier_billing"
+  | "enable_settlements"
+  | "enable_reviews"
+  | "enable_reports"
+  | "enable_messages"
+  | "enable_beta_kpi"
+  | "enable_quick_reorder"
+  | "enable_favorite_items";
+
+export type RoadmapItemStatus = "planned" | "doing" | "done" | "blocked";
+
 export interface Profile {
   id: string;
   name: string;
@@ -1014,6 +1068,380 @@ export interface QaChecklistItem {
   updated_at: string;
 }
 
+export interface BetaTarget {
+  id: string;
+  period_start: string;
+  period_end: string;
+  target_buyers: number;
+  target_suppliers: number;
+  target_quote_requests: number;
+  target_quotes: number;
+  target_deals: number;
+  target_completed_deals: number;
+  target_feedbacks: number;
+  target_repeat_buyers: number;
+  target_active_suppliers: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BetaParticipant {
+  id: string;
+  user_id?: string;
+  participant_type: BetaParticipantType;
+  source: BetaParticipantSource;
+  status: BetaParticipantStatus;
+  assigned_admin_id: string;
+  business_name: string;
+  contact_name: string;
+  phone: string;
+  email: string;
+  region: string;
+  category_interest: string;
+  memo: string;
+  quote_request_count: number;
+  quote_selected_count: number;
+  deal_count: number;
+  feedback_count: number;
+  tags: string[];
+  invited_at?: string;
+  signed_up_at?: string;
+  onboarded_at?: string;
+  activated_at?: string;
+  dropped_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SalesLead {
+  id: string;
+  lead_type: BetaParticipantType;
+  business_name: string;
+  contact_name: string;
+  phone: string;
+  email: string;
+  region: string;
+  category: string;
+  source: BetaParticipantSource;
+  stage: SalesLeadStage;
+  priority: SalesLeadPriority;
+  assigned_admin_id: string;
+  next_action: string;
+  next_action_date: string;
+  memo: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SalesActivity {
+  id: string;
+  lead_id: string;
+  activity_type: SalesActivityType;
+  result: SalesActivityResult;
+  memo: string;
+  actor_id: string;
+  activity_at: string;
+  created_at: string;
+}
+
+export interface BetaExperiment {
+  id: string;
+  name: string;
+  hypothesis: string;
+  target_group: BetaExperimentTargetGroup;
+  start_date: string;
+  end_date: string;
+  status: BetaExperimentStatus;
+  success_metric: string;
+  result_summary: string;
+  next_action: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BetaFeedbackInsight {
+  id: string;
+  feedback_id: string;
+  category: BetaFeedbackInsightCategory;
+  severity: BetaFeedbackInsightSeverity;
+  priority_score: number;
+  impact: number;
+  frequency: number;
+  effort: number;
+  decision: BetaFeedbackDecision;
+  admin_memo: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OperatorTask {
+  id: string;
+  title: string;
+  description: string;
+  task_type: OperatorTaskType;
+  status: OperatorTaskStatus;
+  priority: SalesLeadPriority;
+  assigned_admin_id: string;
+  related_entity_type: string;
+  related_entity_id: string;
+  due_date: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessValidationReport {
+  id: string;
+  period_start: string;
+  period_end: string;
+  summary: string;
+  buyer_findings: string;
+  supplier_findings: string;
+  kpi_findings: string;
+  risk_findings: string;
+  recommendation: string;
+  decision: BusinessValidationDecision;
+  keep_features?: string[];
+  reduce_features?: string[];
+  hide_features?: string[];
+  strengthen_features?: string[];
+  focus_category?: string;
+  priority_regions?: string[];
+  priority_buyer_segments?: string[];
+  next_product_priorities?: string[];
+  next_sales_priorities?: string[];
+  monetization_validation_status?: string;
+  launch_blockers?: string[];
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BetaKpiSummary {
+  target: BetaTarget;
+  buyerCount: number;
+  activeBuyerCount: number;
+  supplierCandidateCount: number;
+  approvedSupplierCount: number;
+  activeSupplierCount: number;
+  quoteRequestCount: number;
+  quoteCount: number;
+  averageQuotesPerRequest: number;
+  averageFirstQuoteHours: number;
+  quoteRequestConversionRate: number;
+  quoteResponseRate: number;
+  quoteSelectionRate: number;
+  dealConversionRate: number;
+  completedDealRate: number;
+  repeatBuyerRate: number;
+  activeSupplierRate: number;
+  feedbackCount: number;
+  openIssueCount: number;
+  goalAchievementRate: number;
+  estimatedRevenue: number;
+}
+
+export interface CategoryPerformance {
+  category: string;
+  requestCount: number;
+  quoteCount: number;
+  averageQuotes: number;
+  selectedCount: number;
+  dealCount: number;
+  completedDealCount: number;
+  averageDealAmount: number;
+  disputeCount: number;
+  feedbackCount: number;
+  recommendation: "집중" | "유지" | "보류" | "공급망 보강";
+}
+
+export interface FunnelMetric {
+  label: string;
+  count: number;
+  conversionRate: number;
+  warning?: boolean;
+}
+
+export interface FocusSetting {
+  id: string;
+  focus_category_name: string;
+  focus_region: string;
+  focus_mode_enabled: boolean;
+  buyer_home_message: string;
+  supplier_home_message: string;
+  priority_template_names: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeatureFlag {
+  id: string;
+  key: FeatureFlagKey;
+  name: string;
+  description: string;
+  enabled: boolean;
+  beta_label_enabled: boolean;
+  admin_only: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FavoriteItemGroup {
+  id: string;
+  buyer_id: string;
+  name: string;
+  category_name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FavoriteItem {
+  id: string;
+  group_id: string;
+  item_name: string;
+  spec: string;
+  quantity: number;
+  unit: string;
+  memo: string;
+  allow_alternative: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CategoryPlaybook {
+  id: string;
+  category_name: string;
+  target_buyers: string[];
+  supplier_types: string[];
+  representative_items: string[];
+  request_template: string;
+  supplier_sales_points: string[];
+  buyer_message: string;
+  common_issues: string[];
+  operator_response: string[];
+  success_kpis: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RoadmapItem {
+  id: string;
+  title: string;
+  description: string;
+  week: 1 | 2 | 3 | 4;
+  priority: SalesLeadPriority;
+  owner_id: string;
+  status: RoadmapItemStatus;
+  success_metric: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CategoryFocusScore {
+  category: string;
+  requestCount: number;
+  activeSupplierCount: number;
+  averageQuotes: number;
+  firstQuoteHours: number;
+  selectionRate: number;
+  dealRate: number;
+  repeatRate: number;
+  averageDealAmount: number;
+  riskRate: number;
+  demandScore: number;
+  supplyScore: number;
+  responseScore: number;
+  dealScore: number;
+  repeatScore: number;
+  revenueScore: number;
+  riskPenalty: number;
+  focusScore: number;
+  status: CategoryFocusStatus;
+  reason: string;
+}
+
+export interface QuoteRequestOpsInsight {
+  request: QuoteRequest;
+  buyerName: string;
+  elapsedHours: number;
+  matchingSupplierCount: number;
+  viewedSupplierCount: number;
+  quoteCount: number;
+  riskLevel: QuoteRiskLevel;
+  opsStatus: QuoteRequestOpsStatus;
+  assignedAdminName: string;
+  nextAction: string;
+}
+
+export interface SupplierMatchCandidate {
+  supplier: SupplierProfile;
+  score: number;
+  label: "강력 추천" | "적합" | "조건 일부 확인 필요" | "응답 느림" | "제외 권장";
+  reasons: string[];
+  responseRate: number;
+  averageResponseMinutes: number;
+  monthlyQuoteCount: number;
+  remainingCredits: number;
+  trustScore: number;
+}
+
+export interface SupplierResponseOpsRow {
+  supplier: SupplierProfile;
+  status: SupplierResponseStatus;
+  matchedRequestCount: number;
+  viewedRequestCount: number;
+  quoteCount: number;
+  quoteSubmitRate: number;
+  averageResponseMinutes: number;
+  selectedQuoteCount: number;
+  dealWinRate: number;
+  lastActiveAt: string;
+  action: string;
+}
+
+export interface RepeatUsageInsight {
+  buyerId: string;
+  buyerName: string;
+  requestCount: number;
+  purchaseCount: number;
+  lastCategory: string;
+  riskLabel: string;
+  recommendedAction: string;
+}
+
+export interface DropoffMetric {
+  actor: BetaParticipantType;
+  stage: string;
+  count: number;
+  rate: number;
+  reason: string;
+  action: string;
+}
+
+export interface ImprovementPriority {
+  id: string;
+  title: string;
+  category: BetaFeedbackInsightCategory;
+  userType: UserRole;
+  severity: BetaFeedbackInsightSeverity;
+  frequency: number;
+  impact: number;
+  effort: number;
+  score: number;
+  decision: BetaFeedbackDecision;
+  linkedWork: string[];
+  status: ImprovementPriorityStatus;
+}
+
+export interface DataQualityCheck {
+  label: string;
+  status: "good" | "warning" | "needs_review";
+  value: string;
+  action: string;
+}
+
 export interface DealStatusLog {
   id: string;
   deal_id: string;
@@ -1081,6 +1509,20 @@ export interface AppData {
   blacklist_entries: BlacklistEntry[];
   feedbacks: BetaFeedback[];
   qa_checklists: QaChecklistItem[];
+  beta_targets: BetaTarget[];
+  beta_participants: BetaParticipant[];
+  sales_leads: SalesLead[];
+  sales_activities: SalesActivity[];
+  beta_experiments: BetaExperiment[];
+  beta_feedback_insights: BetaFeedbackInsight[];
+  operator_tasks: OperatorTask[];
+  business_validation_reports: BusinessValidationReport[];
+  focus_settings: FocusSetting[];
+  feature_flags: FeatureFlag[];
+  favorite_item_groups: FavoriteItemGroup[];
+  favorite_items: FavoriteItem[];
+  category_playbooks: CategoryPlaybook[];
+  roadmap_items: RoadmapItem[];
   deal_status_logs: DealStatusLog[];
 }
 
