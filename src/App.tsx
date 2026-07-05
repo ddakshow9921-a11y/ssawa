@@ -865,6 +865,12 @@ export default function App() {
           );
         })}
       </nav>
+      {authSession && isProtectedAppPath(path) && path !== primaryAction.path && (
+        <button className="mobileFixedActionButton" type="button" onClick={() => navigate(primaryAction.path)}>
+          <PrimaryActionIcon size={18} />
+          {primaryAction.label}
+        </button>
+      )}
       {showChatShortcut && (
         <button className="chatShortcutButton" type="button" onClick={() => navigate(chatPath)} aria-label="문의/채팅 열기">
           <span className="navIconWrap">
@@ -2044,6 +2050,7 @@ function HomePage({ data, navigate }: PageProps) {
           <img src="/로고.png" alt="싸와!" className="heroLogo" />
           <h1>필요한 자재를 올려보세요.</h1>
           <p>업체들이 견적을 보내드립니다.</p>
+          <small>사진이나 거래명세서만 있어도 됩니다.</small>
         </div>
         <div className="primaryActionGrid" aria-label="견적요청 시작">
           <QuickStartCard
@@ -2098,6 +2105,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
   const [receiptAnalysisSource, setReceiptAnalysisSource] = useState<ReceiptAnalysisSource>("");
   const [receiptAnalysisNotice, setReceiptAnalysisNotice] = useState("");
   const [receiptAnalysisLoading, setReceiptAnalysisLoading] = useState(false);
+  const [showMoreConditions, setShowMoreConditions] = useState(false);
   const [draft, setDraft] = useState<QuoteRequestDraft>({
     title: "",
     category_id: data.categories[0]?.id ?? "",
@@ -2131,6 +2139,10 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
     [data, selectedCategory, draft.delivery_region, draft.need_tax_invoice, draft.card_payment_required],
   );
   const cleanItems = draft.items.filter((entry) => entry.item_name.trim());
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
 
   function updateItem(index: number, key: keyof QuoteRequestDraft["items"][number], value: string | number | boolean) {
     setDraft((current) => ({
@@ -2381,45 +2393,53 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
         {step === 2 && (
           <section className="wizardPanel">
             <SectionHeader title="납품 조건을 입력하세요" />
-            <div className="conditionGrid">
-              <Field label="요청 제목">
-                <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder={`${selectedCategory?.name ?? "자재"} 견적 요청`} />
-              </Field>
+            <div className="conditionGrid essentialConditions">
               <Field label="배송 지역">
                 <input value={draft.delivery_region} onChange={(event) => setDraft({ ...draft, delivery_region: event.target.value })} placeholder="예: 서울 노원구" />
-              </Field>
-              <Field label="상세 주소 또는 대략 위치">
-                <input value={draft.delivery_address} onChange={(event) => setDraft({ ...draft, delivery_address: event.target.value })} placeholder="예: 월계역 인근 매장" />
               </Field>
               <Field label="희망 납품일">
                 <input type="date" value={draft.desired_delivery_date} onChange={(event) => setDraft({ ...draft, desired_delivery_date: event.target.value })} />
               </Field>
-              <Field label="희망 시간">
-                <input value={draft.preferred_delivery_time} onChange={(event) => setDraft({ ...draft, preferred_delivery_time: event.target.value })} placeholder="예: 오전 10시 전" />
-              </Field>
-              <Field label="선호 브랜드">
-                <input value={draft.preferred_brand} onChange={(event) => setDraft({ ...draft, preferred_brand: event.target.value })} placeholder="없으면 비워두세요" />
-              </Field>
-              <Field label="기존 거래가">
-                <input type="number" min="0" value={draft.previous_amount} onChange={(event) => setDraft({ ...draft, previous_amount: Number(event.target.value) })} />
-              </Field>
-              <Field label="예산 최소">
-                <input type="number" min="0" value={draft.budget_min} onChange={(event) => setDraft({ ...draft, budget_min: Number(event.target.value) })} />
-              </Field>
-              <Field label="예산 최대">
-                <input type="number" min="0" value={draft.budget_max} onChange={(event) => setDraft({ ...draft, budget_max: Number(event.target.value) })} />
-              </Field>
             </div>
-            <Field label="요청 메모">
-              <textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="납품 조건, 대체품 허용 범위, 견적 비교 시 중요한 기준을 적어주세요." />
-            </Field>
             <div className="toggleGrid">
               <Toggle checked={draft.need_tax_invoice} label="세금계산서 필요" onChange={(checked) => setDraft({ ...draft, need_tax_invoice: checked })} />
-              <Toggle checked={draft.card_payment_required} label="카드결제 가능 업체만" onChange={(checked) => setDraft({ ...draft, card_payment_required: checked })} />
-              <Toggle checked={draft.include_delivery_fee} label="배송비 포함 견적 요청" onChange={(checked) => setDraft({ ...draft, include_delivery_fee: checked })} />
-              <Toggle checked={draft.urgent} label="긴급 요청" onChange={(checked) => setDraft({ ...draft, urgent: checked })} />
-              <Toggle checked={draft.allow_alternatives} label="대체품 제안 허용" onChange={(checked) => setDraft({ ...draft, allow_alternatives: checked })} />
+              <Toggle checked={draft.card_payment_required} label="카드결제 필요" onChange={(checked) => setDraft({ ...draft, card_payment_required: checked })} />
             </div>
+            <button className="ghostButton compact showMoreButton" type="button" onClick={() => setShowMoreConditions((current) => !current)}>
+              {showMoreConditions ? "선택 입력 닫기" : "선택 입력 더보기"}
+            </button>
+            {showMoreConditions && (
+              <div className="optionalPanel">
+                <div className="conditionGrid">
+                  <Field label="요청 제목">
+                    <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder={`${selectedCategory?.name ?? "자재"} 견적 요청`} />
+                  </Field>
+                  <Field label="상세 위치">
+                    <input value={draft.delivery_address} onChange={(event) => setDraft({ ...draft, delivery_address: event.target.value })} placeholder="예: 월계역 인근 매장" />
+                  </Field>
+                  <Field label="희망 시간">
+                    <input value={draft.preferred_delivery_time} onChange={(event) => setDraft({ ...draft, preferred_delivery_time: event.target.value })} placeholder="예: 오전 10시 전" />
+                  </Field>
+                  <Field label="선호 브랜드">
+                    <input value={draft.preferred_brand} onChange={(event) => setDraft({ ...draft, preferred_brand: event.target.value })} placeholder="없으면 비워두세요" />
+                  </Field>
+                  <Field label="기존 거래가">
+                    <input type="number" min="0" value={draft.previous_amount} onChange={(event) => setDraft({ ...draft, previous_amount: Number(event.target.value) })} />
+                  </Field>
+                  <Field label="예산 최대">
+                    <input type="number" min="0" value={draft.budget_max} onChange={(event) => setDraft({ ...draft, budget_max: Number(event.target.value) })} />
+                  </Field>
+                </div>
+                <Field label="요청 메모">
+                  <textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="중요한 납품 조건만 짧게 적어주세요." />
+                </Field>
+                <div className="toggleGrid">
+                  <Toggle checked={draft.include_delivery_fee} label="배송비 포함 견적" onChange={(checked) => setDraft({ ...draft, include_delivery_fee: checked })} />
+                  <Toggle checked={draft.urgent} label="긴급 요청" onChange={(checked) => setDraft({ ...draft, urgent: checked })} />
+                  <Toggle checked={draft.allow_alternatives} label="대체품 제안 허용" onChange={(checked) => setDraft({ ...draft, allow_alternatives: checked })} />
+                </div>
+              </div>
+            )}
           </section>
         )}
         {step === 3 && (
@@ -2457,7 +2477,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
           ) : (
             <button className="primaryButton" type="submit">
               <Check size={18} />
-              요청 등록
+              견적요청 완료
             </button>
           )}
         </div>
@@ -2740,6 +2760,13 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
           <span>결제 방식: {paymentMethodLabels[deal.payment_method]}</span>
           <span>세금계산서: {yesNo(deal.tax_invoice_available)}</span>
           <span>카드결제: {yesNo(deal.card_payment_available)}</span>
+        </div>
+        <div className="safeTradeInline">
+          <ShieldCheck size={18} />
+          <div>
+            <strong>안심거래 선택 가능</strong>
+            <p>첫 거래나 고액 거래는 납품 확인 후 정산 흐름으로 진행할 수 있습니다.</p>
+          </div>
         </div>
         <div className="priceSummary">
           <Metric label="상품금액" value={money(deal.subtotal_amount)} icon={<PackageCheck />} />
@@ -8694,20 +8721,25 @@ function ItemReviewEditor({
     <div className="itemReviewEditor">
       {items.map((entry, index) => (
         <article className={entry.needs_review ? "itemReviewRow needsReview" : "itemReviewRow"} key={`item-${index}`}>
-          <div className="itemReviewFields">
+          <div className="itemEssentialFields">
             <input value={entry.item_name} onChange={(event) => onUpdate(index, "item_name", event.target.value)} placeholder="품목명" />
-            <input value={entry.spec} onChange={(event) => onUpdate(index, "spec", event.target.value)} placeholder="규격" />
             <input type="number" min="1" value={entry.quantity} onChange={(event) => onUpdate(index, "quantity", Number(event.target.value))} aria-label="수량" />
             <input value={entry.unit} onChange={(event) => onUpdate(index, "unit", event.target.value)} aria-label="단위" />
-            <input value={entry.memo} onChange={(event) => onUpdate(index, "memo", event.target.value)} placeholder="메모" />
           </div>
-          <div className="itemReviewMeta">
-            <Toggle checked={entry.is_required ?? true} label="필수" onChange={(checked) => onUpdate(index, "is_required", checked)} />
-            <Toggle checked={entry.allow_alternative ?? true} label="대체 가능" onChange={(checked) => onUpdate(index, "allow_alternative", checked)} />
-            <span>신뢰도 {entry.confidence_score ?? 96}%</span>
-            {entry.review_reason && <small>{entry.review_reason}</small>}
-            <button className="ghostButton compact" type="button" onClick={() => onRemove(index)}>삭제</button>
-          </div>
+          <details className="itemOptionalDetails">
+            <summary>선택 입력</summary>
+            <div className="itemReviewFields">
+              <input value={entry.spec} onChange={(event) => onUpdate(index, "spec", event.target.value)} placeholder="규격" />
+              <input value={entry.memo} onChange={(event) => onUpdate(index, "memo", event.target.value)} placeholder="메모" />
+            </div>
+            <div className="itemReviewMeta">
+              <Toggle checked={entry.is_required ?? true} label="필수" onChange={(checked) => onUpdate(index, "is_required", checked)} />
+              <Toggle checked={entry.allow_alternative ?? true} label="대체 가능" onChange={(checked) => onUpdate(index, "allow_alternative", checked)} />
+              <span>인식률 {entry.confidence_score ?? 96}%</span>
+              {entry.review_reason && <small>{entry.review_reason}</small>}
+            </div>
+          </details>
+          <button className="ghostButton compact" type="button" onClick={() => onRemove(index)}>삭제</button>
         </article>
       ))}
     </div>
@@ -8891,6 +8923,7 @@ function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFas
         <span>상품 {money(quote.total_amount)} · 배송 {money(quote.delivery_fee)}</span>
       </div>
       <div className="quoteFacts">
+        <span className="fact">배송비 {quote.delivery_fee > 0 ? "별도" : "포함"}</span>
         <span className={isFastest ? "fact strong" : "fact"}>납품 {quote.available_delivery_date}</span>
         <span className="fact">세금계산서 {yesNo(quote.tax_invoice_available)}</span>
         <span className="fact">카드결제 {yesNo(quote.card_payment_available)}</span>
@@ -8958,7 +8991,11 @@ function QuoteConfirmModal({ data, quote, onCancel, onConfirm }: { data: AppData
           <span>대체품 제안</span><strong>{quote.alternative_proposal || "없음"}</strong>
           <span>견적 유효기간</span><strong>{quote.valid_until}</strong>
         </div>
-        <p className="modalGuide">업체를 선택하면 다른 견적은 미선택 처리되고, 거래가 생성됩니다. 실제 결제는 아직 진행되지 않습니다.</p>
+        <div className="safeTradeChoice">
+          <span><ShieldCheck size={17} /> 싸와 안심거래 추천</span>
+          <p>첫 거래나 고액 거래는 안심거래로 진행하면 구매자와 공급업체 모두 거래 상태를 확인하기 쉽습니다.</p>
+        </div>
+        <p className="modalGuide">업체를 선택하면 거래가 생성됩니다. 결제 방식은 거래 화면에서 선택합니다.</p>
         <div className="formActions">
           <button className="secondaryButton" type="button" onClick={onCancel}>취소</button>
           <button className="primaryButton" type="button" onClick={onConfirm}>

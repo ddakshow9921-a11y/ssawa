@@ -333,6 +333,10 @@ button:disabled {
   background: #162b43;
 }
 
+.mobileFixedActionButton {
+  display: none;
+}
+
 .page {
   width: min(1180px, calc(100% - 64px));
   max-width: 100%;
@@ -466,6 +470,12 @@ button:disabled {
   font-size: 18px;
   font-weight: 820;
   line-height: 1.5;
+}
+
+.simpleHeroCopy small {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .primaryActionGrid,
@@ -1667,6 +1677,45 @@ code {
   color: #1e3a8a;
   line-height: 1.55;
   font-weight: 760;
+}
+
+.safeTradeChoice,
+.safeTradeInline {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(18, 128, 92, 0.22);
+  border-radius: 8px;
+  background: var(--green-soft);
+}
+
+.safeTradeChoice span,
+.safeTradeInline {
+  color: var(--green);
+  font-weight: 900;
+}
+
+.safeTradeChoice span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.safeTradeChoice p,
+.safeTradeInline p {
+  margin: 0;
+  color: #25634d;
+  line-height: 1.48;
+}
+
+.safeTradeInline {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.safeTradeInline strong {
+  color: var(--green);
 }
 
 .quoteActions,
@@ -3196,6 +3245,23 @@ tbody tr:hover {
   margin-bottom: 12px;
 }
 
+.essentialConditions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.showMoreButton {
+  justify-self: start;
+}
+
+.optionalPanel {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fbfcfd;
+}
+
 .methodCard,
 .categoryChoiceCard,
 .templateCard,
@@ -3480,10 +3546,42 @@ tbody tr:hover {
   background: var(--orange-soft);
 }
 
+.itemEssentialFields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 86px;
+  gap: 8px;
+}
+
+.itemEssentialFields input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--charcoal);
+}
+
 .itemReviewFields {
   display: grid;
   grid-template-columns: 1.2fr 1.1fr 84px 74px 1.2fr;
   gap: 8px;
+}
+
+.itemOptionalDetails {
+  display: grid;
+  gap: 10px;
+}
+
+.itemOptionalDetails summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--orange);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.itemOptionalDetails[open] {
+  padding-top: 4px;
 }
 
 .itemReviewFields input {
@@ -3496,6 +3594,12 @@ tbody tr:hover {
 }
 
 .itemReviewFields input:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 4px rgba(255, 107, 26, 0.12);
+  outline: none;
+}
+
+.itemEssentialFields input:focus {
   border-color: var(--orange);
   box-shadow: 0 0 0 4px rgba(255, 107, 26, 0.12);
   outline: none;
@@ -4665,6 +4769,10 @@ tr.selectedRow {
     display: none;
   }
 
+  .topbarActions .primaryButton {
+    display: none;
+  }
+
   .topbarActions .notificationTopButton,
   .topbarActions .signOutTopButton {
     width: 42px;
@@ -4774,6 +4882,10 @@ tr.selectedRow {
 
   .itemRow {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .itemEssentialFields {
+    grid-template-columns: 1fr 88px 78px;
   }
 
   .itemReviewFields {
@@ -4902,7 +5014,7 @@ tr.selectedRow {
 
   .chatShortcutButton {
     right: 14px;
-    bottom: calc(74px + env(safe-area-inset-bottom));
+    bottom: calc(132px + env(safe-area-inset-bottom));
     min-height: 46px;
     padding: 0 14px;
     box-shadow: 0 12px 24px rgba(16, 32, 51, 0.2);
@@ -4910,6 +5022,25 @@ tr.selectedRow {
 
   .chatShortcutButton strong {
     font-size: 13px;
+  }
+
+  .mobileFixedActionButton {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    bottom: calc(74px + env(safe-area-inset-bottom));
+    z-index: 11;
+    min-height: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid var(--orange);
+    border-radius: 8px;
+    color: #ffffff;
+    background: var(--orange);
+    box-shadow: 0 14px 28px rgba(255, 107, 26, 0.24);
+    font-weight: 950;
   }
 }
 
@@ -4996,6 +5127,10 @@ tr.selectedRow {
   }
 
   .wizardSteps {
+    grid-template-columns: 1fr;
+  }
+
+  .itemEssentialFields {
     grid-template-columns: 1fr;
   }
 
