@@ -6,6 +6,18 @@ export type QuoteStatus = "submitted" | "selected" | "rejected" | "expired" | "c
 
 export type ApprovalStatus = "pending" | "approved" | "needs_revision" | "rejected" | "suspended";
 
+export type BusinessVerificationStatus =
+  | "not_started"
+  | "status_checked"
+  | "verified"
+  | "failed"
+  | "manual_review_required"
+  | "api_error";
+
+export type BusinessOperatingStatus = "active" | "suspended" | "closed" | "unregistered" | "api_error" | "unknown";
+
+export type BusinessManualReviewStatus = "submitted" | "reviewing" | "approved" | "rejected" | "needs_revision";
+
 export type DealStatus =
   | "pending_confirmation"
   | "confirmed"
@@ -279,6 +291,16 @@ export interface Profile {
   business_number: string;
   phone: string;
   region: string;
+  representative_name?: string;
+  business_opening_date?: string;
+  business_address?: string;
+  business_type?: string;
+  business_status?: BusinessOperatingStatus;
+  business_tax_type?: string;
+  business_verification_status?: BusinessVerificationStatus;
+  business_verified_at?: string;
+  onboarding_completed?: boolean;
+  onboarding_completed_at?: string;
   is_test_user?: boolean;
   created_at: string;
 }
@@ -372,6 +394,10 @@ export interface SupplierProfile {
   default_quote_valid_days?: number;
   approval_status: ApprovalStatus;
   operational_status?: OperationalStatus;
+  business_verification_id?: string;
+  document_status?: SupplierDocumentStatus;
+  approved_by?: string;
+  approved_at?: string;
   admin_memo?: string;
   rejection_reason?: string;
   created_at: string;
@@ -1218,6 +1244,56 @@ export interface BusinessValidationReport {
   updated_at: string;
 }
 
+export interface BusinessVerification {
+  id: string;
+  user_id: string;
+  role_requested: UserRole;
+  business_name: string;
+  business_number: string;
+  representative_name: string;
+  opening_date: string;
+  phone: string;
+  email: string;
+  region: string;
+  business_address?: string;
+  status_check_status: BusinessOperatingStatus;
+  status_check_label: string;
+  tax_type?: string;
+  verification_status: BusinessVerificationStatus;
+  verification_method: "nts_status" | "nts_validate" | "manual_review" | "local_mock";
+  can_register: boolean;
+  failure_reason?: string;
+  attempt_count: number;
+  raw_status_code?: string;
+  raw_valid_code?: string;
+  manually_reviewed_by?: string;
+  manually_reviewed_at?: string;
+  admin_memo?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessManualReviewRequest {
+  id: string;
+  user_id: string;
+  role_requested: UserRole;
+  business_name: string;
+  business_number: string;
+  representative_name: string;
+  opening_date: string;
+  phone: string;
+  email: string;
+  reason: string;
+  status: BusinessManualReviewStatus;
+  document_name?: string;
+  document_url?: string;
+  admin_memo?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface BetaKpiSummary {
   target: BetaTarget;
   buyerCount: number;
@@ -1507,6 +1583,8 @@ export interface AppData {
   supplier_reputation_scores: SupplierReputationScore[];
   user_sanctions: UserSanction[];
   blacklist_entries: BlacklistEntry[];
+  business_verifications: BusinessVerification[];
+  business_manual_review_requests: BusinessManualReviewRequest[];
   feedbacks: BetaFeedback[];
   qa_checklists: QaChecklistItem[];
   beta_targets: BetaTarget[];

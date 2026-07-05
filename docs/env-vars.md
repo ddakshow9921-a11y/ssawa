@@ -88,4 +88,13 @@ SUPABASE_SECRET_KEY=설정 완료
 SUPABASE_SERVICE_ROLE_KEY=설정 완료
 ADMIN_EMAILS=운영자 이메일 목록
 WEBHOOK_SIGNING_SECRET=설정 완료
+GEMINI_API_KEY=Google AI Studio에서 발급한 서버 전용 키
+GOOGLE_AI_API_KEY=GEMINI_API_KEY 대체 이름
+GOOGLE_GENAI_API_KEY=GEMINI_API_KEY 대체 이름
+GOOGLE_API_KEY=GEMINI_API_KEY 대체 이름
+GOOGLE_GENERATIVE_AI_API_KEY=GEMINI_API_KEY 대체 이름
+GEMINI_MODEL=gemini-3.5-flash
+NTS_BUSINESS_SERVICE_KEY=국세청 사업자등록정보 진위확인/상태조회 서비스키
 ```
+
+Google OAuth 클라이언트 ID/Secret은 로그인 동의 화면용 자격증명이며, Gemini 이미지 분석용 API 키가 아닙니다. `GOCSPX-`로 시작하는 client secret이나 `.apps.googleusercontent.com` client ID를 `GEMINI_API_KEY`에 넣으면 `/api/analyze-receipt`가 명확한 오류를 반환합니다.

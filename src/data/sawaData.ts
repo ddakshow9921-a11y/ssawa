@@ -35,6 +35,11 @@ import type {
   BlacklistEntry,
   BlacklistStatus,
   BlacklistTargetType,
+  BusinessManualReviewRequest,
+  BusinessManualReviewStatus,
+  BusinessOperatingStatus,
+  BusinessVerification,
+  BusinessVerificationStatus,
   Category,
   CommissionFeeType,
   CommissionPolicy,
@@ -197,6 +202,32 @@ export const supplierApprovalLabels: Record<SupplierProfile["approval_status"], 
   needs_revision: "보완 요청",
   rejected: "반려",
   suspended: "이용 제한",
+};
+
+export const businessVerificationStatusLabels: Record<BusinessVerificationStatus, string> = {
+  not_started: "검증 전",
+  status_checked: "상태 확인",
+  verified: "인증 완료",
+  failed: "인증 실패",
+  manual_review_required: "수동 검토 필요",
+  api_error: "API 확인 필요",
+};
+
+export const businessOperatingStatusLabels: Record<BusinessOperatingStatus, string> = {
+  active: "계속사업자",
+  suspended: "휴업자",
+  closed: "폐업자",
+  unregistered: "미등록/조회불가",
+  api_error: "API 오류",
+  unknown: "확인 필요",
+};
+
+export const businessManualReviewStatusLabels: Record<BusinessManualReviewStatus, string> = {
+  submitted: "접수",
+  reviewing: "검토 중",
+  approved: "승인",
+  rejected: "반려",
+  needs_revision: "보완 요청",
 };
 
 export const supplierDocumentTypeLabels: Record<SupplierDocumentType, string> = {
@@ -1757,6 +1788,8 @@ export const initialData: AppData = {
   supplier_reputation_scores: sampleSupplierReputationScores,
   user_sanctions: sampleUserSanctions,
   blacklist_entries: sampleBlacklistEntries,
+  business_verifications: [],
+  business_manual_review_requests: [],
   feedbacks: sampleFeedbacks,
   qa_checklists: sampleQaChecklists,
   beta_targets: sampleBetaTargets,
@@ -1836,6 +1869,56 @@ export function parseItemsFromText(input: string): QuoteRequestDraft["items"] {
   if (items.length > 0) return items.slice(0, 8);
 
   return [draftItem(input.slice(0, 24) || "품목명 확인 필요", "", 1, "개", "", false, true, 55, true, "문장에서 품목과 수량을 찾지 못했습니다.")];
+}
+
+export function analyzeReceiptPhotoForQuoteRequest(fileName: string, sourceType: Extract<AnalysisSourceType, "photo" | "receipt" | "invoice"> = "photo") {
+  const normalizedFileName = fileName.trim() || defaultAnalysisFileName(sourceType);
+  const profile = receiptAnalysisProfile(normalizedFileName);
+  const createdAt = new Date().toISOString();
+  const analysisId = `receipt-preview-${createdAt.replace(/\D/g, "")}`;
+  const analysisItems = parseTextToAnalysisItems(profile.rawText, analysisId, createdAt);
+  const totalAmount = extractAmountsFromText(profile.rawText, analysisItems);
+  const confidenceScore = calculateAnalysisConfidence(analysisItems, { supplierName: profile.supplierName, totalAmount });
+  const attachment = {
+    file_name: normalizedFileName,
+    file_type: fileTypeFromName(normalizedFileName) || (sourceType === "invoice" ? "pdf" : "jpg"),
+    analysis_status: "analyzed",
+    extracted_text: `${profile.supplierName} 영수증에서 ${analysisItems.length}개 품목을 추출했습니다.`,
+    extracted_items_json: JSON.stringify({
+      sourceType,
+      supplierName: profile.supplierName,
+      categoryName: profile.categoryName,
+      confidenceScore,
+      totalAmount,
+      rawText: profile.rawText,
+      items: analysisItems,
+    }),
+  } satisfies QuoteRequestDraft["attachments"][number];
+
+  return {
+    fileName: normalizedFileName,
+    sourceType,
+    supplierName: profile.supplierName,
+    categoryName: profile.categoryName,
+    confidenceScore,
+    totalAmount,
+    rawText: profile.rawText,
+    attachment,
+    items: analysisItems.map((itemEntry) =>
+      draftItem(
+        itemEntry.item_name,
+        itemEntry.spec,
+        itemEntry.quantity,
+        itemEntry.unit,
+        itemEntry.review_reason || `이전 구매 단가 ${formatWon(itemEntry.unit_price)}`,
+        true,
+        true,
+        itemEntry.confidence_score,
+        itemEntry.review_status === "needs_review",
+        itemEntry.review_reason,
+      ),
+    ),
+  };
 }
 
 export function calculateRequestQuality(
@@ -4857,6 +4940,11 @@ function normalizeUnit(unit: string) {
   return unit;
 }
 
+function formatWon(value: number) {
+  if (!value) return "확인 필요";
+  return `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 }).format(value)}원`;
+}
+
 function detectCategoryFromAnalysisItems(items: AnalysisItem[]) {
   const scores = items.reduce<Record<string, number>>((acc, itemEntry) => {
     acc[itemEntry.category_name] = (acc[itemEntry.category_name] ?? 0) + 1;
@@ -4928,6 +5016,36 @@ function defaultAnalysisText(sourceType: AnalysisSourceType) {
     return "삼겹살 30kg 450,000원\n양파 15kg 32,000원\n쌈장 14kg 58,000원\n식용유 18L 2통 76,000원";
   }
   return "삼겹살 30키로\n양파 한 망\n식용유 18리터 2통\n배달봉투 대자 1000장";
+}
+
+function receiptAnalysisProfile(fileName: string) {
+  const normalized = fileName.toLowerCase();
+  if (/카페|커피|컵|홀더|빨대/.test(normalized)) {
+    return {
+      supplierName: "성수카페팩",
+      categoryName: "포장재",
+      rawText: "아이스컵 16oz 1000개 72,000원\n돔뚜껑 98파이 1000개 45,000원\n종이빨대 1000개 18,000원\n컵홀더 1000개 36,000원\n컵캐리어 200개 24,000원\n합계 195,000원",
+    };
+  }
+  if (/식자재|마트|고기|삼겹|정육|야채|시장|영수증/.test(normalized) && !/치킨|포장|박스|봉투|컵/.test(normalized)) {
+    return {
+      supplierName: "동대문식자재",
+      categoryName: "식자재",
+      rawText: "삼겹살 30kg 450,000원\n양파 15kg 32,000원\n쌈장 14kg 58,000원\n식용유 18L 2통 76,000원\n합계 616,000원",
+    };
+  }
+  if (/닥트|덕트|환기|후드/.test(normalized)) {
+    return {
+      supplierName: "충주닥트자재",
+      categoryName: "설비/닥트/환기자재",
+      rawText: "스파이럴덕트 300파이 10m 550,000원\n후렉시블 300파이 2BOX 320,000원\n디퓨저 4개 180,000원\n댐퍼 2개 200,000원\n합계 1,250,000원",
+    };
+  }
+  return {
+    supplierName: "서울포장",
+    categoryName: "포장재",
+    rawText: "치킨박스 1,000개 210,000원\n소스컵 2,000개 80,000원\n배달봉투 대형 1,000장 95,000원\n나무젓가락 1,000개 28,000원\n물티슈 1,000개 35,000원\n합계 448,000원",
+  };
 }
 
 function incrementQuoteUsage(data: AppData, supplierId: string, updatedAt: string): AppData {
@@ -6905,6 +7023,8 @@ function normalizeData(data: Partial<AppData>): AppData {
     supplier_reputation_scores: data.supplier_reputation_scores ?? initialData.supplier_reputation_scores,
     user_sanctions: data.user_sanctions ?? initialData.user_sanctions,
     blacklist_entries: data.blacklist_entries ?? initialData.blacklist_entries,
+    business_verifications: data.business_verifications ?? initialData.business_verifications,
+    business_manual_review_requests: data.business_manual_review_requests ?? initialData.business_manual_review_requests,
     feedbacks: data.feedbacks ?? initialData.feedbacks,
     qa_checklists: data.qa_checklists ?? initialData.qa_checklists,
     beta_targets: data.beta_targets ?? initialData.beta_targets,

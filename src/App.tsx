@@ -6,6 +6,7 @@ import {
   addReviewReply,
   analysisDisclosureScopeLabels,
   analysisItemReviewStatusLabels,
+  analyzeReceiptPhotoForQuoteRequest,
   analysisSourceTypeLabels,
   analysisStatusLabels,
   accountingStatusLabels,
@@ -22,6 +23,9 @@ import {
   blacklistTargetTypeLabels,
   archiveNotification,
   businessValidationDecisionLabels,
+  businessManualReviewStatusLabels,
+  businessOperatingStatusLabels,
+  businessVerificationStatusLabels,
   calculateBetaKpis,
   calculateCategoryFocusScores,
   calculateEstimatedSavings,
@@ -127,6 +131,7 @@ import {
   reviewStatusLabels,
   roadmapItemStatusLabels,
   runMockAnalysis,
+  saveData,
   salesActivityResultLabels,
   salesActivityTypeLabels,
   salesLeadPriorityLabels,
@@ -169,32 +174,83 @@ import {
   vatPolicyLabels,
   waivePlatformFee,
 } from "./data/sawaData";
-import type { AccountingStatus, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, UserRole } from "./types";
+import type { AccountingStatus, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, BusinessManualReviewRequest, BusinessManualReviewStatus, BusinessOperatingStatus, BusinessVerification, BusinessVerificationStatus, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, Profile, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, UserRole } from "./types";
 import { appConfig, environmentLabel, isLiveModeReady } from "./lib/env";
-import { isSupabaseConfigured, SUPABASE_PROJECT_URL } from "./lib/supabase/client";
-import { storageBuckets } from "./lib/supabase/storage";
+import { getSupabaseClient, isSupabaseConfigured, SUPABASE_PROJECT_URL } from "./lib/supabase/client";
+import { getCurrentProfile, signOut as signOutSupabase } from "./lib/supabase/auth";
+import { storageBuckets, uploadAppFile } from "./lib/supabase/storage";
 import { liveFeatureMatrix } from "./services/liveDataService";
 
 const today = "2026-07-04";
 
-const navItems = [
-  { label: "홈", path: "/app", icon: Home },
-  { label: "견적요청", path: "/app/requests", icon: ClipboardList },
-  { label: "분석", path: "/app/analyze", icon: SearchCheck },
-  { label: "거래", path: "/app/deals", icon: ReceiptText },
-  { label: "장부", path: "/app/accounting", icon: Landmark },
-  { label: "알림", path: "/app/notifications", icon: Bell },
-  { label: "공급업체", path: "/app/supplier", icon: Store },
-  { label: "관리자", path: "/app/admin", icon: ShieldCheck },
-];
+type NavItem = {
+  label: string;
+  path: string;
+  icon: (props: IconProps) => ReactNode;
+  key?: string;
+};
 
-const mobileNavItems = [
-  { label: "홈", path: "/app", icon: Home },
-  { label: "견적", path: "/app/requests", icon: ClipboardList },
-  { label: "거래", path: "/app/deals", icon: ReceiptText },
-  { label: "자료", path: "/app/analyze", icon: SearchCheck },
-  { label: "알림", path: "/app/notifications", icon: Bell },
-];
+const navItemsByRole: Record<UserRole, NavItem[]> = {
+  buyer: [
+    { label: "홈", path: "/app", icon: Home },
+    { label: "견적요청", path: "/app/requests", icon: ClipboardList },
+    { label: "자료 올리기", path: "/app/analyze", icon: SearchCheck },
+    { label: "거래내역", path: "/app/deals", icon: ReceiptText },
+    { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
+    { label: "구매장부", path: "/app/accounting", icon: Landmark },
+    { label: "알림", path: "/app/notifications", icon: Bell },
+    { label: "내 정보", path: "/app/buyer/onboarding", icon: ShieldCheck },
+  ],
+  supplier: [
+    { label: "공급업체 홈", path: "/app/supplier", icon: Store },
+    { label: "요청찾기", path: "/app/supplier/requests", icon: SearchCheck },
+    { label: "견적관리", path: "/app/supplier/quotes", icon: ClipboardList },
+    { label: "거래관리", path: "/app/supplier/deals", icon: PackageCheck },
+    { label: "문의/알림", path: "/app/supplier/notifications", icon: Bell },
+    { label: "후기/신뢰도", path: "/app/supplier/reputation", icon: BadgeCheck },
+    { label: "정산/요금제", path: "/app/supplier/billing", icon: Landmark },
+    { label: "업체 정보", path: "/app/supplier/profile", icon: Building2 },
+  ],
+  admin: [
+    { label: "관리자 홈", path: "/app/admin", icon: ShieldCheck },
+    { label: "견적요청 관리", path: "/app/admin/requests", icon: ClipboardList },
+    { label: "공급업체 관리", path: "/app/admin/suppliers", icon: UsersRound },
+    { label: "거래 관리", path: "/app/admin/deals", icon: ReceiptText },
+    { label: "자료분석 관리", path: "/app/admin/analysis", icon: SearchCheck },
+    { label: "신고/분쟁", path: "/app/admin/reports", icon: Bell },
+    { label: "후기/신뢰도", path: "/app/admin/reputation", icon: BadgeCheck },
+    { label: "수익/정산", path: "/app/admin/revenue", icon: Landmark },
+    { label: "베타 운영", path: "/app/admin/beta", icon: UsersRound },
+    { label: "피드백/CS", path: "/app/admin/feedback", icon: Bell },
+    { label: "QA", path: "/app/admin/qa", icon: Check },
+    { label: "데모 데이터 관리", path: "/app/admin/mvp-cleanup", icon: RefreshCcw },
+    { label: "설정", path: "/app/admin/supabase", icon: ShieldCheck },
+  ],
+};
+
+const mobileNavItemsByRole: Record<UserRole, NavItem[]> = {
+  buyer: [
+    { label: "홈", path: "/app", icon: Home },
+    { label: "견적", path: "/app/requests", icon: ClipboardList },
+    { label: "거래", path: "/app/deals", icon: ReceiptText },
+    { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
+    { label: "알림", path: "/app/notifications", icon: Bell },
+  ],
+  supplier: [
+    { label: "홈", path: "/app/supplier", icon: Store },
+    { label: "요청", path: "/app/supplier/requests", icon: SearchCheck },
+    { label: "견적", path: "/app/supplier/quotes", icon: ClipboardList },
+    { label: "거래", path: "/app/supplier/deals", icon: PackageCheck },
+    { label: "알림", path: "/app/supplier/notifications", icon: Bell },
+  ],
+  admin: [
+    { label: "홈", path: "/app/admin", icon: ShieldCheck },
+    { label: "요청", path: "/app/admin/requests", icon: ClipboardList },
+    { label: "공급사", path: "/app/admin/suppliers", icon: UsersRound },
+    { label: "신고", path: "/app/admin/reports", icon: Bell },
+    { label: "QA", path: "/app/admin/qa", icon: Check },
+  ],
+};
 
 const emptyItem = {
   item_name: "",
@@ -209,15 +265,268 @@ const emptyItem = {
   review_reason: "",
 };
 
+type ReceiptAnalysisPreview = ReturnType<typeof analyzeReceiptPhotoForQuoteRequest>;
+type ReceiptAnalysisSource = "gemini" | "mock" | "";
+
+type AppAuthSession = {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  businessName: string;
+  businessNumber: string;
+  verificationStatus: BusinessVerificationStatus;
+  supplierApprovalStatus?: SupplierProfile["approval_status"];
+  source: "supabase" | "local";
+};
+
+function getRouteRole(path: string): UserRole | null {
+  if (path.startsWith("/app/admin")) return "admin";
+  if (path.startsWith("/app/supplier") || path === "/partners" || path === "/supplier/apply") return "supplier";
+  return null;
+}
+
+function getShellRole(path: string, session: AppAuthSession | null): UserRole {
+  return getRouteRole(path) ?? session?.role ?? "buyer";
+}
+
+function getRoleLabel(role: UserRole) {
+  if (role === "supplier") return "공급사";
+  if (role === "admin") return "관리자";
+  return "구매자";
+}
+
+function getNotificationUserId(role: UserRole) {
+  if (role === "supplier") return "sup-1-user";
+  if (role === "admin") return "admin-1";
+  return "buyer-1";
+}
+
+function getNotificationPath(role: UserRole) {
+  if (role === "supplier") return "/app/supplier/notifications";
+  if (role === "admin") return "/app/admin/notifications";
+  return "/app/notifications";
+}
+
+function getProfilePath(role: UserRole) {
+  if (role === "supplier") return "/app/supplier/profile";
+  if (role === "admin") return "/app/admin/supabase";
+  return "/app/buyer/onboarding";
+}
+
+function getPrimaryAction(role: UserRole) {
+  if (role === "supplier") return { label: "요청찾기", path: "/app/supplier/requests", icon: SearchCheck };
+  if (role === "admin") return { label: "관리자 설정", path: "/app/admin/supabase", icon: ShieldCheck };
+  return { label: "새 견적요청", path: "/app/requests/new", icon: Plus };
+}
+
+function isNavItemActive(path: string, itemPath: string) {
+  if (itemPath === "/app") return path === "/app" || path === "/";
+  if (itemPath === "/app/admin" || itemPath === "/app/supplier") return path === itemPath;
+  return path === itemPath || path.startsWith(`${itemPath}/`);
+}
+
+type BusinessSignupDraft = {
+  role: "buyer" | "supplier";
+  email: string;
+  password: string;
+  passwordConfirm: string;
+  name: string;
+  phone: string;
+  businessName: string;
+  businessNumber: string;
+  representativeName: string;
+  openingDate: string;
+  region: string;
+  businessAddress: string;
+  categories: string[];
+  serviceRegions: string[];
+  documentFile: File | null;
+  termsAgreed: boolean;
+  privacyAgreed: boolean;
+  verificationConsent: boolean;
+};
+
+type BusinessCheckResult = {
+  ok: boolean;
+  status: BusinessOperatingStatus;
+  label: string;
+  taxType?: string;
+  valid?: boolean;
+  validCode?: string;
+  canRegister: boolean;
+  manualReviewRequired: boolean;
+  message: string;
+  rawStatusCode?: string;
+};
+
+const AUTH_STORAGE_KEY = "ssawa-auth-session-v1";
+
+const defaultSignupDraft: BusinessSignupDraft = {
+  role: "buyer",
+  email: "",
+  password: "",
+  passwordConfirm: "",
+  name: "",
+  phone: "",
+  businessName: "",
+  businessNumber: "",
+  representativeName: "",
+  openingDate: "",
+  region: "",
+  businessAddress: "",
+  categories: [],
+  serviceRegions: [],
+  documentFile: null,
+  termsAgreed: false,
+  privacyAgreed: false,
+  verificationConsent: false,
+};
+
+function makeId(prefix: string) {
+  return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+}
+
+function makeUuid() {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function cleanBusinessNumber(value: string) {
+  return value.replace(/\D/g, "").slice(0, 10);
+}
+
+function formatBusinessNumber(value: string) {
+  const digits = cleanBusinessNumber(value);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+}
+
+function compactDate(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function normalizeStoredSession(value: unknown): AppAuthSession | null {
+  if (!value || typeof value !== "object") return null;
+  const session = value as Partial<AppAuthSession>;
+  if (!session.id || !session.email || !session.role) return null;
+  return {
+    id: session.id,
+    email: session.email,
+    name: session.name ?? session.email,
+    role: session.role,
+    businessName: session.businessName ?? "",
+    businessNumber: session.businessNumber ?? "",
+    verificationStatus: session.verificationStatus ?? "not_started",
+    supplierApprovalStatus: session.supplierApprovalStatus,
+    source: session.source ?? "local",
+  };
+}
+
+function loadStoredAuthSession() {
+  try {
+    return normalizeStoredSession(JSON.parse(window.localStorage.getItem(AUTH_STORAGE_KEY) ?? "null"));
+  } catch {
+    return null;
+  }
+}
+
+function persistAuthSession(session: AppAuthSession | null) {
+  if (!session) {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    return;
+  }
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+}
+
+function authSessionFromProfile(profile: Profile, supplier?: SupplierProfile | null, source: AppAuthSession["source"] = "local"): AppAuthSession {
+  return {
+    id: profile.id,
+    email: profile.email,
+    name: profile.name,
+    role: profile.role,
+    businessName: profile.business_name,
+    businessNumber: profile.business_number,
+    verificationStatus: profile.business_verification_status ?? "not_started",
+    supplierApprovalStatus: supplier?.approval_status,
+    source,
+  };
+}
+
+function isBusinessBlocked(data: AppData, businessNumber: string) {
+  const normalized = cleanBusinessNumber(businessNumber);
+  return data.blacklist_entries.some((entry) => entry.status === "active" && entry.target_type === "business_number" && cleanBusinessNumber(entry.target_value) === normalized);
+}
+
+function isBusinessDuplicated(data: AppData, businessNumber: string) {
+  const normalized = cleanBusinessNumber(businessNumber);
+  return data.profiles.some((profile) => cleanBusinessNumber(profile.business_number) === normalized) || data.supplier_profiles.some((supplier) => cleanBusinessNumber(supplier.business_number) === normalized);
+}
+
+function parseBusinessApiError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return "사업자 인증 API를 호출하지 못했습니다.";
+}
+
 export default function App() {
   const [path, setPath] = useState(normalizePath(window.location.pathname));
   const [data, setData] = useState<AppData>(() => loadData());
+  const [authSession, setAuthSession] = useState<AppAuthSession | null>(() => loadStoredAuthSession());
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     const onPopState = () => setPath(normalizePath(window.location.pathname));
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const client = getSupabaseClient();
+
+    async function loadSupabaseProfile() {
+      const stored = loadStoredAuthSession();
+      if (stored && mounted) setAuthSession(stored);
+
+      if (!client) {
+        if (mounted) setAuthReady(true);
+        return;
+      }
+
+      const profile = (await getCurrentProfile()) as Profile | null;
+      if (profile && mounted) {
+        const supplier = data.supplier_profiles.find((entry) => entry.user_id === profile.id);
+        const nextSession = authSessionFromProfile(profile, supplier, "supabase");
+        setAuthSession(nextSession);
+        persistAuthSession(nextSession);
+      }
+      if (mounted) setAuthReady(true);
+    }
+
+    void loadSupabaseProfile();
+    const listener = client?.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        if (mounted) {
+          setAuthSession(loadStoredAuthSession());
+          setAuthReady(true);
+        }
+        return;
+      }
+      void getCurrentProfile().then((profile) => {
+        if (!mounted || !profile) return;
+        const typedProfile = profile as Profile;
+        const supplier = data.supplier_profiles.find((entry) => entry.user_id === typedProfile.id);
+        const nextSession = authSessionFromProfile(typedProfile, supplier, "supabase");
+        setAuthSession(nextSession);
+        persistAuthSession(nextSession);
+      });
+    });
+
+    return () => {
+      mounted = false;
+      listener?.data.subscription.unsubscribe();
+    };
+  }, [data.supplier_profiles]);
 
   function navigate(nextPath: string) {
     const normalized = normalizePath(nextPath);
@@ -230,8 +539,25 @@ export default function App() {
     setData(nextData);
   }
 
-  const page = renderRoute(path, data, navigate, replaceData);
-  const buyerUnreadNotifications = getUnreadNotificationCount(data, "buyer-1");
+  function applyAuthSession(nextSession: AppAuthSession | null) {
+    setAuthSession(nextSession);
+    persistAuthSession(nextSession);
+  }
+
+  async function handleSignOut() {
+    applyAuthSession(null);
+    await signOutSupabase();
+    navigate("/login");
+  }
+
+  const shellRole = getShellRole(path, authSession);
+  const navItems = navItemsByRole[shellRole];
+  const mobileNavItems = mobileNavItemsByRole[shellRole];
+  const notificationPath = getNotificationPath(shellRole);
+  const unreadNotifications = getUnreadNotificationCount(data, getNotificationUserId(shellRole));
+  const primaryAction = getPrimaryAction(shellRole);
+  const PrimaryActionIcon = primaryAction.icon;
+  const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole);
 
   return (
     <div className="appShell">
@@ -246,12 +572,12 @@ export default function App() {
         <nav className="sideNav">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = path === item.path || (item.path !== "/app" && path.startsWith(item.path));
+            const active = isNavItemActive(path, item.path);
             return (
-              <button className={active ? "navButton active" : "navButton"} type="button" onClick={() => navigate(item.path)} key={item.path}>
+              <button className={active ? "navButton active" : "navButton"} type="button" onClick={() => navigate(item.path)} key={item.key ?? item.path}>
                 <span className="navIconWrap">
                   <Icon size={18} />
-                  {item.path === "/app/notifications" && buyerUnreadNotifications > 0 && <UnreadBadge count={buyerUnreadNotifications} />}
+                  {item.path === notificationPath && unreadNotifications > 0 && <UnreadBadge count={unreadNotifications} />}
                 </span>
                 <span>{item.label}</span>
               </button>
@@ -259,8 +585,8 @@ export default function App() {
           })}
         </nav>
         <div className="sidebarFooter">
-          <span>오늘 기준 샘플 데이터</span>
-          <strong>{today}</strong>
+          <span>{getRoleLabel(shellRole)} 업무 공간</span>
+          <strong>{shellRole === "admin" ? `샘플 기준 ${today}` : shellRole === "supplier" ? "요청 응답과 거래 관리" : "견적 비교와 구매정리"}</strong>
         </div>
       </aside>
 
@@ -271,19 +597,48 @@ export default function App() {
             <span>싸와!</span>
           </button>
           <div className="topbarActions">
-            {isDemoMode(data) && <span className="demoBadge">{environmentLabels[data.environment]} 데이터</span>}
-            <button className="ghostButton" type="button" onClick={() => replaceData(resetDemoData())}>
-              <RefreshCcw size={16} />
-              데모 초기화
-            </button>
-            <button className="ghostButton compact notificationTopButton" type="button" onClick={() => navigate("/app/notifications")}>
+            {authSession ? (
+              <span className="authBadge">
+                <ShieldCheck size={15} />
+                {authSession.businessName || authSession.email}
+                <small>{getRoleLabel(authSession.role)}</small>
+              </span>
+            ) : authReady ? (
+              <>
+                <button className="ghostButton compact" type="button" onClick={() => navigate("/login")}>
+                  로그인
+                </button>
+                <button className="secondaryButton compact" type="button" onClick={() => navigate("/signup")}>
+                  회원가입
+                </button>
+              </>
+            ) : null}
+            {authSession && (
+              <button className="ghostButton compact" type="button" onClick={handleSignOut}>
+                로그아웃
+              </button>
+            )}
+            {isDemoMode(data) && shellRole === "admin" && <span className="demoBadge">{environmentLabels[data.environment]} 데이터</span>}
+            {shellRole === "admin" && (
+              <button className="ghostButton" type="button" onClick={() => replaceData(resetDemoData())}>
+                <RefreshCcw size={16} />
+                데모 초기화
+              </button>
+            )}
+            <button className="ghostButton compact notificationTopButton" type="button" onClick={() => navigate(notificationPath)}>
               <Bell size={16} />
               알림
-              {buyerUnreadNotifications > 0 && <UnreadBadge count={buyerUnreadNotifications} />}
+              {unreadNotifications > 0 && <UnreadBadge count={unreadNotifications} />}
             </button>
-            <button className="primaryButton compact" type="button" onClick={() => navigate("/app/requests/new")}>
-              <Plus size={16} />
-              견적요청
+            {shellRole !== "admin" && (
+              <button className="ghostButton compact" type="button" onClick={() => navigate(getProfilePath(shellRole))}>
+                <ShieldCheck size={16} />
+                내 정보
+              </button>
+            )}
+            <button className="primaryButton compact" type="button" onClick={() => navigate(primaryAction.path)}>
+              <PrimaryActionIcon size={16} />
+              {primaryAction.label}
             </button>
           </div>
         </header>
@@ -293,12 +648,12 @@ export default function App() {
       <nav className="bottomNav" aria-label="모바일 주요 메뉴">
         {mobileNavItems.map((item) => {
           const Icon = item.icon;
-          const active = path === item.path || (item.path !== "/app" && path.startsWith(item.path));
+          const active = isNavItemActive(path, item.path);
           return (
             <button className={active ? "bottomNavButton active" : "bottomNavButton"} type="button" onClick={() => navigate(item.path)} key={item.path}>
               <span className="navIconWrap">
                 <Icon size={18} />
-                {item.path === "/app/notifications" && buyerUnreadNotifications > 0 && <UnreadBadge count={buyerUnreadNotifications} />}
+                {item.path === notificationPath && unreadNotifications > 0 && <UnreadBadge count={unreadNotifications} />}
               </span>
               <span>{item.label}</span>
             </button>
@@ -309,7 +664,11 @@ export default function App() {
   );
 }
 
-function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (data: AppData) => void) {
+function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (data: AppData) => void, authSession: AppAuthSession | null, onAuthChange: (session: AppAuthSession | null) => void, shellRole: UserRole) {
+  if (path === "/login") return <LoginPage data={data} navigate={navigate} onAuthChange={onAuthChange} />;
+  if (path === "/signup") return <SignupPage data={data} navigate={navigate} setData={setData} onAuthChange={onAuthChange} />;
+  if (path === "/signup/manual-review") return <ManualReviewInfoPage data={data} navigate={navigate} authSession={authSession} />;
+  if (path === "/signup/pending") return <SignupPendingPage data={data} navigate={navigate} authSession={authSession} />;
   if (path === "/terms") return <PolicyPage type="terms" navigate={navigate} />;
   if (path === "/privacy") return <PolicyPage type="privacy" navigate={navigate} />;
   if (path === "/operation-policy") return <PolicyPage type="operation" navigate={navigate} />;
@@ -317,7 +676,11 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/beta") return <BetaNoticePage navigate={navigate} appMode={false} />;
   if (path === "/beta-notice") return <BetaNoticePage navigate={navigate} appMode={false} />;
   if (path === "/partners" || path === "/supplier/apply") return <PartnersPage navigate={navigate} />;
-  if (path === "/app" || path === "/") return <HomePage data={data} navigate={navigate} />;
+  if (path === "/app" || path === "/") {
+    if (shellRole === "admin") return <AdminDashboard data={data} navigate={navigate} />;
+    if (shellRole === "supplier") return <SupplierDashboard data={data} navigate={navigate} />;
+    return <HomePage data={data} navigate={navigate} />;
+  }
   if (path === "/app/onboarding" || path === "/app/buyer/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="buyer" />;
   if (path === "/app/supplier/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="supplier" />;
   if (path === "/app/beta") return <BetaNoticePage navigate={navigate} appMode />;
@@ -395,6 +758,8 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/admin/reputation") return <AdminReputationPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/admin/sanctions") return <AdminSanctionsPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/admin/operations") return <AdminOperationsPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/business-verifications") return <AdminBusinessVerificationsPage data={data} setData={setData} navigate={navigate} />;
+  if (path === "/app/admin/manual-reviews") return <AdminManualReviewsPage data={data} setData={setData} navigate={navigate} />;
   if (path === "/app/admin/feedback") return <AdminFeedbackPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/admin/qa") return <AdminQaPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/admin/supabase") return <AdminSupabasePage data={data} navigate={navigate} />;
@@ -412,6 +777,671 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/admin/suppliers") return <AdminSuppliersPage data={data} setData={setData} />;
   if (path === "/app/admin/categories") return <AdminCategoriesPage data={data} />;
   return <NotFound navigate={navigate} />;
+}
+
+function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: Navigate; onAuthChange: (session: AppAuthSession | null) => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function finishLogin(profile: Profile, source: AppAuthSession["source"]) {
+    const supplier = data.supplier_profiles.find((entry) => entry.user_id === profile.id);
+    const session = authSessionFromProfile(profile, supplier, source);
+    onAuthChange(session);
+    navigate(profile.role === "supplier" ? "/app/supplier" : profile.role === "admin" ? "/app/admin" : "/app");
+  }
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setStatus("");
+    setSubmitting(true);
+    try {
+      const client = getSupabaseClient();
+      if (client) {
+        const { error } = await client.auth.signInWithPassword({ email: email.trim(), password });
+        if (error) throw error;
+        const profile = (await getCurrentProfile()) as Profile | null;
+        if (profile) {
+          await finishLogin(profile, "supabase");
+          return;
+        }
+      }
+
+      const localProfile = data.profiles.find((profile) => profile.email.toLowerCase() === email.trim().toLowerCase());
+      if (!localProfile) throw new Error("가입된 이메일을 찾을 수 없습니다.");
+      await finishLogin(localProfile, "local");
+    } catch (error) {
+      setStatus(parseBusinessApiError(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function demoLogin(role: UserRole) {
+    const profile = data.profiles.find((entry) => entry.role === role) ?? data.profiles[0];
+    if (profile) void finishLogin(profile, "local");
+  }
+
+  return (
+    <section className="authPage">
+      <div className="authHero">
+        <span className="eyebrow">싸와! 계정</span>
+        <h1>사업자 인증 기반 로그인</h1>
+        <p>구매자와 공급사는 사업자번호 인증 상태에 따라 온보딩, 견적 요청, 공급사 참여 권한이 나뉩니다.</p>
+      </div>
+      <form className="authPanel" onSubmit={handleSubmit}>
+        <Field label="이메일">
+          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" />
+        </Field>
+        <Field label="비밀번호">
+          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" />
+        </Field>
+        {status && <p className="formStatus error">{status}</p>}
+        <button className="primaryButton full" type="submit" disabled={submitting}>
+          <ShieldCheck size={17} />
+          {submitting ? "확인 중" : "로그인"}
+        </button>
+        <button className="ghostButton full" type="button" onClick={() => navigate("/signup")}>회원가입으로 이동</button>
+        <div className="demoLoginGrid" aria-label="데모 로그인">
+          <button className="secondaryButton compact" type="button" onClick={() => demoLogin("buyer")}>구매자 데모</button>
+          <button className="secondaryButton compact" type="button" onClick={() => demoLogin("supplier")}>공급사 데모</button>
+          <button className="secondaryButton compact" type="button" onClick={() => demoLogin("admin")}>관리자 데모</button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps & { onAuthChange: (session: AppAuthSession | null) => void }) {
+  const [draft, setDraft] = useState<BusinessSignupDraft>(defaultSignupDraft);
+  const [businessCheck, setBusinessCheck] = useState<BusinessCheckResult | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [status, setStatus] = useState("");
+  const [statusTone, setStatusTone] = useState<"info" | "error" | "success">("info");
+
+  const businessNumber = cleanBusinessNumber(draft.businessNumber);
+  const supplierCategories = draft.categories.length ? draft.categories : [data.categories[0]?.name ?? "기타"];
+  const supplierRegions = draft.serviceRegions.length ? draft.serviceRegions : [draft.region].filter(Boolean);
+
+  function update<K extends keyof BusinessSignupDraft>(key: K, value: BusinessSignupDraft[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function showStatus(message: string, tone: "info" | "error" | "success" = "info") {
+    setStatus(message);
+    setStatusTone(tone);
+  }
+
+  function validateCommonFields() {
+    if (!draft.email.trim() || !draft.password || !draft.name.trim()) return "계정 정보를 입력해 주세요.";
+    if (draft.password.length < 8) return "비밀번호는 8자 이상으로 입력해 주세요.";
+    if (draft.password !== draft.passwordConfirm) return "비밀번호 확인이 일치하지 않습니다.";
+    if (businessNumber.length !== 10) return "사업자등록번호 10자리를 입력해 주세요.";
+    if (!draft.businessName.trim() || !draft.representativeName.trim() || !draft.openingDate) return "상호, 대표자명, 개업일자를 입력해 주세요.";
+    if (!draft.region.trim() || !draft.phone.trim()) return "지역과 연락처를 입력해 주세요.";
+    if (!draft.termsAgreed || !draft.privacyAgreed || !draft.verificationConsent) return "약관, 개인정보 처리, 사업자 인증 조회 동의가 필요합니다.";
+    if (draft.role === "supplier" && !draft.documentFile) return "공급사는 사업자등록증 또는 입점 증빙 파일을 첨부해 주세요.";
+    if (isBusinessBlocked(data, businessNumber)) return "운영 정책상 가입이 제한된 사업자번호입니다.";
+    if (isBusinessDuplicated(data, businessNumber)) return "이미 등록된 사업자번호입니다.";
+    return "";
+  }
+
+  async function callBusinessApi(endpoint: string, payload: Record<string, unknown>) {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = (await response.json().catch(() => ({}))) as Partial<BusinessCheckResult>;
+    if (!response.ok && !json.manualReviewRequired) throw new Error(json.message ?? "사업자 인증 API 확인에 실패했습니다.");
+    const normalizedStatus = json.status ?? "api_error";
+    const manualReviewRequired = Boolean(json.manualReviewRequired) || normalizedStatus === "api_error";
+    return {
+      ok: Boolean(json.ok),
+      status: normalizedStatus,
+      label: json.label ?? businessOperatingStatusLabels[normalizedStatus] ?? businessOperatingStatusLabels.api_error,
+      taxType: json.taxType,
+      valid: json.valid,
+      validCode: json.validCode,
+      canRegister: Boolean(json.canRegister) || manualReviewRequired,
+      manualReviewRequired,
+      message: json.message ?? "인증 결과를 확인했습니다.",
+      rawStatusCode: json.rawStatusCode,
+    } satisfies BusinessCheckResult;
+  }
+
+  async function handleStatusCheck() {
+    const fieldError = validateCommonFields();
+    if (fieldError && !fieldError.includes("약관") && !fieldError.includes("비밀번호 확인") && !fieldError.includes("비밀번호는")) {
+      showStatus(fieldError, "error");
+      return;
+    }
+    if (businessNumber.length !== 10) {
+      showStatus("사업자등록번호 10자리를 입력해 주세요.", "error");
+      return;
+    }
+    setChecking(true);
+    try {
+      const result = await callBusinessApi("/api/business/status", { businessNumber });
+      setBusinessCheck(result);
+      showStatus(result.message, result.ok ? "success" : result.manualReviewRequired ? "info" : "error");
+    } catch (error) {
+      const fallback: BusinessCheckResult = {
+        ok: false,
+        status: "api_error",
+        label: businessOperatingStatusLabels.api_error,
+        canRegister: true,
+        manualReviewRequired: true,
+        message: parseBusinessApiError(error),
+      };
+      setBusinessCheck(fallback);
+      showStatus("국세청 상태 확인이 지연되어 수동 검토로 접수할 수 있습니다.", "info");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  async function handleValidateBusiness() {
+    if (!businessCheck) {
+      showStatus("먼저 사업자 상태 확인을 진행해 주세요.", "error");
+      return;
+    }
+    if (businessCheck.status === "closed" || businessCheck.status === "suspended") {
+      showStatus("휴업 또는 폐업 사업자는 가입할 수 없습니다.", "error");
+      return;
+    }
+    setChecking(true);
+    try {
+      const result = await callBusinessApi("/api/business/validate", {
+        businessNumber,
+        representativeName: draft.representativeName,
+        openingDate: compactDate(draft.openingDate),
+      });
+      const merged = { ...businessCheck, ...result, status: result.status || businessCheck.status, label: result.label || businessCheck.label };
+      setBusinessCheck(merged);
+      showStatus(merged.message, merged.valid ? "success" : "info");
+    } catch (error) {
+      setBusinessCheck((current) => current ? { ...current, ok: false, valid: false, manualReviewRequired: true, message: parseBusinessApiError(error) } : current);
+      showStatus("진위 확인이 지연되어 수동 검토로 접수할 수 있습니다.", "info");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  async function writeSupabaseSignup(userId: string, profile: Profile, verification: BusinessVerification, supplier: SupplierProfile | null, manualReview: BusinessManualReviewRequest | null) {
+    const client = getSupabaseClient();
+    if (!client) return;
+    const profilePayload = {
+      id: userId,
+      name: profile.name,
+      email: profile.email,
+      role: profile.role,
+      business_name: profile.business_name,
+      business_number: profile.business_number,
+      phone: profile.phone,
+      region: profile.region,
+      representative_name: profile.representative_name,
+      business_opening_date: profile.business_opening_date,
+      business_address: profile.business_address,
+      business_status: profile.business_status,
+      business_tax_type: profile.business_tax_type,
+      business_verification_status: profile.business_verification_status,
+      business_verified_at: profile.business_verified_at,
+      onboarding_completed: profile.onboarding_completed,
+    };
+    await (client as any).from("profiles").upsert(profilePayload, { onConflict: "id" });
+    await (client as any).from("business_verifications").insert(verification);
+    if (supplier) await (client as any).from("supplier_profiles").insert(supplier);
+    if (manualReview) await (client as any).from("business_manual_review_requests").insert(manualReview);
+  }
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setStatus("");
+    const fieldError = validateCommonFields();
+    if (fieldError) {
+      showStatus(fieldError, "error");
+      return;
+    }
+    if (!businessCheck) {
+      showStatus("사업자 상태 확인과 진위 확인을 먼저 진행해 주세요.", "error");
+      return;
+    }
+    if (businessCheck.status === "closed" || businessCheck.status === "suspended") {
+      showStatus("휴업 또는 폐업 사업자는 가입할 수 없습니다.", "error");
+      return;
+    }
+    if (businessCheck.status === "active" && businessCheck.valid !== true && !businessCheck.manualReviewRequired) {
+      showStatus("계속사업자는 대표자명과 개업일자 진위 확인을 완료해야 합니다.", "error");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const createdAt = new Date().toISOString();
+      const client = getSupabaseClient();
+      let userId = makeId("user");
+      let source: AppAuthSession["source"] = "local";
+
+      if (client) {
+        const { data: signupData, error } = await client.auth.signUp({
+          email: draft.email.trim(),
+          password: draft.password,
+          options: {
+            data: {
+              role: draft.role,
+              business_name: draft.businessName.trim(),
+              business_number: businessNumber,
+            },
+          },
+        });
+        if (error) throw error;
+        userId = signupData.user?.id ?? userId;
+        source = "supabase";
+      }
+
+      const verificationStatus: BusinessVerificationStatus = businessCheck.valid === true ? "verified" : businessCheck.manualReviewRequired ? "manual_review_required" : "failed";
+      const verificationId = makeUuid();
+      const profile: Profile = {
+        id: userId,
+        name: draft.name.trim(),
+        email: draft.email.trim(),
+        role: draft.role,
+        business_name: draft.businessName.trim(),
+        business_number: formatBusinessNumber(businessNumber),
+        phone: draft.phone.trim(),
+        region: draft.region.trim(),
+        representative_name: draft.representativeName.trim(),
+        business_opening_date: draft.openingDate,
+        business_address: draft.businessAddress.trim(),
+        business_status: businessCheck.status,
+        business_tax_type: businessCheck.taxType,
+        business_verification_status: verificationStatus,
+        business_verified_at: verificationStatus === "verified" ? createdAt : undefined,
+        onboarding_completed: false,
+        created_at: createdAt,
+      };
+      const supplierId = draft.role === "supplier" ? makeUuid() : "";
+      let documentUrl = "";
+      if (draft.documentFile && client) {
+        const uploadResult = await uploadAppFile("supplierDocument", userId, draft.documentFile);
+        if (uploadResult.ok) documentUrl = `${uploadResult.bucket}/${uploadResult.path}`;
+      }
+      const supplier: SupplierProfile | null = draft.role === "supplier" ? {
+        id: supplierId,
+        user_id: userId,
+        business_name: profile.business_name,
+        business_number: profile.business_number,
+        representative_name: draft.representativeName.trim(),
+        manager_name: draft.name.trim(),
+        manager_phone: draft.phone.trim(),
+        phone: draft.phone.trim(),
+        email: draft.email.trim(),
+        address: draft.businessAddress.trim() || draft.region.trim(),
+        description: `${supplierRegions.join(", ")} 지역 ${supplierCategories.join(", ")} 공급사 입점 신청`,
+        service_regions: supplierRegions,
+        categories: supplierCategories,
+        sub_categories: [],
+        min_order_amount: 0,
+        delivery_fee_policy: "협의",
+        free_delivery_min_amount: 0,
+        same_day_delivery_available: false,
+        urgent_delivery_available: false,
+        delivery_days: [],
+        delivery_time_slots: [],
+        tax_invoice_available: true,
+        card_payment_available: true,
+        bank_transfer_available: true,
+        on_site_payment_available: false,
+        default_quote_valid_days: 3,
+        approval_status: "pending",
+        operational_status: "normal",
+        business_verification_id: verificationId,
+        document_status: draft.documentFile ? "pending_review" : "uploaded",
+        admin_memo: "회원가입 사업자 인증 후 입점 승인 대기",
+        created_at: createdAt,
+        updated_at: createdAt,
+      } : null;
+      const verification: BusinessVerification = {
+        id: verificationId,
+        user_id: userId,
+        role_requested: draft.role,
+        business_name: profile.business_name,
+        business_number: profile.business_number,
+        representative_name: draft.representativeName.trim(),
+        opening_date: draft.openingDate,
+        phone: draft.phone.trim(),
+        email: draft.email.trim(),
+        region: draft.region.trim(),
+        business_address: draft.businessAddress.trim(),
+        status_check_status: businessCheck.status,
+        status_check_label: businessCheck.label,
+        tax_type: businessCheck.taxType,
+        verification_status: verificationStatus,
+        verification_method: verificationStatus === "verified" ? "nts_validate" : businessCheck.status === "api_error" ? "manual_review" : "nts_status",
+        can_register: businessCheck.canRegister || businessCheck.manualReviewRequired,
+        failure_reason: verificationStatus === "verified" ? undefined : businessCheck.message,
+        attempt_count: 1,
+        raw_status_code: businessCheck.rawStatusCode,
+        raw_valid_code: businessCheck.validCode,
+        created_at: createdAt,
+        updated_at: createdAt,
+      };
+      const manualReview: BusinessManualReviewRequest | null = verificationStatus === "verified" ? null : {
+        id: makeUuid(),
+        user_id: userId,
+        role_requested: draft.role,
+        business_name: profile.business_name,
+        business_number: profile.business_number,
+        representative_name: draft.representativeName.trim(),
+        opening_date: draft.openingDate,
+        phone: draft.phone.trim(),
+        email: draft.email.trim(),
+        reason: businessCheck.message,
+        status: "submitted",
+        document_name: draft.documentFile?.name,
+        document_url: documentUrl || (draft.documentFile ? `local://${draft.documentFile.name}` : undefined),
+        created_at: createdAt,
+        updated_at: createdAt,
+      };
+      const nextData: AppData = {
+        ...data,
+        profiles: [profile, ...data.profiles],
+        supplier_profiles: supplier ? [supplier, ...data.supplier_profiles] : data.supplier_profiles,
+        supplier_documents: supplier && draft.documentFile ? [{
+          id: makeId("doc"),
+          supplier_id: supplier.id,
+          document_type: "business_license",
+          file_url: documentUrl || `local://${draft.documentFile.name}`,
+          file_name: draft.documentFile.name,
+          status: "pending_review",
+          uploaded_at: createdAt,
+        }, ...data.supplier_documents] : data.supplier_documents,
+        business_verifications: [verification, ...data.business_verifications],
+        business_manual_review_requests: manualReview ? [manualReview, ...data.business_manual_review_requests] : data.business_manual_review_requests,
+      };
+      saveData(nextData);
+      setData(nextData);
+      const session = authSessionFromProfile(profile, supplier, source);
+      onAuthChange(session);
+      await writeSupabaseSignup(userId, profile, verification, supplier, manualReview);
+      navigate(verificationStatus !== "verified" ? "/signup/manual-review" : draft.role === "supplier" ? "/signup/pending" : "/app/buyer/onboarding");
+    } catch (error) {
+      showStatus(parseBusinessApiError(error), "error");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="authPage signupPage">
+      <div className="authHero">
+        <span className="eyebrow">사업자 인증 회원가입</span>
+        <h1>사업자번호를 확인하고 싸와! 계정을 만듭니다</h1>
+        <p>국세청 상태 확인과 대표자·개업일자 진위 확인을 통과하면 바로 가입됩니다. API 오류나 신규 사업자는 운영팀 수동 검토로 접수됩니다.</p>
+      </div>
+      <form className="authPanel signupPanel" onSubmit={handleSubmit}>
+        <div className="roleSelector">
+          <button className={draft.role === "buyer" ? "roleCard active" : "roleCard"} type="button" onClick={() => update("role", "buyer")}>
+            <BadgeCheck size={20} />
+            <strong>구매자</strong>
+            <span>음식점, 카페, 매장 운영자</span>
+          </button>
+          <button className={draft.role === "supplier" ? "roleCard active" : "roleCard"} type="button" onClick={() => update("role", "supplier")}>
+            <Store size={20} />
+            <strong>공급사</strong>
+            <span>자재 납품·견적 참여 업체</span>
+          </button>
+        </div>
+        <div className="formGrid">
+          <Field label="이메일"><input type="email" value={draft.email} onChange={(event) => update("email", event.target.value)} required autoComplete="email" /></Field>
+          <Field label="비밀번호"><input type="password" value={draft.password} onChange={(event) => update("password", event.target.value)} required autoComplete="new-password" /></Field>
+          <Field label="비밀번호 확인"><input type="password" value={draft.passwordConfirm} onChange={(event) => update("passwordConfirm", event.target.value)} required autoComplete="new-password" /></Field>
+          <Field label="담당자명"><input value={draft.name} onChange={(event) => update("name", event.target.value)} required /></Field>
+          <Field label="연락처"><input value={draft.phone} onChange={(event) => update("phone", event.target.value)} required placeholder="010-0000-0000" /></Field>
+          <Field label="지역"><input value={draft.region} onChange={(event) => update("region", event.target.value)} required placeholder="예: 서울 강남구" /></Field>
+          <Field label="상호"><input value={draft.businessName} onChange={(event) => update("businessName", event.target.value)} required /></Field>
+          <Field label="사업자등록번호"><input value={formatBusinessNumber(draft.businessNumber)} onChange={(event) => update("businessNumber", formatBusinessNumber(event.target.value))} required inputMode="numeric" /></Field>
+          <Field label="대표자명"><input value={draft.representativeName} onChange={(event) => update("representativeName", event.target.value)} required /></Field>
+          <Field label="개업일자"><input type="date" value={draft.openingDate} onChange={(event) => update("openingDate", event.target.value)} required /></Field>
+        </div>
+        <Field label="사업장 주소"><input value={draft.businessAddress} onChange={(event) => update("businessAddress", event.target.value)} placeholder="예: 서울 강남구 테헤란로 12" /></Field>
+        {draft.role === "supplier" && (
+          <div className="supplierSignupBlock">
+            <SectionHeader title="공급사 입점 정보" />
+            <Field label="취급 카테고리">
+              <div className="chipSelector">
+                {data.categories.filter((category) => !category.parent_id).slice(0, 8).map((category) => (
+                  <button
+                    className={draft.categories.includes(category.name) ? "chipButton active" : "chipButton"}
+                    type="button"
+                    onClick={() => update("categories", draft.categories.includes(category.name) ? draft.categories.filter((name) => name !== category.name) : [...draft.categories, category.name])}
+                    key={category.id}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="납품 가능 지역">
+              <input value={draft.serviceRegions.join(", ")} onChange={(event) => update("serviceRegions", event.target.value.split(",").map((value) => value.trim()).filter(Boolean))} placeholder="예: 서울 강남구, 서울 서초구" />
+            </Field>
+            <Field label="사업자등록증/입점 증빙">
+              <input type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.pdf" onChange={(event) => update("documentFile", event.target.files?.[0] ?? null)} />
+            </Field>
+          </div>
+        )}
+        <div className="businessCheckPanel">
+          <div>
+            <strong>국세청 사업자 확인</strong>
+            <span>상태 확인 후 대표자명·개업일자를 한 번 더 검증합니다.</span>
+          </div>
+          <div className="businessCheckActions">
+            <button className="secondaryButton compact" type="button" onClick={handleStatusCheck} disabled={checking}>
+              상태 확인
+            </button>
+            <button className="primaryButton compact" type="button" onClick={handleValidateBusiness} disabled={checking || !businessCheck}>
+              진위 확인
+            </button>
+          </div>
+          {businessCheck && (
+            <div className="businessCheckResult">
+              <StatusBadge tone={businessCheck.valid ? "green" : businessCheck.manualReviewRequired ? "orange" : businessCheck.ok ? "blue" : "gray"}>
+                {businessCheck.valid ? "진위 확인 완료" : businessCheck.label}
+              </StatusBadge>
+              <span>{businessCheck.message}</span>
+              {businessCheck.taxType && <small>{businessCheck.taxType}</small>}
+            </div>
+          )}
+        </div>
+        <div className="toggleGrid">
+          <Toggle checked={draft.termsAgreed} label="서비스 이용약관에 동의합니다" onChange={(checked) => update("termsAgreed", checked)} />
+          <Toggle checked={draft.privacyAgreed} label="개인정보 처리방침에 동의합니다" onChange={(checked) => update("privacyAgreed", checked)} />
+          <Toggle checked={draft.verificationConsent} label="사업자번호 상태 및 진위 확인 조회에 동의합니다" onChange={(checked) => update("verificationConsent", checked)} />
+        </div>
+        {status && <p className={`formStatus ${statusTone}`}>{status}</p>}
+        <div className="formActions">
+          <button className="ghostButton" type="button" onClick={() => navigate("/login")}>로그인</button>
+          <button className="primaryButton" type="submit" disabled={submitting || checking}>
+            <ShieldCheck size={17} />
+            {submitting ? "가입 처리 중" : draft.role === "supplier" ? "입점 신청하기" : "회원가입 완료"}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function ManualReviewInfoPage({ data, navigate, authSession }: { data: AppData; navigate: Navigate; authSession: AppAuthSession | null }) {
+  const review = authSession ? data.business_manual_review_requests.find((entry) => entry.user_id === authSession.id) : data.business_manual_review_requests[0];
+  return (
+    <section className="authPage">
+      <div className="authHero">
+        <span className="eyebrow">수동 검토 접수</span>
+        <h1>운영팀이 사업자 정보를 확인하고 있습니다</h1>
+        <p>국세청 API 지연, 신규 사업자 미반영, 대표자·개업일자 불일치가 있으면 서류 기반으로 확인합니다.</p>
+      </div>
+      <div className="authPanel">
+        {review ? (
+          <>
+            <Metric label="검토 상태" value={businessManualReviewStatusLabels[review.status]} icon={<ShieldCheck />} />
+            <InfoPanel title="접수 정보" items={[review.business_name, formatBusinessNumber(review.business_number), review.reason, review.document_name ? `첨부: ${review.document_name}` : "첨부 없음"]} />
+          </>
+        ) : (
+          <EmptyState icon={<ShieldCheck />} title="접수 내역이 없습니다." desc="회원가입에서 사업자 인증을 먼저 진행해 주세요." />
+        )}
+        <div className="formActions">
+          <button className="secondaryButton" type="button" onClick={() => navigate("/signup")}>다시 가입하기</button>
+          <button className="primaryButton" type="button" onClick={() => navigate("/login")}>로그인 화면</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SignupPendingPage({ data, navigate, authSession }: { data: AppData; navigate: Navigate; authSession: AppAuthSession | null }) {
+  const supplier = authSession ? data.supplier_profiles.find((entry) => entry.user_id === authSession.id) : data.supplier_profiles.find((entry) => entry.approval_status === "pending");
+  return (
+    <section className="authPage">
+      <div className="authHero">
+        <span className="eyebrow">공급사 승인 대기</span>
+        <h1>입점 신청이 접수되었습니다</h1>
+        <p>사업자 인증을 통과해도 공급사는 운영팀 승인 후 견적 요청에 참여할 수 있습니다.</p>
+      </div>
+      <div className="authPanel">
+        {supplier ? (
+          <>
+            <Metric label="승인 상태" value={supplierApprovalLabels[supplier.approval_status]} icon={<BadgeCheck />} />
+            <InfoPanel title="입점 정보" items={[supplier.business_name, supplier.representative_name, supplier.categories.join(", "), supplier.service_regions.join(", ")]} />
+          </>
+        ) : (
+          <EmptyState icon={<Store />} title="입점 신청 내역이 없습니다." desc="공급사 회원가입을 먼저 진행해 주세요." />
+        )}
+        <div className="formActions">
+          <button className="secondaryButton" type="button" onClick={() => navigate("/app/supplier/profile")}>프로필 보완</button>
+          <button className="primaryButton" type="button" onClick={() => navigate("/app/supplier")}>공급사 홈</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AdminBusinessVerificationsPage({ data, setData, navigate }: MutatingPageProps) {
+  function patchVerification(id: string, status: BusinessVerificationStatus) {
+    const updatedAt = new Date().toISOString();
+    const nextData = {
+      ...data,
+      business_verifications: data.business_verifications.map((entry) => entry.id === id ? { ...entry, verification_status: status, manually_reviewed_by: "admin-1", manually_reviewed_at: updatedAt, updated_at: updatedAt } : entry),
+    };
+    saveData(nextData);
+    setData(nextData);
+  }
+
+  return (
+    <section className="page">
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <div className="pageHeader">
+        <span className="eyebrow">사업자 인증</span>
+        <h1>사업자 인증 이력</h1>
+        <p>회원가입 단계에서 생성된 국세청 상태 확인, 진위 확인, 수동 검토 전환 이력을 확인합니다.</p>
+      </div>
+      <div className="metricGrid">
+        <Metric label="전체" value={`${data.business_verifications.length}건`} icon={<ShieldCheck />} />
+        <Metric label="인증 완료" value={`${data.business_verifications.filter((entry) => entry.verification_status === "verified").length}건`} icon={<BadgeCheck />} />
+        <Metric label="수동 검토" value={`${data.business_verifications.filter((entry) => entry.verification_status === "manual_review_required" || entry.verification_status === "api_error").length}건`} icon={<Bell />} />
+      </div>
+      <div className="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>상호</th>
+              <th>사업자번호</th>
+              <th>역할</th>
+              <th>상태</th>
+              <th>검증</th>
+              <th>접수일</th>
+              <th>처리</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.business_verifications.map((entry) => (
+              <tr key={entry.id}>
+                <td>{entry.business_name}</td>
+                <td>{entry.business_number}</td>
+                <td>{entry.role_requested === "supplier" ? "공급사" : "구매자"}</td>
+                <td>{businessOperatingStatusLabels[entry.status_check_status]}</td>
+                <td><StatusBadge tone={entry.verification_status === "verified" ? "green" : entry.verification_status === "failed" ? "gray" : "orange"}>{businessVerificationStatusLabels[entry.verification_status]}</StatusBadge></td>
+                <td>{entry.created_at.slice(0, 10)}</td>
+                <td className="tableActions">
+                  <button className="ghostButton compact" type="button" onClick={() => patchVerification(entry.id, "verified")}>인증</button>
+                  <button className="ghostButton compact" type="button" onClick={() => patchVerification(entry.id, "failed")}>실패</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.business_verifications.length === 0 && <EmptyState icon={<ShieldCheck />} title="인증 이력이 없습니다." desc="회원가입이 진행되면 이곳에 표시됩니다." />}
+      </div>
+    </section>
+  );
+}
+
+function AdminManualReviewsPage({ data, setData, navigate }: MutatingPageProps) {
+  function decide(reviewId: string, status: BusinessManualReviewStatus) {
+    const updatedAt = new Date().toISOString();
+    const target = data.business_manual_review_requests.find((entry) => entry.id === reviewId);
+    if (!target) return;
+    const verificationStatus: BusinessVerificationStatus = status === "approved" ? "verified" : status === "rejected" ? "failed" : "manual_review_required";
+    const nextData: AppData = {
+      ...data,
+      business_manual_review_requests: data.business_manual_review_requests.map((entry) => entry.id === reviewId ? { ...entry, status, reviewed_by: "admin-1", reviewed_at: updatedAt, updated_at: updatedAt } : entry),
+      business_verifications: data.business_verifications.map((entry) => entry.user_id === target.user_id ? { ...entry, verification_status: verificationStatus, manually_reviewed_by: "admin-1", manually_reviewed_at: updatedAt, updated_at: updatedAt } : entry),
+      profiles: data.profiles.map((profile) => profile.id === target.user_id ? { ...profile, business_verification_status: verificationStatus, business_verified_at: status === "approved" ? updatedAt : profile.business_verified_at } : profile),
+    };
+    saveData(nextData);
+    setData(nextData);
+  }
+
+  return (
+    <section className="page">
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <div className="pageHeader">
+        <span className="eyebrow">수동 검토</span>
+        <h1>사업자 수동 검토 큐</h1>
+        <p>API 오류, 신규 사업자 미반영, 진위 불일치 건을 서류 기반으로 승인하거나 보완 요청합니다.</p>
+      </div>
+      <div className="reviewList">
+        {data.business_manual_review_requests.map((review) => (
+          <article className="reviewCard" key={review.id}>
+            <div className="sectionHeader">
+              <div>
+                <span className="eyebrow">{review.role_requested === "supplier" ? "공급사" : "구매자"}</span>
+                <h2>{review.business_name}</h2>
+              </div>
+              <StatusBadge tone={review.status === "approved" ? "green" : review.status === "rejected" ? "gray" : "orange"}>{businessManualReviewStatusLabels[review.status]}</StatusBadge>
+            </div>
+            <div className="metaLine">
+              <span>{review.business_number}</span>
+              <span>대표자 {review.representative_name}</span>
+              <span>개업일 {review.opening_date}</span>
+              <span>{review.phone}</span>
+            </div>
+            <p>{review.reason}</p>
+            {review.document_name && <p className="mutedText">첨부: {review.document_name}</p>}
+            <div className="formActions">
+              <button className="secondaryButton compact" type="button" onClick={() => decide(review.id, "reviewing")}>검토 중</button>
+              <button className="primaryButton compact" type="button" onClick={() => decide(review.id, "approved")}>사업자 인증 승인</button>
+              <button className="ghostButton compact" type="button" onClick={() => decide(review.id, "needs_revision")}>보완 요청</button>
+              <button className="ghostButton compact" type="button" onClick={() => decide(review.id, "rejected")}>반려</button>
+            </div>
+          </article>
+        ))}
+        {data.business_manual_review_requests.length === 0 && <EmptyState icon={<ShieldCheck />} title="수동 검토 건이 없습니다." desc="API 오류 또는 진위 불일치가 접수되면 이곳에 표시됩니다." />}
+      </div>
+    </section>
+  );
 }
 
 function OnboardingPage({ data, navigate, setData, role }: MutatingPageProps & { role: "buyer" | "supplier" }) {
@@ -726,23 +1756,27 @@ function HomePage({ data, navigate }: PageProps) {
         <div className="heroCopy">
           <img src="/로고.png" alt="싸와!" className="heroLogo" />
           <h1 className="heroLead">필요한 자재를 올리면, 업체들이 견적합니다.</h1>
-          <p className="heroSub">뭐가 필요하세요? 사진이나 거래명세서만 올려도 견적요청을 만들 수 있어요.</p>
+          <p className="heroSub">영수증, 거래명세서, 자필 메모를 올리거나 직접 입력하면 품목을 정리하고 여러 업체 견적을 비교할 수 있어요.</p>
           <div className="heroActions">
-            <button className="primaryButton" type="button" onClick={() => navigate("/app/requests/new")}>
-              <FilePlus2 size={18} />
-              견적요청하기
+            <button className="primaryButton" type="button" onClick={() => navigate("/app/analyze")}>
+              <Upload size={18} />
+              거래명세서 올리기
             </button>
-            <button className="secondaryButton" type="button" onClick={() => navigate("/partners")}>
-              <Store size={18} />
-              공급업체 입점
+            <button className="secondaryButton" type="button" onClick={() => navigate("/app/requests/new")}>
+              <FilePlus2 size={18} />
+              직접 견적요청
+            </button>
+            <button className="secondaryButton" type="button" onClick={() => navigate("/app/quick-reorder")}>
+              <RefreshCcw size={18} />
+              지난 구매 다시 견적
             </button>
           </div>
         </div>
         <div className="heroPanel" aria-label="싸와 핵심 지표">
-          <Metric label="열린 요청" value={`${activeRequests}건`} icon={<ClipboardList />} />
-          <Metric label="도착 견적" value={`${submittedQuotes}건`} icon={<ReceiptText />} />
-          <Metric label="승인 업체" value={`${approvedSuppliers}곳`} icon={<BadgeCheck />} />
-          <Metric label="장부 대기" value={`${purchaseSummary.pendingCount}건`} icon={<Landmark />} />
+          <Metric label="열린 요청" value={`${activeRequests}건`} icon={<ClipboardList />} desc="업체 견적을 기다리는 요청입니다." actionLabel="요청 보기" onClick={() => navigate("/app/requests")} />
+          <Metric label="도착 견적" value={`${submittedQuotes}건`} icon={<ReceiptText />} desc="가격, 납품일, 결제 조건을 비교합니다." actionLabel="비교하기" onClick={() => navigate("/app/requests")} />
+          <Metric label="승인 업체" value={`${approvedSuppliers}곳`} icon={<BadgeCheck />} desc="검토된 파트너 정보를 확인합니다." actionLabel="파트너 보기" onClick={() => navigate("/partners")} />
+          <Metric label="장부 대기" value={`${purchaseSummary.pendingCount}건`} icon={<Landmark />} desc="구매내역에서 장부 반영할 항목입니다." actionLabel="장부 보기" onClick={() => navigate("/app/accounting")} />
         </div>
       </section>
 
@@ -760,32 +1794,37 @@ function HomePage({ data, navigate }: PageProps) {
       )}
 
       <section className="quickGrid" aria-label="주요 작업">
-        <ActionTile title="견적요청하기" desc="필요한 자재와 납품 조건을 등록합니다." icon={<FilePlus2 />} onClick={() => navigate("/app/requests/new")} />
-        <ActionTile title="거래명세서 올리기" desc="사진이나 파일을 품목으로 정리해 견적요청을 만듭니다." icon={<Upload />} onClick={() => navigate("/app/analyze")} />
-        <ActionTile title="지난 구매 다시 견적" desc="수량과 납품일만 바꿔 반복 요청을 생성합니다." icon={<RefreshCcw />} onClick={() => navigate("/app/quick-reorder")} />
-        <ActionTile title="자주 쓰는 품목" desc="치킨집/카페 포장재 묶음을 저장하고 재사용합니다." icon={<Boxes />} onClick={() => navigate("/app/favorites/items")} />
-        <ActionTile title="자료 자동분석" desc="거래명세서, 견적서, 카톡 내용을 품목으로 정리합니다." icon={<SearchCheck />} onClick={() => navigate("/app/analyze")} />
-        <ActionTile title="구매내역 보기" desc="완료 거래와 수동 등록 매입을 장부 기준으로 정리합니다." icon={<ReceiptText />} onClick={() => navigate("/app/purchases")} />
-        <ActionTile title="오늘장사 장부" desc="매입비 반영 대기 건을 확인하고 mock 반영합니다." icon={<Landmark />} onClick={() => navigate("/app/accounting")} />
-        <ActionTile title="공급업체 입점하기" desc="지역과 카테고리 기반 요청을 확인합니다." icon={<Store />} onClick={() => navigate("/app/supplier")} />
+        <ActionTile title="명세서·영수증 올리기" desc="사진, 이미지, PDF를 품목 후보로 정리해 검토합니다." icon={<Upload />} onClick={() => navigate("/app/analyze")} />
+        <ActionTile title="직접 견적요청" desc="품목, 수량, 납품 조건을 직접 입력해 요청합니다." icon={<FilePlus2 />} onClick={() => navigate("/app/requests/new")} />
+        <ActionTile title="지난 구매 다시 견적" desc="이전 구매 품목을 불러와 수량과 납품일만 바꿉니다." icon={<RefreshCcw />} onClick={() => navigate("/app/quick-reorder")} />
+        <ActionTile title="견적 비교" desc="가격, 납기, 세금계산서, 카드결제 조건을 한 화면에서 봅니다." icon={<ReceiptText />} onClick={() => navigate("/app/requests")} />
+        <ActionTile title="자주 쓰는 품목" desc="반복 구매하는 포장재와 소모품 묶음을 저장합니다." icon={<Boxes />} onClick={() => navigate("/app/favorites/items")} />
+        <ActionTile title="구매내역" desc="완료 거래와 수동 등록 매입을 증빙 기준으로 모읍니다." icon={<PackageCheck />} onClick={() => navigate("/app/purchases")} />
+        <ActionTile title="구매장부" desc="오늘장사 반영 대기 건과 매입 리포트를 확인합니다." icon={<Landmark />} onClick={() => navigate("/app/accounting")} />
+        <ActionTile title="알림 확인" desc="견적 도착, 문의 답변, 거래 상태 변경을 놓치지 않습니다." icon={<Bell />} onClick={() => navigate("/app/notifications")} />
       </section>
 
       <section className="landingSection">
         <SectionHeader title="구매자 이용 흐름" />
         <div className="flowGrid">
-          {["올리기", "견적받기", "비교하기", "거래하기", "장부정리"].map((step, index) => (
+          {["올리기", "비교하기", "선택하기", "구매내역 정리"].map((step, index) => (
             <div className="flowStep" key={step}><span>{index + 1}</span><strong>{step}</strong></div>
           ))}
         </div>
       </section>
 
-      <section className="landingSection">
-        <SectionHeader title="공급업체 이용 흐름" />
-        <div className="flowGrid supplierFlow">
-          {["입점하기", "요청받기", "견적하기", "거래하기"].map((step, index) => (
-            <div className="flowStep" key={step}><span>{index + 1}</span><strong>{step}</strong></div>
-          ))}
+      <section className="accountingValuePanel">
+        <div>
+          <span className="eyebrow">구매내역 자동정리</span>
+          <h2>견적을 거래로 끝내면 구매내역과 장부 준비가 같이 남습니다.</h2>
+          <p>완료된 거래, 수동 등록 매입, 업로드한 명세서를 한곳에 모아 매입비 확인과 증빙 준비가 쉬워집니다. 세무 신고를 대신한다고 말하지 않고, 장부와 세금자료 준비에 필요한 항목을 정리합니다.</p>
         </div>
+        <div className="valueChecklist" aria-label="구매내역 정리 가치">
+          <span><PackageCheck size={18} />구매내역 자동 분류</span>
+          <span><Landmark size={18} />오늘장사 장부 반영 대기</span>
+          <span><ReceiptText size={18} />세금계산서·영수증 준비 상태 확인</span>
+        </div>
+        <button className="primaryButton" type="button" onClick={() => navigate("/app/purchases")}>구매내역 보기</button>
       </section>
 
       <section className="landingSection">
@@ -802,6 +1841,18 @@ function HomePage({ data, navigate }: PageProps) {
           <p>거래 완료 후 구매내역을 장부 반영 대기 자료로 정리하고, 세금자료 준비와 절감 리포트까지 확인할 수 있습니다.</p>
         </div>
         <button className="secondaryButton" type="button" onClick={() => navigate("/app/accounting")}>장부 흐름 보기</button>
+      </section>
+
+      <section className="supplierJoinStrip">
+        <div>
+          <span className="eyebrow">공급업체이신가요?</span>
+          <h2>구매 요청에 견적을 보내고 거래를 관리할 수 있습니다.</h2>
+          <p>공급업체 입점은 구매자 주요 작업과 분리해 아래 보조 영역에서 안내합니다.</p>
+        </div>
+        <button className="secondaryButton" type="button" onClick={() => navigate("/partners")}>
+          <Store size={17} />
+          공급업체 입점 안내
+        </button>
       </section>
 
       <section className="landingSection">
@@ -833,6 +1884,12 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
   const wizardSteps = ["입력 방식", "카테고리", "품목 검토", "납품 조건", "최종 확인"];
   const [step, setStep] = useState(0);
   const [textInput, setTextInput] = useState("치킨박스 1000개, 소스컵 2000개, 배달봉투 대형 1000장 필요해요.");
+  const [receiptFileName, setReceiptFileName] = useState("치킨집_포장재_영수증.jpg");
+  const [receiptImageFile, setReceiptImageFile] = useState<File | null>(null);
+  const [receiptAnalysisPreview, setReceiptAnalysisPreview] = useState<ReceiptAnalysisPreview | null>(null);
+  const [receiptAnalysisSource, setReceiptAnalysisSource] = useState<ReceiptAnalysisSource>("");
+  const [receiptAnalysisNotice, setReceiptAnalysisNotice] = useState("");
+  const [receiptAnalysisLoading, setReceiptAnalysisLoading] = useState(false);
   const [draft, setDraft] = useState<QuoteRequestDraft>({
     title: "",
     category_id: data.categories[0]?.id ?? "",
@@ -942,6 +1999,60 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
     }));
   }
 
+  function applyReceiptAnalysis(result: ReceiptAnalysisPreview, source: ReceiptAnalysisSource, notice = "") {
+    const category = data.categories.find((entry) => entry.name === result.categoryName) ?? selectedCategory;
+    setReceiptAnalysisPreview(result);
+    setReceiptAnalysisSource(source);
+    setReceiptAnalysisNotice(notice);
+    setReceiptFileName(result.fileName);
+    setDraft((current) => ({
+      ...current,
+      input_method: result.sourceType === "invoice" ? "invoice" : "photo",
+      title: current.title || `${result.categoryName} 재견적 요청`,
+      category_id: category?.id ?? current.category_id,
+      description: current.description || `${result.supplierName || "업로드 이미지"}에서 자동 추출한 품목입니다. 품목과 수량을 확인한 뒤 견적을 요청합니다.`,
+      attachment_note: result.fileName,
+      previous_amount: result.totalAmount,
+      budget_max: current.budget_max || Math.round(result.totalAmount * 0.95),
+      original_text_input: result.rawText,
+      items: result.items.length ? result.items : current.items,
+      attachments: [
+        result.attachment,
+        ...current.attachments.filter((attachment) => attachment.file_name !== result.attachment.file_name),
+      ],
+    }));
+    setError("");
+  }
+
+  async function analyzeReceiptPhoto() {
+    const sourceType = draft.input_method === "invoice" ? "invoice" : "photo";
+    setReceiptAnalysisLoading(true);
+    setError("");
+    try {
+      if (receiptImageFile) {
+        const result = await analyzeReceiptImageWithGemini(receiptImageFile, receiptFileName || receiptImageFile.name, sourceType);
+        applyReceiptAnalysis(result, "gemini", "Gemini AI가 업로드 이미지를 읽어 품목 후보를 자동 입력했습니다.");
+        return;
+      }
+
+      const result = analyzeReceiptPhotoForQuoteRequest(receiptFileName, sourceType);
+      applyReceiptAnalysis(result, "mock", "이미지 파일이 선택되지 않아 샘플 분석 결과로 자동 입력했습니다.");
+    } catch (analysisError) {
+      const fallback = analyzeReceiptPhotoForQuoteRequest(receiptFileName || receiptImageFile?.name || "", sourceType);
+      applyReceiptAnalysis(fallback, "mock", `${formatGeminiAnalysisError(analysisError)} 샘플 분석 결과로 자동 입력했습니다.`);
+    } finally {
+      setReceiptAnalysisLoading(false);
+    }
+  }
+
+  function updateReceiptImageFile(file: File | null) {
+    setReceiptImageFile(file);
+    setReceiptAnalysisNotice("");
+    if (file) {
+      setReceiptFileName(file.name);
+    }
+  }
+
   function addMockAttachment(status: AttachmentAnalysisStatus = "analyzed") {
     const defaults: Record<QuoteRequestInputMethod, string> = {
       manual: "요청_참고자료.pdf",
@@ -1009,7 +2120,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
             <SectionHeader title="어떤 방식으로 시작할까요?" />
             <div className="methodGrid">
               <MethodCard icon={<FilePlus2 />} title="직접 입력" desc="품목을 하나씩 입력합니다." active={draft.input_method === "manual"} onClick={() => selectMethod("manual")} />
-              <MethodCard icon={<Upload />} title="사진 업로드" desc="자재 사진을 올리고 품목 후보를 확인합니다." active={draft.input_method === "photo"} onClick={() => selectMethod("photo")} />
+              <MethodCard icon={<Upload />} title="사진 업로드" desc="구매영수증이나 자필 메모 사진을 올리면 Gemini AI가 품목을 자동 입력합니다." active={draft.input_method === "photo"} onClick={() => selectMethod("photo")} />
               <MethodCard icon={<ReceiptText />} title="거래명세서" desc="기존 명세서를 기준으로 재견적합니다." active={draft.input_method === "invoice"} onClick={() => selectMethod("invoice")} />
               <MethodCard icon={<ClipboardList />} title="문장으로 입력" desc="한 문장을 품목 목록으로 나눕니다." active={draft.input_method === "text"} onClick={() => selectMethod("text")} />
               <MethodCard icon={<Boxes />} title="템플릿" desc="업종별 자주 쓰는 세트를 불러옵니다." active={draft.input_method === "template"} onClick={() => selectMethod("template")} />
@@ -1020,6 +2131,20 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
         {step === 1 && (
           <section className="wizardPanel">
             <SectionHeader title="카테고리를 선택하세요" />
+            {(draft.input_method === "photo" || draft.input_method === "invoice") && (
+              <UploadMockPanel
+                attachments={draft.attachments}
+                fileName={receiptFileName}
+                onFileNameChange={setReceiptFileName}
+                onImageFileChange={updateReceiptImageFile}
+                onAnalyze={analyzeReceiptPhoto}
+                onAdd={() => addMockAttachment("analyzed")}
+                analysisPreview={receiptAnalysisPreview}
+                analysisSource={receiptAnalysisSource}
+                analysisNotice={receiptAnalysisNotice}
+                isAnalyzing={receiptAnalysisLoading}
+              />
+            )}
             <div className="categoryChoiceGrid">
               {data.categories.map((category) => (
                 <button className={draft.category_id === category.id ? "categoryChoiceCard active" : "categoryChoiceCard"} type="button" onClick={() => setDraft({ ...draft, category_id: category.id })} key={category.id}>
@@ -1044,7 +2169,18 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
                   </div>
                 )}
                 {(draft.input_method === "photo" || draft.input_method === "invoice") && (
-                  <UploadMockPanel attachments={draft.attachments} onAdd={() => addMockAttachment("analyzed")} />
+                  <UploadMockPanel
+                    attachments={draft.attachments}
+                    fileName={receiptFileName}
+                    onFileNameChange={setReceiptFileName}
+                    onImageFileChange={updateReceiptImageFile}
+                    onAnalyze={analyzeReceiptPhoto}
+                    onAdd={() => addMockAttachment("analyzed")}
+                    analysisPreview={receiptAnalysisPreview}
+                    analysisSource={receiptAnalysisSource}
+                    analysisNotice={receiptAnalysisNotice}
+                    isAnalyzing={receiptAnalysisLoading}
+                  />
                 )}
                 {draft.input_method === "template" && <TemplatePicker onSelect={selectTemplate} selectedName={draft.template_name} />}
                 {draft.input_method === "repeat" && <RepeatRequestPanel data={data} onSelect={repeatRequest} selectedId={draft.previous_request_id} />}
@@ -1146,7 +2282,7 @@ function RequestsPage({ data, navigate }: PageProps) {
   return (
     <Page>
       <PageTitle eyebrow="구매자" title="내 견적요청" desc="등록한 요청과 도착한 견적을 한곳에서 확인합니다." />
-      <div className="toolbar">
+      <div className="toolbar requestListToolbar">
         <button className="primaryButton compact" type="button" onClick={() => navigate("/app/requests/new")}>
           <Plus size={16} />
           새 요청
@@ -4247,7 +5383,7 @@ function SupplierDashboard({ data, navigate }: PageProps) {
 
   return (
     <Page>
-      <PageTitle eyebrow="공급업체" title="구매 의사가 있는 사장님을 만나보세요." desc={`${supplier.business_name} 기준으로 지역과 카테고리에 맞는 견적요청을 확인합니다.`} />
+      <PageTitle eyebrow="공급업체 홈" title="오늘 견적 가능한 요청을 바로 확인하세요." desc={`${supplier.business_name} 기준으로 지역과 카테고리에 맞는 요청, 제출 견적, 거래 상태를 관리합니다.`} />
       <SupplierStatusNotice supplier={supplier} navigate={navigate} />
       {focusSetting.focus_mode_enabled && supplier.categories.includes(focusSetting.focus_category_name) && (
         <section className="dealNotice">
@@ -4260,14 +5396,14 @@ function SupplierDashboard({ data, navigate }: PageProps) {
         </section>
       )}
       <div className="dashboardGrid">
-        <Metric label="오늘 도착한 요청" value={`${todayRequests}건`} icon={<ClipboardList />} />
-        <Metric label="견적 제출 대기" value={`${pendingQuoteRequests.length}건`} icon={<SearchCheck />} />
-        <Metric label="제출한 견적" value={`${myQuotes.length}건`} icon={<ReceiptText />} />
-        <Metric label="선택된 견적" value={`${selectedQuotes}건`} icon={<PackageCheck />} />
-        <Metric label="이번 달 예상 거래액" value={money(stats.total_deal_amount)} icon={<ReceiptText />} />
-        <Metric label="견적 응답률" value={`${stats.response_rate}%`} icon={<BadgeCheck />} />
+        <Metric label="오늘 도착한 요청" value={`${todayRequests}건`} icon={<ClipboardList />} desc="응답 가능한 요청을 먼저 확인합니다." actionLabel="요청찾기" onClick={() => navigate("/app/supplier/requests")} />
+        <Metric label="견적 제출 대기" value={`${pendingQuoteRequests.length}건`} icon={<SearchCheck />} desc="아직 견적을 보내지 않은 요청입니다." actionLabel="견적 보내기" onClick={() => navigate("/app/supplier/requests")} />
+        <Metric label="제출한 견적" value={`${myQuotes.length}건`} icon={<ReceiptText />} desc="선택 여부와 문의를 확인합니다." actionLabel="견적관리" onClick={() => navigate("/app/supplier/quotes")} />
+        <Metric label="선택된 견적" value={`${selectedQuotes}건`} icon={<PackageCheck />} desc="납품과 거래 상태를 관리합니다." actionLabel="거래관리" onClick={() => navigate("/app/supplier/deals")} />
+        <Metric label="이번 달 예상 거래액" value={money(stats.total_deal_amount)} icon={<ReceiptText />} desc="완료/진행 거래 기준 금액입니다." actionLabel="정산 보기" onClick={() => navigate("/app/supplier/settlements")} />
+        <Metric label="견적 응답률" value={`${stats.response_rate}%`} icon={<BadgeCheck />} desc="응답 품질과 신뢰도에 반영됩니다." actionLabel="신뢰도 보기" onClick={() => navigate("/app/supplier/reputation")} />
         <Metric label="평균 응답 시간" value={stats.average_response_minutes ? `${stats.average_response_minutes}분` : "신규"} icon={<RefreshCcw />} />
-        <Metric label="승인 상태" value={supplierApprovalLabels[supplier.approval_status]} icon={<BadgeCheck />} />
+        <Metric label="승인 상태" value={supplierApprovalLabels[supplier.approval_status]} icon={<BadgeCheck />} desc="업체 정보와 증빙을 관리합니다." actionLabel="업체 정보" onClick={() => navigate("/app/supplier/profile")} />
       </div>
       <section className="dealNotice">
         <div>
@@ -4750,16 +5886,16 @@ function AdminDashboard({ data, navigate }: PageProps) {
 
   return (
     <Page>
-      <PageTitle eyebrow="관리자" title="관리자 대시보드" desc="전체 요청, 견적, 공급업체 현황을 운영자가 빠르게 확인합니다." />
+      <PageTitle eyebrow="관리자 홈" title="운영 상태와 문제 구간을 바로 확인합니다." desc="견적요청, 공급업체, 거래, 분석, 신고/분쟁, 수익 지표를 관리자 업무 단위로 정리합니다." />
       <div className="dashboardGrid">
-        <Metric label="전체 요청" value={`${data.quote_requests.length}건`} icon={<ClipboardList />} />
-        <Metric label="전체 견적" value={`${data.quotes.length}건`} icon={<ReceiptText />} />
-        <Metric label="공급업체" value={`${data.supplier_profiles.length}곳`} icon={<Building2 />} />
-        <Metric label="선택 완료" value={`${selected}건`} icon={<PackageCheck />} />
-        <Metric label="평균 요청 품질" value={`${averageQuality}점`} icon={<BadgeCheck />} />
-        <Metric label="첨부 요청" value={`${attachmentRequestCount}건`} icon={<Upload />} />
-        <Metric label="템플릿/반복" value={`${templateOrRepeat}건`} icon={<RefreshCcw />} />
-        <Metric label="무견적 요청" value={`${noQuoteCount}건`} icon={<SearchCheck />} />
+        <Metric label="전체 요청" value={`${data.quote_requests.length}건`} icon={<ClipboardList />} desc="상태와 견적 수를 모니터링합니다." actionLabel="요청 관리" onClick={() => navigate("/app/admin/requests")} />
+        <Metric label="전체 견적" value={`${data.quotes.length}건`} icon={<ReceiptText />} desc="거래 전환 흐름을 확인합니다." actionLabel="거래 관리" onClick={() => navigate("/app/admin/deals")} />
+        <Metric label="공급업체" value={`${data.supplier_profiles.length}곳`} icon={<Building2 />} desc="승인 상태와 카테고리를 봅니다." actionLabel="업체 관리" onClick={() => navigate("/app/admin/suppliers")} />
+        <Metric label="선택 완료" value={`${selected}건`} icon={<PackageCheck />} desc="구매자가 선택한 견적입니다." actionLabel="거래 보기" onClick={() => navigate("/app/admin/deals")} />
+        <Metric label="평균 요청 품질" value={`${averageQuality}점`} icon={<BadgeCheck />} desc="품목/조건 완성도를 점검합니다." actionLabel="품질 개선" onClick={() => navigate("/app/admin/improvement-priorities")} />
+        <Metric label="첨부 요청" value={`${attachmentRequestCount}건`} icon={<Upload />} desc="자료분석과 검토가 필요한 요청입니다." actionLabel="분석 관리" onClick={() => navigate("/app/admin/analysis")} />
+        <Metric label="템플릿/반복" value={`${templateOrRepeat}건`} icon={<RefreshCcw />} desc="반복구매 가능성을 확인합니다." actionLabel="반복 분석" onClick={() => navigate("/app/admin/repeat-insights")} />
+        <Metric label="무견적 요청" value={`${noQuoteCount}건`} icon={<SearchCheck />} desc="수동 매칭이 필요한 요청입니다." actionLabel="매칭 보조" onClick={() => navigate("/app/admin/matching-assist")} />
       </div>
       <div className="adminInsightGrid">
         <StatList title="카테고리별 요청" items={categoryCounts} />
@@ -4776,6 +5912,8 @@ function AdminDashboard({ data, navigate }: PageProps) {
         <ActionTile title="운영 플레이북" desc="카테고리별 영업/운영 대응 기준을 봅니다." icon={<ClipboardList />} onClick={() => navigate("/app/admin/playbooks")} />
         <ActionTile title="베타 운영" desc="KPI, CRM, CS, 실험, 의사결정 보드를 봅니다." icon={<UsersRound />} onClick={() => navigate("/app/admin/beta")} />
         <ActionTile title="운영 대시보드" desc="신고, 후기, 신뢰도, 제재 지표를 봅니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/operations")} />
+        <ActionTile title="사업자 인증 이력" desc="회원가입 사업자번호 검증 결과를 확인합니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/business-verifications")} />
+        <ActionTile title="수동 검토 큐" desc="API 오류와 진위 불일치 가입 건을 처리합니다." icon={<BadgeCheck />} onClick={() => navigate("/app/admin/manual-reviews")} />
         <ActionTile title="QA 체크리스트" desc="베타 출시 전 기능별 점검 상태를 관리합니다." icon={<Check />} onClick={() => navigate("/app/admin/qa")} />
         <ActionTile title="Supabase/배포 준비" desc="DB, RLS, Storage, 환경변수 상태를 점검합니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/supabase")} />
         <ActionTile title="베타 피드백" desc="테스터 오류와 사용성 의견을 분류합니다." icon={<Bell />} onClick={() => navigate("/app/admin/feedback")} />
@@ -6928,13 +8066,74 @@ function QualityMeter({ score }: { score: number }) {
   );
 }
 
-function UploadMockPanel({ attachments, onAdd }: { attachments: QuoteAttachmentDraft[]; onAdd: () => void }) {
+function UploadMockPanel({
+  attachments,
+  fileName,
+  onFileNameChange,
+  onImageFileChange,
+  onAnalyze,
+  onAdd,
+  analysisPreview,
+  analysisSource,
+  analysisNotice,
+  isAnalyzing,
+}: {
+  attachments: QuoteAttachmentDraft[];
+  fileName: string;
+  onFileNameChange: (value: string) => void;
+  onImageFileChange: (file: File | null) => void;
+  onAnalyze: () => void;
+  onAdd: () => void;
+  analysisPreview: ReceiptAnalysisPreview | null;
+  analysisSource: ReceiptAnalysisSource;
+  analysisNotice: string;
+  isAnalyzing: boolean;
+}) {
   return (
     <div className="uploadMockPanel">
-      <button className="secondaryButton compact" type="button" onClick={onAdd}>
-        <Upload size={16} />
-        샘플 파일 추가
-      </button>
+      <div className="receiptUploadGrid">
+        <Field label="구매영수증/자필 메모 이미지">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(event) => onImageFileChange(event.target.files?.[0] ?? null)}
+          />
+        </Field>
+        <Field label="파일명 또는 메모">
+          <input value={fileName} onChange={(event) => onFileNameChange(event.target.value)} placeholder="예: 치킨집_포장재_영수증.jpg" />
+        </Field>
+        <div className="receiptUploadActions">
+          <button className="primaryButton compact" type="button" onClick={onAnalyze} disabled={isAnalyzing}>
+            <SearchCheck size={16} />
+            {isAnalyzing ? "Gemini 분석 중" : "Gemini AI로 자동 입력"}
+          </button>
+          <button className="secondaryButton compact" type="button" onClick={onAdd}>
+            <Upload size={16} />
+            샘플 첨부 보기
+          </button>
+        </div>
+      </div>
+      <p className="mutedText">기존 구매영수증, 거래명세서 캡처, 자필 주문 메모 사진을 올리면 품목명/규격/수량을 자동으로 채웁니다.</p>
+      {analysisNotice && <p className="receiptAnalysisNotice">{analysisNotice}</p>}
+      {analysisPreview && (
+        <div className="receiptAnalysisResult">
+          <div>
+            <span className="eyebrow">{analysisSource === "gemini" ? "Gemini AI 분석 완료" : "샘플 AI 분석 완료"}</span>
+            <strong>{analysisPreview.supplierName} · {analysisPreview.categoryName}</strong>
+            <p>업로드 이미지에서 {analysisPreview.items.length}개 품목을 자동 입력했습니다. 품목 검토 단계에서 수량과 규격을 수정할 수 있습니다.</p>
+          </div>
+          <div className="receiptAnalysisMeta">
+            <span>기존 구매금액 {money(analysisPreview.totalAmount)}</span>
+            <span>신뢰도 {analysisPreview.confidenceScore}%</span>
+            <span>{analysisPreview.fileName}</span>
+          </div>
+          <div className="receiptItemChips">
+            {analysisPreview.items.map((item, index) => (
+              <span key={`${item.item_name}-${index}`}>{item.item_name} {item.quantity}{item.unit}</span>
+            ))}
+          </div>
+        </div>
+      )}
       <AttachmentStatusList attachments={attachments} />
     </div>
   );
@@ -7496,12 +8695,28 @@ function Toggle({ checked, label, onChange }: { checked: boolean; label: string;
   );
 }
 
-function Metric({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
-  return (
-    <div className="metric">
+function Metric({ label, value, icon, desc, actionLabel, onClick }: { label: string; value: string; icon: ReactNode; desc?: string; actionLabel?: string; onClick?: () => void }) {
+  const content = (
+    <>
       <div className="metricIcon">{icon}</div>
       <span>{label}</span>
       <strong>{value}</strong>
+      {desc && <small>{desc}</small>}
+      {actionLabel && <em>{actionLabel}</em>}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button className="metric metricAction" type="button" onClick={onClick}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className="metric">
+      {content}
     </div>
   );
 }
@@ -7943,6 +9158,115 @@ function sortSupplierRequests(a: QuoteRequest, b: QuoteRequest, sort: string, su
   if (sort === "예상 금액 높은순") return (b.budget_max ?? b.previous_amount ?? 0) - (a.budget_max ?? a.previous_amount ?? 0);
   if (sort === "지역 가까운순 mock") return calculateSupplierMatchScore(supplier, b) - calculateSupplierMatchScore(supplier, a);
   return (b.request_quality_score ?? 0) - (a.request_quality_score ?? 0);
+}
+
+async function analyzeReceiptImageWithGemini(file: File, fileName: string, sourceType: "photo" | "invoice"): Promise<ReceiptAnalysisPreview> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("이미지 파일만 분석할 수 있습니다.");
+  }
+
+  const imageBase64 = await readFileAsBase64(file);
+  const response = await fetch("/api/analyze-receipt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fileName: fileName || file.name,
+      mimeType: file.type || "image/jpeg",
+      imageBase64,
+      sourceType,
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(typeof payload.error === "string" ? payload.error : "Gemini 분석 API 응답이 올바르지 않습니다.");
+  }
+  if (!payload || typeof payload !== "object" || !Array.isArray((payload as Record<string, unknown>).items)) {
+    throw new Error("Gemini 분석 API 응답이 JSON 품목 형식이 아닙니다.");
+  }
+  return normalizeGeminiReceiptPayload(payload, fileName || file.name, sourceType, file.type || "image/jpeg");
+}
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? "");
+      resolve(result.includes(",") ? result.split(",").pop() ?? "" : result);
+    };
+    reader.onerror = () => reject(new Error("이미지를 읽지 못했습니다."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function normalizeGeminiReceiptPayload(payload: Record<string, unknown>, fileName: string, sourceType: "photo" | "invoice", mimeType: string): ReceiptAnalysisPreview {
+  const rawItems = Array.isArray(payload.items) ? payload.items : [];
+  const items = rawItems.slice(0, 20).map((entry) => {
+    const item = entry && typeof entry === "object" ? entry as Record<string, unknown> : {};
+    const name = stringValue(item.itemName) || stringValue(item.item_name) || "품목명 확인 필요";
+    const quantity = positiveNumber(item.quantity, 1);
+    const unit = stringValue(item.unit) || "개";
+    const confidence = clampScore(positiveNumber(item.confidenceScore, positiveNumber(payload.confidenceScore, 82)));
+    return {
+      item_name: name,
+      spec: stringValue(item.spec),
+      quantity,
+      unit,
+      memo: stringValue(item.memo) || (positiveNumber(item.unitPrice, 0) ? `이전 구매 단가 ${money(positiveNumber(item.unitPrice, 0))}` : ""),
+      is_required: true,
+      allow_alternative: true,
+      confidence_score: confidence,
+      needs_review: Boolean(item.needsReview) || confidence < 75,
+      review_reason: stringValue(item.reviewReason) || (confidence < 75 ? "Gemini AI 인식 신뢰도가 낮아 확인이 필요합니다." : ""),
+    };
+  });
+  const normalizedItems = items.length ? items : [{ ...emptyItem, item_name: "품목명 확인 필요", confidence_score: 55, needs_review: true, review_reason: "이미지에서 품목을 충분히 인식하지 못했습니다." }];
+  const supplierName = stringValue(payload.supplierName) || "업로드 이미지";
+  const categoryName = stringValue(payload.categoryName) || "기타";
+  const totalAmount = positiveNumber(payload.totalAmount, 0);
+  const confidenceScore = clampScore(positiveNumber(payload.confidenceScore, 82));
+  const rawText = stringValue(payload.rawText) || normalizedItems.map((item) => `${item.item_name} ${item.quantity}${item.unit}`).join("\n");
+  return {
+    fileName,
+    sourceType,
+    supplierName,
+    categoryName,
+    confidenceScore,
+    totalAmount,
+    rawText,
+    attachment: {
+      file_name: fileName,
+      file_type: fileName.split(".").pop() || mimeType.split("/").pop() || "jpg",
+      analysis_status: "analyzed",
+      extracted_text: `Gemini AI가 ${normalizedItems.length}개 품목을 추출했습니다.`,
+      extracted_items_json: JSON.stringify({ source: "gemini", ...payload, normalizedItems }),
+    },
+    items: normalizedItems,
+  };
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function positiveNumber(value: unknown, fallback: number) {
+  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value.replace(/,/g, "")) : NaN;
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : fallback;
+}
+
+function clampScore(value: number) {
+  return Math.max(30, Math.min(99, Math.round(value)));
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
+}
+
+function formatGeminiAnalysisError(error: unknown) {
+  const message = errorMessage(error);
+  if (message.includes("GEMINI_API_KEY") || message.includes("OAuth") || message.includes("API 키")) {
+    return `Gemini AI 설정 필요: ${message}`;
+  }
+  return `Gemini AI 연결 실패: ${message}`;
 }
 
 function money(value: number) {
