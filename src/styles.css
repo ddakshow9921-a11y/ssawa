@@ -318,6 +318,81 @@ button:disabled {
   box-shadow: var(--shadow);
 }
 
+.publicStatusHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr);
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 24px;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(16, 32, 51, 0.05);
+}
+
+.publicStatusHero h1 {
+  margin: 8px 0 10px;
+  color: var(--navy);
+  font-size: 38px;
+  line-height: 1.16;
+  letter-spacing: 0;
+}
+
+.publicStatusHero p {
+  max-width: 720px;
+  margin: 0 0 20px;
+  color: var(--muted);
+  line-height: 1.62;
+}
+
+.statusRuntimePanel {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+  padding: 18px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+}
+
+.statusRuntimePanel dl,
+.statusAccountList {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.statusRuntimePanel div,
+.statusAccountList div {
+  min-width: 0;
+}
+
+.statusRuntimePanel dt,
+.statusAccountList dt {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.statusRuntimePanel dd,
+.statusAccountList dd {
+  margin: 4px 0 0;
+  color: var(--navy);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.statusChecklist {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--charcoal);
+  line-height: 1.6;
+}
+
 .primaryButton,
 .selectedButton {
   padding: 0 18px;
@@ -3525,7 +3600,8 @@ button.riskRow {
 
 .roleSelector,
 .businessCheckPanel,
-.demoLoginGrid {
+.demoLoginGrid,
+.testAccountGrid {
   display: grid;
   gap: 10px;
 }
@@ -3648,6 +3724,42 @@ button.riskRow {
 
 .demoLoginGrid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.testAccountGrid {
+  grid-template-columns: 1fr;
+}
+
+.testAccountCard {
+  min-height: 68px;
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  color: var(--charcoal);
+  text-align: left;
+}
+
+.testAccountCard strong {
+  color: var(--navy);
+  font-size: 14px;
+}
+
+.testAccountCard span,
+.testAccountCard small {
+  max-width: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.testAccountCard small {
+  color: var(--orange);
+  font-weight: 900;
 }
 
 .tableActions {
@@ -3987,6 +4099,10 @@ tr.selectedRow {
     grid-template-columns: 1fr;
   }
 
+  .publicStatusHero {
+    grid-template-columns: 1fr;
+  }
+
   .quickGrid,
   .dashboardGrid,
   .accountingValuePanel,
@@ -4215,7 +4331,8 @@ tr.selectedRow {
 
   .roleSelector,
   .businessCheckPanel,
-  .demoLoginGrid {
+  .demoLoginGrid,
+  .testAccountGrid {
     grid-template-columns: 1fr;
   }
 

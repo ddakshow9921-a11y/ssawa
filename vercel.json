@@ -3,7 +3,26 @@
   "buildCommand": "pnpm exec tsc --noEmit && pnpm exec vite build",
   "installCommand": "pnpm install --frozen-lockfile",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/app",
+      "permanent": false
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/status",
+      "destination": "/api/status"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/status"
+    },
+    {
+      "source": "/beta-status",
+      "destination": "/api/status"
+    },
     {
       "source": "/((?!api/|assets/|로고.png|아이콘.png|favicon.ico|robots.txt).*)",
       "destination": "/index.html"

@@ -69,6 +69,7 @@ import type {
   MessageThreadStatus,
   PaymentMethod,
   PaymentMethodStatus,
+  Profile,
   Notification,
   NotificationDeliveryStatus,
   NotificationEntityType,
@@ -156,6 +157,88 @@ import type {
 const STORAGE_KEY = "ssawa-mvp-data-v6";
 
 const now = "2026-07-04T12:00:00.000Z";
+
+export const testLoginAccounts = [
+  { role: "buyer", label: "테스트 고객", email: "buyer@test.ssawa.local", password: "test1234!" },
+  { role: "supplier", label: "테스트 업체", email: "supplier@test.ssawa.local", password: "test1234!" },
+  { role: "admin", label: "테스트 관리자", email: "admin@test.ssawa.local", password: "test1234!" },
+] as const;
+
+const testProfiles: Profile[] = [
+  {
+    ...profile("test-buyer-1", "테스트 고객", "buyer@test.ssawa.local", "buyer", "테스트식당", "900-11-00001", "010-9001-0001", "서울 강남구"),
+    representative_name: "테스트고객",
+    business_opening_date: "2020-01-01",
+    business_address: "서울 강남구 테스트로 1",
+    business_status: "active",
+    business_verification_status: "verified",
+    business_verified_at: now,
+    onboarding_completed: true,
+    onboarding_completed_at: now,
+    is_test_user: true,
+  },
+  {
+    ...profile("test-supplier-1", "테스트 업체", "supplier@test.ssawa.local", "supplier", "테스트포장상사", "900-22-00002", "010-9002-0002", "서울 동대문구"),
+    representative_name: "테스트업체",
+    business_opening_date: "2019-03-15",
+    business_address: "서울 동대문구 테스트로 2",
+    business_status: "active",
+    business_verification_status: "verified",
+    business_verified_at: now,
+    onboarding_completed: true,
+    onboarding_completed_at: now,
+    is_test_user: true,
+  },
+  {
+    ...profile("test-admin-1", "테스트 관리자", "admin@test.ssawa.local", "admin", "싸와 테스트 운영팀", "900-33-00003", "02-9003-0003", "서울"),
+    representative_name: "테스트관리자",
+    business_opening_date: "2026-01-01",
+    business_address: "서울 테스트센터",
+    business_status: "active",
+    business_verification_status: "verified",
+    business_verified_at: now,
+    onboarding_completed: true,
+    onboarding_completed_at: now,
+    is_test_user: true,
+  },
+];
+
+const testSupplierProfiles: SupplierProfile[] = [
+  {
+    id: "test-supplier-profile-1",
+    user_id: "test-supplier-1",
+    business_name: "테스트포장상사",
+    business_number: "900-22-00002",
+    representative_name: "테스트업체",
+    manager_name: "테스트 담당자",
+    manager_phone: "010-9002-0002",
+    phone: "02-9002-0002",
+    email: "supplier@test.ssawa.local",
+    address: "서울 동대문구 테스트로 2",
+    description: "테스트용 승인 공급업체입니다. 포장재와 소모품 견적 흐름을 확인할 수 있습니다.",
+    service_regions: ["서울 강남구", "서울 동대문구", "서울 성동구", "서울 중구"],
+    categories: ["포장재", "소모품"],
+    sub_categories: ["배달용기", "박스", "봉투", "일회용품"],
+    min_order_amount: 50000,
+    delivery_fee_policy: "테스트 거래는 배송비 협의",
+    free_delivery_min_amount: 300000,
+    same_day_delivery_available: true,
+    urgent_delivery_available: true,
+    delivery_days: ["월", "화", "수", "목", "금"],
+    delivery_time_slots: ["오전", "오후"],
+    tax_invoice_available: true,
+    card_payment_available: true,
+    bank_transfer_available: true,
+    on_site_payment_available: false,
+    default_quote_valid_days: 3,
+    approval_status: "approved",
+    operational_status: "normal",
+    document_status: "approved",
+    admin_memo: "테스트 로그인용 승인 공급업체",
+    created_at: now,
+    updated_at: now,
+  },
+];
 
 export const requestStatusLabels: Record<QuoteRequest["status"], string> = {
   open: "견적 받는 중",
@@ -1676,6 +1759,7 @@ export const initialData: AppData = {
   demo_label: "데모 데이터",
   onboarding_completed: false,
   profiles: [
+    ...testProfiles,
     profile("buyer-1", "김사장", "owner@ssawa.local", "buyer", "월계치킨", "111-22-33333", "010-1111-2222", "서울 노원구"),
     profile("buyer-2", "박대표", "meat@ssawa.local", "buyer", "고깃집오늘", "222-33-44444", "010-3333-4444", "경기 성남시"),
     profile("admin-1", "운영자", "admin@ssawa.local", "admin", "싸와 운영팀", "000-00-00000", "02-000-0000", "서울"),
@@ -1688,6 +1772,7 @@ export const initialData: AppData = {
   ],
   quote_request_items: requestItems,
   supplier_profiles: [
+    ...testSupplierProfiles,
     supplier("sup-1", "서울포장", "서울 동대문구", ["서울 동대문구", "서울 성동구", "서울 중구", "서울 종로구"], ["포장재", "소모품"], true, true, "approved"),
     supplier("sup-2", "동대문식자재", "서울 동대문구", ["서울 동대문구", "서울 중랑구", "서울 성북구"], ["식자재"], true, false, "approved"),
     supplier("sup-3", "충주닥트자재", "충북 충주시", ["충북 충주시", "충북 음성군", "충북 제천시"], ["설비/닥트/환기자재"], true, true, "approved"),
@@ -6974,11 +7059,11 @@ function normalizeData(data: Partial<AppData>): AppData {
     demo_label: data.demo_label ?? initialData.demo_label,
     onboarding_completed: data.onboarding_completed ?? initialData.onboarding_completed,
     onboarding_completed_at: data.onboarding_completed_at ?? initialData.onboarding_completed_at,
-    profiles: data.profiles ?? initialData.profiles,
+    profiles: mergeRequiredRecords(data.profiles ?? initialData.profiles, testProfiles),
     categories: data.categories ?? initialData.categories,
     quote_requests: data.quote_requests ?? initialData.quote_requests,
     quote_request_items: data.quote_request_items ?? initialData.quote_request_items,
-    supplier_profiles: data.supplier_profiles ?? initialData.supplier_profiles,
+    supplier_profiles: mergeRequiredRecords(data.supplier_profiles ?? initialData.supplier_profiles, testSupplierProfiles),
     supplier_documents: data.supplier_documents ?? initialData.supplier_documents,
     supplier_stats: data.supplier_stats ?? initialData.supplier_stats,
     supplier_reviews: data.supplier_reviews ?? initialData.supplier_reviews,
@@ -7046,6 +7131,14 @@ function normalizeData(data: Partial<AppData>): AppData {
 
   saveData(merged);
   return merged;
+}
+
+function mergeRequiredRecords<T extends { id: string }>(records: T[], requiredRecords: T[]) {
+  const recordIds = new Set(records.map((record) => record.id));
+  return [
+    ...requiredRecords.filter((record) => !recordIds.has(record.id)),
+    ...records,
+  ];
 }
 
 function normalizePurchaseRecord(record: PurchaseRecord): PurchaseRecord {

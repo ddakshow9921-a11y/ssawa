@@ -149,6 +149,7 @@ import {
   supplierSubscriptionStatusLabels,
   supplierSubCategoryOptions,
   taxInvoiceStatusLabels,
+  testLoginAccounts,
   commonServiceRegions,
   updateBillingAccount,
   updateBlacklistStatus,
@@ -182,6 +183,11 @@ import { storageBuckets, uploadAppFile } from "./lib/supabase/storage";
 import { liveFeatureMatrix } from "./services/liveDataService";
 
 const today = "2026-07-04";
+
+function apiEndpoint(path: string) {
+  if (/^https?:\/\//i.test(path) || !appConfig.apiBaseUrl) return path;
+  return `${appConfig.apiBaseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+}
 
 type NavItem = {
   label: string;
@@ -288,6 +294,16 @@ function getRouteRole(path: string): UserRole | null {
 
 function getShellRole(path: string, session: AppAuthSession | null): UserRole {
   return getRouteRole(path) ?? session?.role ?? "buyer";
+}
+
+function getRoleHomePath(role: UserRole) {
+  if (role === "supplier") return "/app/supplier";
+  if (role === "admin") return "/app/admin";
+  return "/app";
+}
+
+function isProtectedAppPath(path: string) {
+  return path === "/app" || path.startsWith("/app/");
 }
 
 function getRoleLabel(role: UserRole) {
@@ -475,10 +491,19 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
+    if (window.location.pathname === "/") {
+      window.history.replaceState({}, "", "/app");
+    }
     const onPopState = () => setPath(normalizePath(window.location.pathname));
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  useEffect(() => {
+    if (!authReady || authSession || !isProtectedAppPath(path)) return;
+    window.history.replaceState({}, "", "/login");
+    setPath("/login");
+  }, [authReady, authSession, path]);
 
   useEffect(() => {
     let mounted = true;
@@ -665,6 +690,7 @@ export default function App() {
 }
 
 function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (data: AppData) => void, authSession: AppAuthSession | null, onAuthChange: (session: AppAuthSession | null) => void, shellRole: UserRole) {
+  if (path === "/health" || path === "/status" || path === "/beta-status") return <PublicDeploymentStatusPage navigate={navigate} />;
   if (path === "/login") return <LoginPage data={data} navigate={navigate} onAuthChange={onAuthChange} />;
   if (path === "/signup") return <SignupPage data={data} navigate={navigate} setData={setData} onAuthChange={onAuthChange} />;
   if (path === "/signup/manual-review") return <ManualReviewInfoPage data={data} navigate={navigate} authSession={authSession} />;
@@ -676,6 +702,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/beta") return <BetaNoticePage navigate={navigate} appMode={false} />;
   if (path === "/beta-notice") return <BetaNoticePage navigate={navigate} appMode={false} />;
   if (path === "/partners" || path === "/supplier/apply") return <PartnersPage navigate={navigate} />;
+  if (path.startsWith("/app") && !authSession) return <LoginPage data={data} navigate={navigate} onAuthChange={onAuthChange} />;
   if (path === "/app" || path === "/") {
     if (shellRole === "admin") return <AdminDashboard data={data} navigate={navigate} />;
     if (shellRole === "supplier") return <SupplierDashboard data={data} navigate={navigate} />;
@@ -789,7 +816,7 @@ function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: 
     const supplier = data.supplier_profiles.find((entry) => entry.user_id === profile.id);
     const session = authSessionFromProfile(profile, supplier, source);
     onAuthChange(session);
-    navigate(profile.role === "supplier" ? "/app/supplier" : profile.role === "admin" ? "/app/admin" : "/app");
+    navigate(getRoleHomePath(profile.role));
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -797,6 +824,17 @@ function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: 
     setStatus("");
     setSubmitting(true);
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const localProfile = data.profiles.find((profile) => profile.email.toLowerCase() === normalizedEmail);
+      const testAccount = testLoginAccounts.find((account) => account.email === normalizedEmail);
+      if (localProfile && testAccount) {
+        if (password !== testAccount.password) {
+          throw new Error(`테스트 계정 비밀번호는 ${testAccount.password} 입니다.`);
+        }
+        await finishLogin(localProfile, "local");
+        return;
+      }
+
       const client = getSupabaseClient();
       if (client) {
         const { error } = await client.auth.signInWithPassword({ email: email.trim(), password });
@@ -808,7 +846,6 @@ function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: 
         }
       }
 
-      const localProfile = data.profiles.find((profile) => profile.email.toLowerCase() === email.trim().toLowerCase());
       if (!localProfile) throw new Error("가입된 이메일을 찾을 수 없습니다.");
       await finishLogin(localProfile, "local");
     } catch (error) {
@@ -821,6 +858,12 @@ function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: 
   function demoLogin(role: UserRole) {
     const profile = data.profiles.find((entry) => entry.role === role) ?? data.profiles[0];
     if (profile) void finishLogin(profile, "local");
+  }
+
+  function fillTestAccount(account: (typeof testLoginAccounts)[number]) {
+    setEmail(account.email);
+    setPassword(account.password);
+    setStatus("");
   }
 
   return (
@@ -847,6 +890,15 @@ function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: 
           <button className="secondaryButton compact" type="button" onClick={() => demoLogin("buyer")}>구매자 데모</button>
           <button className="secondaryButton compact" type="button" onClick={() => demoLogin("supplier")}>공급사 데모</button>
           <button className="secondaryButton compact" type="button" onClick={() => demoLogin("admin")}>관리자 데모</button>
+        </div>
+        <div className="testAccountGrid" aria-label="테스트 계정">
+          {testLoginAccounts.map((account) => (
+            <button className="testAccountCard" type="button" onClick={() => fillTestAccount(account)} key={account.email}>
+              <strong>{account.label}</strong>
+              <span>{account.email}</span>
+              <small>비밀번호 {account.password}</small>
+            </button>
+          ))}
         </div>
       </form>
     </section>
@@ -889,7 +941,7 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
   }
 
   async function callBusinessApi(endpoint: string, payload: Record<string, unknown>) {
-    const response = await fetch(endpoint, {
+    const response = await fetch(apiEndpoint(endpoint), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -7869,6 +7921,89 @@ function BetaLimitationsNotice({ navigate, context }: { navigate: Navigate; cont
   );
 }
 
+function PublicDeploymentStatusPage({ navigate }: { navigate: Navigate }) {
+  const currentUrl = typeof window !== "undefined" ? window.location.href : appConfig.appUrl;
+  const currentOrigin = typeof window !== "undefined" ? window.location.origin : appConfig.appUrl;
+  const appUrl = appConfig.appUrl || currentOrigin || "not set";
+  const statusItems = [
+    { label: "Build status", value: "OK", icon: <Check />, desc: "Vite bundle loaded" },
+    { label: "Environment", value: environmentLabel(appConfig.appEnv), icon: <ShieldCheck />, desc: appConfig.appEnv },
+    { label: "Supabase URL", value: appConfig.supabaseUrl ? "yes" : "no", icon: <Landmark />, desc: "value hidden" },
+    { label: "Live data", value: isLiveModeReady() ? "ready" : "off", icon: <SearchCheck />, desc: appConfig.useLiveData ? "key required" : "mock/local mode" },
+  ];
+  const visibilityChecks = [
+    "이 페이지가 Vercel 로그인 화면 없이 보이면 공개 접근은 열려 있습니다.",
+    "/app 접속 시 싸와 로그인 화면 또는 역할별 홈 화면이 떠야 합니다.",
+    "Preview URL 대신 Production Domain을 외부 테스터에게 공유해야 합니다.",
+    "Supabase Auth Redirect URL에는 공개 도메인 전체 경로가 등록되어야 합니다.",
+  ];
+
+  return (
+    <Page>
+      <section className="publicStatusHero">
+        <div>
+          <span className="eyebrow">Deployment status</span>
+          <h1>싸와! 공개 접근 점검</h1>
+          <p>외부 테스터가 Vercel SSO나 Deployment Protection 화면 없이 앱에 접근할 수 있는지 확인하는 상태 페이지입니다.</p>
+          <div className="heroActions">
+            <button className="primaryButton" type="button" onClick={() => navigate("/app")}>앱 열기</button>
+            <button className="secondaryButton" type="button" onClick={() => navigate("/login")}>로그인 화면</button>
+          </div>
+        </div>
+        <div className="statusRuntimePanel">
+          <StatusBadge tone="green">public check</StatusBadge>
+          <dl>
+            <div>
+              <dt>Current URL</dt>
+              <dd>{currentUrl}</dd>
+            </div>
+            <div>
+              <dt>Configured app URL</dt>
+              <dd>{appUrl}</dd>
+            </div>
+            <div>
+              <dt>API base URL</dt>
+              <dd>{appConfig.apiBaseUrl || "same origin"}</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <div className="dashboardGrid">
+        {statusItems.map((item) => (
+          <Metric label={item.label} value={item.value} icon={item.icon} desc={item.desc} key={item.label} />
+        ))}
+      </div>
+
+      <section className="twoColumn">
+        <div className="toolPanel">
+          <SectionHeader title="공개 접근 기준" />
+          <ul className="statusChecklist">
+            {visibilityChecks.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
+        <div className="toolPanel">
+          <SectionHeader title="테스트 계정" />
+          <dl className="statusAccountList">
+            <div>
+              <dt>구매자</dt>
+              <dd>buyer@test.ssawa.local / test1234!</dd>
+            </div>
+            <div>
+              <dt>공급업체</dt>
+              <dd>supplier@test.ssawa.local / test1234!</dd>
+            </div>
+            <div>
+              <dt>관리자</dt>
+              <dd>admin@test.ssawa.local / test1234!</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+    </Page>
+  );
+}
+
 function ReviewCard({ review }: { review: { id: string; rating: number; content: string; created_at: string } }) {
   return (
     <article className="reviewCard">
@@ -9166,7 +9301,7 @@ async function analyzeReceiptImageWithGemini(file: File, fileName: string, sourc
   }
 
   const imageBase64 = await readFileAsBase64(file);
-  const response = await fetch("/api/analyze-receipt", {
+  const response = await fetch(apiEndpoint("/api/analyze-receipt"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

@@ -17,9 +17,15 @@ function readNumber(value: string | undefined, fallback: number) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function normalizeBaseUrl(value: string | undefined) {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+}
+
 export const appConfig = {
   appEnv: normalizeEnvironment(import.meta.env.VITE_APP_ENV),
   appUrl: import.meta.env.VITE_APP_URL || (typeof window !== "undefined" ? window.location.origin : ""),
+  apiBaseUrl: normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL),
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL,
   supabasePublishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "",
   enableDemoData: readBoolean(import.meta.env.VITE_ENABLE_DEMO_DATA, true),
