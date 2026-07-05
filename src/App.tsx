@@ -209,7 +209,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "견적요청", path: "/app/requests", icon: ClipboardList },
     { label: "자료 올리기", path: "/app/analyze", icon: SearchCheck },
     { label: "거래내역", path: "/app/deals", icon: ReceiptText },
-    { label: "문의", path: "/app/chats", icon: Bell },
+    { label: "문의/채팅", path: "/app/chats", icon: MessageCircle },
     { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
     { label: "구매장부", path: "/app/accounting", icon: Landmark },
     { label: "내 정보", path: "/app/buyer/onboarding", icon: ShieldCheck },
@@ -219,7 +219,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "요청찾기", path: "/app/supplier/requests", icon: SearchCheck },
     { label: "견적관리", path: "/app/supplier/quotes", icon: ClipboardList },
     { label: "거래관리", path: "/app/supplier/deals", icon: PackageCheck },
-    { label: "문의", path: "/app/supplier/chats", icon: Bell },
+    { label: "문의/채팅", path: "/app/supplier/chats", icon: MessageCircle },
     { label: "후기/신뢰도", path: "/app/supplier/reputation", icon: BadgeCheck },
     { label: "정산/요금제", path: "/app/supplier/billing", icon: Landmark },
     { label: "업체 정보", path: "/app/supplier/profile", icon: Building2 },
@@ -229,7 +229,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "견적요청 관리", path: "/app/admin/requests", icon: ClipboardList },
     { label: "공급업체 관리", path: "/app/admin/suppliers", icon: UsersRound },
     { label: "거래 관리", path: "/app/admin/deals", icon: ReceiptText },
-    { label: "문의/채팅", path: "/app/admin/chats", icon: Bell },
+    { label: "문의/채팅", path: "/app/admin/chats", icon: MessageCircle },
     { label: "자료분석 관리", path: "/app/admin/analysis", icon: SearchCheck },
     { label: "신고/분쟁", path: "/app/admin/reports", icon: Bell },
     { label: "후기/신뢰도", path: "/app/admin/reputation", icon: BadgeCheck },
@@ -246,21 +246,21 @@ const mobileNavItemsByRole: Record<UserRole, NavItem[]> = {
   buyer: [
     { label: "홈", path: "/app", icon: Home },
     { label: "견적", path: "/app/requests", icon: ClipboardList },
+    { label: "채팅", path: "/app/chats", icon: MessageCircle },
     { label: "거래", path: "/app/deals", icon: ReceiptText },
     { label: "구매장부", path: "/app/accounting", icon: Landmark },
-    { label: "알림", path: "/app/notifications", icon: Bell },
   ],
   supplier: [
     { label: "홈", path: "/app/supplier", icon: Store },
     { label: "요청", path: "/app/supplier/requests", icon: SearchCheck },
+    { label: "채팅", path: "/app/supplier/chats", icon: MessageCircle },
     { label: "견적", path: "/app/supplier/quotes", icon: ClipboardList },
     { label: "거래", path: "/app/supplier/deals", icon: PackageCheck },
-    { label: "알림", path: "/app/supplier/notifications", icon: Bell },
   ],
   admin: [
     { label: "홈", path: "/app/admin", icon: ShieldCheck },
     { label: "요청", path: "/app/admin/requests", icon: ClipboardList },
-    { label: "공급사", path: "/app/admin/suppliers", icon: UsersRound },
+    { label: "채팅", path: "/app/admin/chats", icon: MessageCircle },
     { label: "신고", path: "/app/admin/reports", icon: Bell },
     { label: "QA", path: "/app/admin/qa", icon: Check },
   ],
@@ -337,6 +337,18 @@ function getNotificationPath(role: UserRole) {
   if (role === "supplier") return "/app/supplier/notifications";
   if (role === "admin") return "/app/admin/notifications";
   return "/app/notifications";
+}
+
+function getChatPath(role: UserRole) {
+  if (role === "supplier") return "/app/supplier/chats";
+  if (role === "admin") return "/app/admin/chats";
+  return "/app/chats";
+}
+
+function getChatUnreadCountForRole(data: AppData, role: UserRole) {
+  const threads = getThreadsForRole(data, role);
+  const userId = getNotificationUserId(role);
+  return threads.reduce((sum, thread) => sum + getThreadUnreadCount(data, thread.id, role === "admin" ? undefined : userId), 0);
 }
 
 function supplierUserIdForUi(data: AppData, supplierId: string) {
@@ -744,9 +756,18 @@ export default function App() {
   const notificationPath = getNotificationPath(shellRole);
   const notificationUserId = getNotificationUserId(shellRole);
   const unreadNotifications = getUnreadNotificationCount(data, notificationUserId);
+  const chatPath = getChatPath(shellRole);
+  const unreadChats = getChatUnreadCountForRole(data, shellRole);
   const primaryAction = getPrimaryAction(shellRole);
   const PrimaryActionIcon = primaryAction.icon;
   const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole);
+  const showChatShortcut = Boolean(authSession && isProtectedAppPath(path) && !isNavItemActive(path, chatPath));
+
+  function navBadgeCount(itemPath: string) {
+    if (itemPath === notificationPath) return unreadNotifications;
+    if (itemPath === chatPath) return unreadChats;
+    return 0;
+  }
 
   useEffect(() => {
     if (!authSession) return;
@@ -773,11 +794,12 @@ export default function App() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isNavItemActive(path, item.path);
+            const badgeCount = navBadgeCount(item.path);
             return (
               <button className={active ? "navButton active" : "navButton"} type="button" onClick={() => navigate(item.path)} key={item.key ?? item.path}>
                 <span className="navIconWrap">
                   <Icon size={18} />
-                  {item.path === notificationPath && unreadNotifications > 0 && <UnreadBadge count={unreadNotifications} />}
+                  {badgeCount > 0 && <UnreadBadge count={badgeCount} />}
                 </span>
                 <span>{item.label}</span>
               </button>
@@ -849,17 +871,27 @@ export default function App() {
         {mobileNavItems.map((item) => {
           const Icon = item.icon;
           const active = isNavItemActive(path, item.path);
+          const badgeCount = navBadgeCount(item.path);
           return (
             <button className={active ? "bottomNavButton active" : "bottomNavButton"} type="button" onClick={() => navigate(item.path)} key={item.path}>
               <span className="navIconWrap">
                 <Icon size={18} />
-                {item.path === notificationPath && unreadNotifications > 0 && <UnreadBadge count={unreadNotifications} />}
+                {badgeCount > 0 && <UnreadBadge count={badgeCount} />}
               </span>
               <span>{item.label}</span>
             </button>
           );
         })}
       </nav>
+      {showChatShortcut && (
+        <button className="chatShortcutButton" type="button" onClick={() => navigate(chatPath)} aria-label="문의/채팅 열기">
+          <span className="navIconWrap">
+            <MessageCircle size={18} />
+            {unreadChats > 0 && <UnreadBadge count={unreadChats} />}
+          </span>
+          <strong>문의/채팅</strong>
+        </button>
+      )}
       </div>
     </>
   );
@@ -4449,7 +4481,9 @@ function MessageThreadPanel({ data, setData, thread, currentUserId, currentRole 
   const [reportReason, setReportReason] = useState("외부 결제 유도");
   const [reportDetail, setReportDetail] = useState("");
   const [warningDraft, setWarningDraft] = useState<{ body: string; attachmentName: string; reason: string } | null>(null);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
   const messages = data.messages.filter((entry) => entry.thread_id === thread.id).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const lastMessageId = messages[messages.length - 1]?.id ?? "";
   const templates = chatTemplatesForThread(thread, currentRole);
   const contextRows = threadContextRows(data, thread);
   const composerDisabled = thread.status === "closed" || thread.status === "blocked" || thread.status === "archived";
@@ -4461,6 +4495,15 @@ function MessageThreadPanel({ data, setData, thread, currentUserId, currentRole 
       setData(markThreadAsRead(data, thread.id, currentUserId));
     }
   }, [currentUserId, data, setData, thread.id]);
+
+  useEffect(() => {
+    const list = messageListRef.current;
+    if (!list) return;
+    const frame = window.requestAnimationFrame(() => {
+      list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [lastMessageId, thread.id]);
 
   function submitMessage(event: FormEvent) {
     event.preventDefault();
@@ -4513,7 +4556,7 @@ function MessageThreadPanel({ data, setData, thread, currentUserId, currentRole 
         <span>연락처, 계좌번호, 외부결제 유도는 경고 후 관리자 위험 대화로 표시됩니다. 거래 조건은 싸와 채팅에 남겨주세요.</span>
         {flaggedCount > 0 && <StatusBadge tone="orange">위험 메시지 {flaggedCount}건</StatusBadge>}
       </div>
-      <div className="messageList">
+      <div className="messageList" ref={messageListRef}>
         {messages.map((entry) => (
           <article className={`${entry.sender_role === "system" ? "messageBubble system" : entry.sender_id === currentUserId ? "messageBubble mine" : "messageBubble theirs"}${entry.is_flagged ? " flagged" : ""}`} key={entry.id}>
             <strong>{messageSenderLabel(data, entry)}</strong>
@@ -10030,6 +10073,10 @@ function BadgeCheck(props: IconProps) {
 
 function Bell(props: IconProps) {
   return <LineIcon {...props}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></LineIcon>;
+}
+
+function MessageCircle(props: IconProps) {
+  return <LineIcon {...props}><path d="M21 11.5a8.5 8.5 0 0 1-9.4 8.45 8.7 8.7 0 0 1-3.6-1.15L3 20l1.25-4.1A8.45 8.45 0 1 1 21 11.5Z" /><path d="M8 10h8M8 14h5" /></LineIcon>;
 }
 
 function Boxes(props: IconProps) {

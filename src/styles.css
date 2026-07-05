@@ -280,6 +280,33 @@ button:disabled {
   position: relative;
 }
 
+.chatShortcutButton {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 12;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 18px;
+  border: 1px solid #0f172a;
+  border-radius: 999px;
+  color: #ffffff;
+  background: var(--navy);
+  box-shadow: 0 16px 32px rgba(16, 32, 51, 0.22);
+  font-weight: 950;
+}
+
+.chatShortcutButton strong {
+  font-size: 14px;
+}
+
+.chatShortcutButton:hover {
+  transform: translateY(-1px);
+  background: #162b43;
+}
+
 .page {
   width: min(1180px, calc(100% - 64px));
   margin: 0 auto;
@@ -4581,6 +4608,18 @@ tr.selectedRow {
   .bottomNavButton.active {
     color: var(--orange);
     background: var(--orange-soft);
+  }
+
+  .chatShortcutButton {
+    right: 14px;
+    bottom: calc(74px + env(safe-area-inset-bottom));
+    min-height: 46px;
+    padding: 0 14px;
+    box-shadow: 0 12px 24px rgba(16, 32, 51, 0.2);
+  }
+
+  .chatShortcutButton strong {
+    font-size: 13px;
   }
 }
 
