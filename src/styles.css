@@ -24,14 +24,23 @@
 
 html {
   min-width: 320px;
+  max-width: 100%;
+  overflow-x: clip;
   background: var(--background);
 }
 
 body {
   margin: 0;
   min-width: 320px;
+  max-width: 100%;
+  overflow-x: clip;
   color: var(--charcoal);
   background: var(--background);
+}
+
+#root {
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .launchScreen {
@@ -88,6 +97,8 @@ button,
 input,
 select,
 textarea {
+  min-width: 0;
+  max-width: 100%;
   font: inherit;
 }
 
@@ -100,6 +111,7 @@ button:disabled {
 }
 
 .appShell {
+  max-width: 100%;
   min-height: 100vh;
   display: grid;
   grid-template-columns: 260px 1fr;
@@ -249,7 +261,9 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   min-height: 70px;
+  min-width: 0;
   padding: 14px 32px;
   background: rgba(246, 247, 249, 0.92);
   backdrop-filter: blur(14px);
@@ -271,6 +285,8 @@ button:disabled {
 
 .topbarActions {
   margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -309,12 +325,19 @@ button:disabled {
 
 .page {
   width: min(1180px, calc(100% - 64px));
+  max-width: 100%;
   margin: 0 auto;
   padding: 32px 0 80px;
 }
 
 .page.narrow {
   width: min(820px, calc(100% - 64px));
+}
+
+:where(.page, .authPage, .signupPage, .topbarActions) :where(h1, h2, h3, h4, p, span, strong, small, label, button, input, select, textarea, td, th, code) {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 .heroBand {
@@ -473,6 +496,8 @@ button:disabled {
 
 .primaryButton,
 .selectedButton {
+  max-width: 100%;
+  min-width: 0;
   padding: 0 18px;
   color: #ffffff;
   background: var(--orange);
@@ -480,11 +505,30 @@ button:disabled {
   font-weight: 850;
 }
 
+.primaryButton,
+.secondaryButton,
+.ghostButton,
+.backButton,
+.selectedButton {
+  text-align: center;
+  white-space: normal;
+}
+
+.primaryButton svg,
+.secondaryButton svg,
+.ghostButton svg,
+.backButton svg,
+.selectedButton svg {
+  flex: 0 0 auto;
+}
+
 .primaryButton:hover {
   background: #ef5c0b;
 }
 
 .secondaryButton {
+  max-width: 100%;
+  min-width: 0;
   padding: 0 18px;
   color: var(--navy);
   background: #ffffff;
@@ -493,6 +537,8 @@ button:disabled {
 }
 
 .ghostButton {
+  max-width: 100%;
+  min-width: 0;
   padding: 0 13px;
   color: var(--charcoal);
   background: #ffffff;
@@ -1272,12 +1318,16 @@ button:disabled {
 }
 
 code {
+  max-width: 100%;
   padding: 2px 5px;
   border-radius: 6px;
   background: #f1f4f8;
   color: var(--navy);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.92em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .itemEditor {
@@ -2783,9 +2833,13 @@ code {
 }
 
 .tableWrap {
+  position: relative;
+  width: 100%;
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -2796,10 +2850,13 @@ table {
 
 th,
 td {
+  min-width: 0;
   padding: 14px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: middle;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 th {
@@ -3754,6 +3811,7 @@ button.riskRow {
 }
 
 .authBadge {
+  min-width: 0;
   max-width: min(320px, 42vw);
   min-height: 34px;
   display: inline-flex;
@@ -3769,6 +3827,10 @@ button.riskRow {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.authBadge svg {
+  flex: 0 0 auto;
 }
 
 .authBadge small {
@@ -4390,10 +4452,29 @@ tr.selectedRow {
 
   .topbar {
     min-height: 64px;
+    overflow: hidden;
+  }
+
+  .mobileBrand {
+    flex: 0 0 auto;
+  }
+
+  .topbarActions {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    gap: 6px;
+    max-width: calc(100% - 92px);
   }
 
   .authBadge {
-    max-width: 42vw;
+    flex: 1 1 auto;
+    max-width: min(54vw, 190px);
+    padding-inline: 8px;
+  }
+
+  .authBadge small,
+  .demoBadge {
+    display: none;
   }
 
   .topbarActions .ghostButton {
@@ -4686,11 +4767,11 @@ tr.selectedRow {
   }
 
   .topbarActions .primaryButton {
+    flex: 0 0 auto;
     min-width: 42px;
     padding-inline: 10px;
   }
 
-  .topbarActions .primaryButton svg + text,
   .topbarActions .primaryButton span {
     display: none;
   }

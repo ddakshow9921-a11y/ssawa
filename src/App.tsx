@@ -860,7 +860,7 @@ export default function App() {
             )}
             <button className="primaryButton compact" type="button" onClick={() => navigate(primaryAction.path)}>
               <PrimaryActionIcon size={16} />
-              {primaryAction.label}
+              <span>{primaryAction.label}</span>
             </button>
           </div>
         </header>
