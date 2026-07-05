@@ -12,6 +12,9 @@ function statusPayload(request) {
     supabaseUrlConfigured: Boolean(process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
     supabasePublishableKeyConfigured: Boolean(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     liveDataEnabled: readBoolean(process.env.VITE_USE_LIVE_DATA || process.env.NEXT_PUBLIC_USE_LIVE_DATA, false),
+    vercelEnv: process.env.VERCEL_ENV || "",
+    commitSha: process.env.VERCEL_GIT_COMMIT_SHA || "",
+    deploymentUrl: process.env.VERCEL_URL || "",
     path: url.pathname,
     timestamp: new Date().toISOString(),
   };
