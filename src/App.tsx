@@ -265,9 +265,9 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
 };
 
 const mobileNavItemsByRole: Record<UserRole, NavItem[]> = {
-  buyer: navItemsByRole.buyer.slice(0, 5),
-  supplier: navItemsByRole.supplier.slice(0, 5),
-  admin: navItemsByRole.admin.slice(0, 5),
+  buyer: navItemsByRole.buyer.slice(0, 3),
+  supplier: navItemsByRole.supplier.slice(0, 3),
+  admin: navItemsByRole.admin.slice(0, 3),
 };
 
 const emptyItem = {
@@ -418,6 +418,28 @@ function getPrimaryAction(role: UserRole) {
   if (role === "supplier") return { label: "요청찾기", path: "/app/supplier/requests", icon: SearchCheck };
   if (role === "admin") return { label: "환경 점검", path: "/app/admin/supabase", icon: ShieldCheck };
   return { label: "새 견적요청", path: "/app/requests/new", icon: Plus };
+}
+
+function getMobileMoreItems(role: UserRole, signedIn: boolean) {
+  if (!signedIn) return [];
+  const primaryPaths = new Set(mobileNavItemsByRole[role].map((item) => item.path));
+  const roleItems = navItemsByRole[role].filter((item) => !primaryPaths.has(item.path));
+  const utilityItems: NavItem[] = signedIn
+    ? [
+        { ...getPrimaryAction(role), key: `mobile-primary-${role}` },
+        { label: "문의/채팅", mobileLabel: "채팅", path: getChatPath(role), icon: MessageCircle, key: `mobile-chat-${role}` },
+        { label: "알림", path: getNotificationPath(role), icon: Bell, key: `mobile-notification-${role}` },
+        { label: "내 정보", path: getProfilePath(role), icon: ShieldCheck, key: `mobile-profile-${role}` },
+      ]
+    : [];
+  const seen = new Set<string>();
+  return [...roleItems, ...utilityItems]
+    .filter((item) => !primaryPaths.has(item.path))
+    .filter((item) => {
+      if (seen.has(item.path)) return false;
+      seen.add(item.path);
+      return true;
+    });
 }
 
 function isNavItemActive(path: string, itemPath: string) {
@@ -580,6 +602,7 @@ export default function App() {
   const [authSession, setAuthSession] = useState<AppAuthSession | null>(() => loadStoredAuthSession());
   const [authReady, setAuthReady] = useState(false);
   const [showLaunchScreen, setShowLaunchScreen] = useState(true);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const previousUnreadByUserRef = useRef<Record<string, number>>({});
   const launchStartedAtRef = useRef(typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -598,6 +621,7 @@ export default function App() {
 
   useEffect(() => {
     pathRef.current = path;
+    setMobileMoreOpen(false);
   }, [path]);
 
   useEffect(() => {
@@ -757,6 +781,7 @@ export default function App() {
   const shellRole = authSession && routeRole && routeRole !== authSession.role ? authSession.role : getShellRole(path, authSession);
   const navItems = navItemsByRole[shellRole];
   const mobileNavItems = mobileNavItemsByRole[shellRole];
+  const mobileMoreItems = getMobileMoreItems(shellRole, Boolean(authSession));
   const notificationPath = getNotificationPath(shellRole);
   const notificationUserId = getNotificationUserId(shellRole);
   const unreadNotifications = authSession ? getUnreadNotificationCount(data, notificationUserId) : 0;
@@ -766,6 +791,8 @@ export default function App() {
   const PrimaryActionIcon = primaryAction.icon;
   const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole, handleSignOut);
   const showChatShortcut = Boolean(authSession && isProtectedAppPath(path) && !isNavItemActive(path, chatPath));
+  const showMobileNav = Boolean(authSession && isProtectedAppPath(path));
+  const mobileMoreActive = mobileMoreItems.some((item) => isNavItemActive(path, item.path));
 
   function navBadgeCount(itemPath: string) {
     if (!authSession) return 0;
@@ -872,22 +899,56 @@ export default function App() {
         {page}
       </main>
 
-      <nav className="bottomNav" aria-label="모바일 주요 메뉴">
-        {mobileNavItems.map((item) => {
-          const Icon = item.icon;
-          const active = isNavItemActive(path, item.path);
-          const badgeCount = navBadgeCount(item.path);
-          return (
-            <button className={active ? "bottomNavButton active" : "bottomNavButton"} type="button" onClick={() => navigate(item.path)} key={item.path}>
-              <span className="navIconWrap">
-                <Icon size={18} />
-                {badgeCount > 0 && <UnreadBadge count={badgeCount} />}
-              </span>
-              <span>{item.mobileLabel ?? item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      {showMobileNav && mobileMoreOpen && (
+        <>
+          <button className="mobileMoreBackdrop" type="button" aria-label="더보기 닫기" onClick={() => setMobileMoreOpen(false)} />
+          <section className="mobileMorePanel" id="mobile-more-menu" aria-label="더보기 메뉴">
+            <div className="mobileMoreHeader">
+              <strong>더보기</strong>
+              <span>{getRoleLabel(shellRole)}에게 필요한 메뉴만 모았습니다.</span>
+            </div>
+            <div className="mobileMoreGrid">
+              {mobileMoreItems.map((item) => {
+                const Icon = item.icon;
+                const active = isNavItemActive(path, item.path);
+                const badgeCount = navBadgeCount(item.path);
+                return (
+                  <button className={active ? "mobileMoreItem active" : "mobileMoreItem"} type="button" onClick={() => navigate(item.path)} key={item.key ?? item.path}>
+                    <span className="navIconWrap">
+                      <Icon size={18} />
+                      {badgeCount > 0 && <UnreadBadge count={badgeCount} />}
+                    </span>
+                    <span>{item.mobileLabel ?? item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </>
+      )}
+
+      {showMobileNav && (
+        <nav className="bottomNav" aria-label="모바일 주요 메뉴">
+          {mobileNavItems.map((item) => {
+            const Icon = item.icon;
+            const active = isNavItemActive(path, item.path);
+            const badgeCount = navBadgeCount(item.path);
+            return (
+              <button className={active ? "bottomNavButton active" : "bottomNavButton"} type="button" onClick={() => navigate(item.path)} key={item.path}>
+                <span className="navIconWrap">
+                  <Icon size={18} />
+                  {badgeCount > 0 && <UnreadBadge count={badgeCount} />}
+                </span>
+                <span>{item.mobileLabel ?? item.label}</span>
+              </button>
+            );
+          })}
+          <button className={mobileMoreOpen || mobileMoreActive ? "bottomNavButton active" : "bottomNavButton"} type="button" onClick={() => setMobileMoreOpen((open) => !open)} aria-expanded={mobileMoreOpen} aria-controls="mobile-more-menu">
+            <MoreHorizontal size={18} />
+            <span>더보기</span>
+          </button>
+        </nav>
+      )}
       {showChatShortcut && (
         <button className="chatShortcutButton" type="button" onClick={() => navigate(chatPath)} aria-label="문의/채팅 열기">
           <span className="navIconWrap">
@@ -10873,6 +10934,10 @@ function Bell(props: IconProps) {
 
 function MessageCircle(props: IconProps) {
   return <LineIcon {...props}><path d="M21 11.5a8.5 8.5 0 0 1-9.4 8.45 8.7 8.7 0 0 1-3.6-1.15L3 20l1.25-4.1A8.45 8.45 0 1 1 21 11.5Z" /><path d="M8 10h8M8 14h5" /></LineIcon>;
+}
+
+function MoreHorizontal(props: IconProps) {
+  return <LineIcon {...props}><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></LineIcon>;
 }
 
 function Boxes(props: IconProps) {
