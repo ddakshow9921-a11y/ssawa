@@ -51,8 +51,14 @@ import {
   createReport,
   createQuote,
   createDealFromQuote,
+  createProductInquiry,
+  createProductOrderRequest,
+  createProductReport,
+  createQuoteRequestFromProduct,
   createQuoteRequest,
   createSupplierApplication,
+  createSupplierProduct,
+  deleteSupplierProduct,
   dealStatusLabels,
   detectSuspiciousMessage,
   deliveryNoteStatusLabels,
@@ -74,19 +80,25 @@ import {
   getNotificationsForUser,
   getOperationsSummary,
   getPlatformFeesBySupplier,
+  getProductCategoryName,
   getQuoteRequestOpsInsights,
   getRepeatUsageInsights,
   getRevenueSummary,
   getSupplierDropoffMetrics,
   getSupplierMatchCandidates,
+  getSupplierProductPriceLabel,
+  getSupplierProducts,
+  getSupplierProductSummary,
   getSupplierReputation,
   getSupplierResponseOps,
+  getSupplierStoreProfile,
   getSupplierCurrentPlan,
   getSupplierSettlements,
   getSupplierSubscription,
   getSupplierUsageSummary,
   getSupplierUsageForCurrentPeriod,
   getSupplierRevenueRanking,
+  getVisibleSupplierProducts,
   getUnreadNotificationCount,
   getVisibleRequestsForSupplier,
   environmentLabels,
@@ -113,6 +125,15 @@ import {
   paymentMethodStatusLabels,
   parseItemsFromText,
   platformFeeStatusLabels,
+  productApprovalStatusLabels,
+  productDeliveryFeeTypeLabels,
+  productInquiryStatusLabels,
+  productInquiryTypeLabels,
+  productOrderRequestStatusLabels,
+  productPriceTypeLabels,
+  productReportReasonLabels,
+  productReportStatusLabels,
+  productStockStatusLabels,
   purchaseDocumentStatusLabels,
   purchaseDocumentTypeLabels,
   quoteStatusLabels,
@@ -167,6 +188,9 @@ import {
   updateMessageThreadAdminMemo,
   updateNotificationSettings,
   updatePlatformFeeStatus,
+  updateProductApprovalStatus,
+  updateProductOrderRequest,
+  updateProductReportStatus,
   updatePurchaseAccountingStatus,
   updatePurchaseRecord,
   updateReportStatus,
@@ -175,13 +199,15 @@ import {
   updateSettlementStatus,
   updateQaChecklist,
   updateSupplierApprovalStatus,
+  updateSupplierProduct,
   updateSupplierPlan,
   updateSupplierSubscriptionPlan,
   updateSupplierProfile,
+  toggleProductFavorite,
   vatPolicyLabels,
   waivePlatformFee,
 } from "./data/sawaData";
-import type { AccountingStatus, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, BusinessManualReviewRequest, BusinessManualReviewStatus, BusinessOperatingStatus, BusinessVerification, BusinessVerificationStatus, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, Profile, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, UserRole } from "./types";
+import type { AccountingStatus, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, BusinessManualReviewRequest, BusinessManualReviewStatus, BusinessOperatingStatus, BusinessVerification, BusinessVerificationStatus, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, ProductInquiryDraft, ProductOrderRequestDraft, ProductStockStatus, Profile, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProduct, SupplierProductDraft, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, UserRole } from "./types";
 import { appConfig, environmentLabel, isLiveModeReady } from "./lib/env";
 import { getSupabaseClient, isSupabaseConfigured, SUPABASE_PROJECT_URL } from "./lib/supabase/client";
 import { ensureProfile, getCurrentProfile, signOut as signOutSupabase } from "./lib/supabase/auth";
@@ -208,6 +234,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
   buyer: [
     { label: "홈", path: "/app", icon: Home },
     { label: "견적", path: "/app/requests", icon: ClipboardList },
+    { label: "업체 상품", mobileLabel: "상품", path: "/app/products", icon: Boxes },
     { label: "거래", path: "/app/deals", icon: ReceiptText },
     { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
     { label: "내 사업장", mobileLabel: "사업장", path: "/app/buyer/profile", icon: ShieldCheck },
@@ -217,6 +244,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "요청", path: "/app/supplier/requests", icon: SearchCheck },
     { label: "견적", path: "/app/supplier/quotes", icon: ClipboardList },
     { label: "거래", path: "/app/supplier/deals", icon: PackageCheck },
+    { label: "내 상품", mobileLabel: "상품", path: "/app/supplier/products", icon: Boxes },
     { label: "문의", path: "/app/supplier/chats", icon: MessageCircle },
     { label: "정산", path: "/app/supplier/settlements", icon: Landmark },
     { label: "업체 정보", path: "/app/supplier/profile", icon: Building2 },
@@ -226,6 +254,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "공급업체 승인", mobileLabel: "승인", path: "/app/admin/suppliers", icon: UsersRound },
     { label: "사업자 인증", mobileLabel: "인증", path: "/app/admin/business-verifications", icon: ShieldCheck },
     { label: "견적 미도착", mobileLabel: "매칭", path: "/app/admin/matching-assist", icon: SearchCheck },
+    { label: "상품 관리", mobileLabel: "상품", path: "/app/admin/products", icon: Boxes },
     { label: "신고/피드백", mobileLabel: "신고", path: "/app/admin/feedback", icon: Bell },
     { label: "거래 관리", path: "/app/admin/deals", icon: ReceiptText },
     { label: "정산", path: "/app/admin/settlements", icon: Landmark },
@@ -914,6 +943,8 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/beta-guide") return <BuyerBetaGuidePage navigate={navigate} />;
   if (path === "/app/quick-reorder") return <QuickReorderPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/favorites/items") return <FavoriteItemsPage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/products") return <ProductsPage data={data} navigate={navigate} setData={setData} />;
+  if (path.startsWith("/app/products/")) return <ProductDetailPage data={data} navigate={navigate} setData={setData} productId={path.split("/").pop() ?? ""} />;
   if (path === "/app/feedback") return <FeedbackPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/notifications/settings") return <NotificationSettingsPage data={data} setData={setData} userId="buyer-1" navigate={navigate} />;
   if (path === "/app/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId="buyer-1" userRole="buyer" />;
@@ -942,6 +973,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path.startsWith("/app/deals/") && path.endsWith("/messages")) return <DealMessagesPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[3] ?? ""} />;
   if (path.startsWith("/app/deals/") && path.endsWith("/review")) return <DealReviewPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[3] ?? ""} />;
   if (path.startsWith("/app/deals/")) return <DealDetailPage data={data} navigate={navigate} setData={setData} dealId={path.split("/").pop() ?? ""} role="buyer" />;
+  if (path.startsWith("/app/suppliers/") && path.endsWith("/store")) return <SupplierStorePage data={data} navigate={navigate} setData={setData} supplierId={path.split("/")[3] ?? ""} />;
   if (path.startsWith("/app/suppliers/")) return <SupplierPublicProfilePage data={data} navigate={navigate} supplierId={path.split("/").pop() ?? ""} />;
   if (path === "/app/supplier") return <SupplierDashboard data={data} navigate={navigate} />;
   if (path === "/app/supplier/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId="sup-1-user" userRole="supplier" />;
@@ -955,6 +987,10 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/supplier/response-guide") return <SupplierResponseGuidePage data={data} navigate={navigate} />;
   if (path === "/app/supplier/apply") return <SupplierApplyPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/profile") return <SupplierProfilePage data={data} navigate={navigate} setData={setData} onSignOut={onSignOut} />;
+  if (path === "/app/supplier/products") return <SupplierProductsPage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/supplier/products/new") return <SupplierProductFormPage data={data} navigate={navigate} setData={setData} />;
+  if (path.startsWith("/app/supplier/products/") && path.endsWith("/edit")) return <SupplierProductFormPage data={data} navigate={navigate} setData={setData} productId={path.split("/")[4] ?? ""} />;
+  if (path === "/app/supplier/store") return <SupplierStorePage data={data} navigate={navigate} setData={setData} supplierId={getActiveSupplier(data).id} editable />;
   if (path === "/app/supplier/settings") return <SupplierSettingsPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/deals") return <SupplierDealsPage data={data} navigate={navigate} />;
   if (path.startsWith("/app/supplier/deals/") && path.endsWith("/messages")) return <DealMessagesPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[4] ?? ""} role="supplier" />;
@@ -965,6 +1001,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/supplier/quotes") return <SupplierQuotesPage data={data} navigate={navigate} />;
   if (path === "/app/admin") return <AdminDashboard data={data} navigate={navigate} />;
   if (path === "/app/admin/product-focus") return <AdminProductFocusPage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/admin/products") return <AdminProductsPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/admin/matching-assist") return <AdminMatchingAssistPage data={data} navigate={navigate} />;
   if (path === "/app/admin/response-ops") return <AdminResponseOpsPage data={data} navigate={navigate} />;
   if (path === "/app/admin/repeat-insights") return <AdminRepeatInsightsPage data={data} navigate={navigate} />;
@@ -2199,6 +2236,684 @@ function HomePage({ data, navigate }: PageProps) {
 
       <SectionHeader title="최근 견적요청" action="전체 보기" onAction={() => navigate("/app/requests")} />
       <RequestList data={data} requests={data.quote_requests.slice(0, 3)} navigate={navigate} />
+    </Page>
+  );
+}
+
+function ProductThumb({ product }: { product: SupplierProduct }) {
+  return (
+    <div className="productThumb" aria-hidden="true">
+      <img src={product.main_image_url || "/아이콘.png"} alt="" loading="lazy" />
+    </div>
+  );
+}
+
+function ProductCard({
+  data,
+  product,
+  favorite = false,
+  onOpen,
+  onFavorite,
+}: {
+  data: AppData;
+  product: SupplierProduct;
+  favorite?: boolean;
+  onOpen: () => void;
+  onFavorite?: () => void;
+}) {
+  const supplier = data.supplier_profiles.find((entry) => entry.id === product.supplier_id);
+  const categoryName = getProductCategoryName(data, product.category_id);
+
+  return (
+    <article className="productCard">
+      <button className="productThumbButton" type="button" onClick={onOpen} aria-label={`${product.title} 상세 보기`}>
+        <ProductThumb product={product} />
+      </button>
+      <div className="productCardBody">
+        <div>
+          <span className="eyebrow">{categoryName}</span>
+          <h2>{product.title}</h2>
+          <p>{product.short_description || supplier?.business_name || "공급업체 상품"}</p>
+        </div>
+        <strong className="productPrice">{getSupplierProductPriceLabel(product)}</strong>
+        <div className="chipLine">
+          <StatusBadge tone={stockStatusTone(product.stock_status)}>{productStockStatusLabels[product.stock_status]}</StatusBadge>
+          <span className="chip">{supplier?.business_name ?? "공급업체"}</span>
+          <span className="chip">최소 {product.min_order_quantity}{product.unit_label}</span>
+        </div>
+        <div className="productCardActions">
+          {onFavorite && (
+            <button className={favorite ? "secondaryButton compact" : "ghostButton compact"} type="button" onClick={onFavorite}>
+              {favorite ? "저장됨" : "저장"}
+            </button>
+          )}
+          <button className="primaryButton compact" type="button" onClick={onOpen}>상세 보기</button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function stockStatusTone(status: ProductStockStatus): "orange" | "blue" | "green" | "gray" {
+  if (status === "in_stock") return "green";
+  if (status === "low_stock") return "orange";
+  if (status === "made_to_order") return "blue";
+  return "gray";
+}
+
+function productApprovalTone(status: SupplierProduct["approval_status"]): "orange" | "blue" | "green" | "gray" {
+  if (status === "approved") return "green";
+  if (status === "pending") return "orange";
+  if (status === "draft") return "blue";
+  return "gray";
+}
+
+function defaultProductDraft(data: AppData, supplier: SupplierProfile): SupplierProductDraft {
+  const category = data.product_categories.find((entry) => supplier.categories.includes(entry.name) && entry.is_active)
+    ?? data.product_categories.find((entry) => entry.is_active)
+    ?? data.product_categories[0];
+  return {
+    title: "",
+    category_id: category?.id ?? "",
+    short_description: "",
+    description: "",
+    main_image_url: "/아이콘.png",
+    sku: "",
+    brand: "",
+    origin: "",
+    unit_label: "개",
+    package_unit: "",
+    min_order_quantity: 1,
+    price_type: "quote_only",
+    price: 0,
+    from_price: 0,
+    vat_included: true,
+    delivery_fee_type: "quote",
+    delivery_fee_amount: 0,
+    available_regions: supplier.service_regions.slice(0, 3),
+    tax_invoice_available: supplier.tax_invoice_available,
+    card_payment_available: supplier.card_payment_available,
+    safe_trade_available: true,
+    stock_status: "in_stock",
+    lead_time_text: "평일 기준 1-2일",
+    is_featured: false,
+    is_public: supplier.approval_status === "approved",
+    approval_status: "draft",
+  };
+}
+
+function productToDraft(product: SupplierProduct): SupplierProductDraft {
+  return {
+    title: product.title,
+    category_id: product.category_id,
+    short_description: product.short_description,
+    description: product.description,
+    main_image_url: product.main_image_url,
+    sku: product.sku,
+    brand: product.brand,
+    origin: product.origin,
+    unit_label: product.unit_label,
+    package_unit: product.package_unit,
+    min_order_quantity: product.min_order_quantity,
+    price_type: product.price_type,
+    price: product.price,
+    from_price: product.from_price,
+    vat_included: product.vat_included,
+    delivery_fee_type: product.delivery_fee_type,
+    delivery_fee_amount: product.delivery_fee_amount,
+    available_regions: product.available_regions,
+    tax_invoice_available: product.tax_invoice_available,
+    card_payment_available: product.card_payment_available,
+    safe_trade_available: product.safe_trade_available,
+    stock_status: product.stock_status,
+    lead_time_text: product.lead_time_text,
+    is_featured: product.is_featured,
+    is_public: product.is_public,
+    approval_status: product.approval_status,
+  };
+}
+
+function ProductsPage({ data, navigate, setData }: MutatingPageProps) {
+  const [keyword, setKeyword] = useState("");
+  const [categoryId, setCategoryId] = useState("all");
+  const [region, setRegion] = useState("all");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const products = getVisibleSupplierProducts(data);
+  const filtered = products.filter((product) => {
+    const supplier = data.supplier_profiles.find((entry) => entry.id === product.supplier_id);
+    const categoryName = getProductCategoryName(data, product.category_id);
+    const haystack = `${product.title} ${product.short_description} ${product.brand} ${supplier?.business_name ?? ""} ${categoryName}`.toLowerCase();
+    const keywordOk = !keyword.trim() || haystack.includes(keyword.trim().toLowerCase());
+    const categoryOk = categoryId === "all" || product.category_id === categoryId;
+    const regionOk = region === "all" || product.available_regions.some((entry) => entry.includes(region) || region.includes(entry.split(" ")[0]));
+    const favoriteOk = !favoritesOnly || data.product_favorites.some((entry) => entry.product_id === product.id && entry.buyer_id === "buyer-1");
+    return keywordOk && categoryOk && regionOk && favoriteOk;
+  });
+  const featured = filtered.filter((product) => product.is_featured).length;
+  const quoteOnly = filtered.filter((product) => product.price_type === "quote_only").length;
+
+  return (
+    <Page>
+      <PageTitle eyebrow="업체 상품" title="자주 쓰는 자재를 빠르게 찾아보세요." desc="공급업체가 공개한 상품을 보고 문의, 견적담기, 주문요청으로 이어갈 수 있습니다." />
+      <div className="dashboardGrid">
+        <Metric label="공개 상품" value={`${products.length}개`} icon={<Boxes />} />
+        <Metric label="추천 상품" value={`${featured}개`} icon={<BadgeCheck />} />
+        <Metric label="견적 문의 상품" value={`${quoteOnly}개`} icon={<ClipboardList />} />
+        <Metric label="저장한 상품" value={`${data.product_favorites.filter((entry) => entry.buyer_id === "buyer-1").length}개`} icon={<PackageCheck />} />
+      </div>
+
+      <section className="filterPanel productFilterPanel">
+        <Field label="검색">
+          <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="상품명, 업체명, 카테고리" />
+        </Field>
+        <Field label="카테고리">
+          <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+            <option value="all">전체</option>
+            {data.product_categories.filter((entry) => entry.is_active).map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}
+          </select>
+        </Field>
+        <Field label="납품지역">
+          <select value={region} onChange={(event) => setRegion(event.target.value)}>
+            <option value="all">전체</option>
+            {commonServiceRegions.map((entry) => <option value={entry} key={entry}>{entry}</option>)}
+          </select>
+        </Field>
+        <Toggle checked={favoritesOnly} label="저장한 상품만" onChange={setFavoritesOnly} />
+      </section>
+
+      {filtered.length ? (
+        <section className="productGrid" aria-label="상품 목록">
+          {filtered.map((product) => (
+            <ProductCard
+              key={product.id}
+              data={data}
+              product={product}
+              favorite={data.product_favorites.some((entry) => entry.product_id === product.id && entry.buyer_id === "buyer-1")}
+              onOpen={() => navigate(`/app/products/${product.id}`)}
+              onFavorite={() => setData(toggleProductFavorite(data, product.id, "buyer-1"))}
+            />
+          ))}
+        </section>
+      ) : (
+        <EmptyState icon={<SearchCheck />} title="조건에 맞는 상품이 없습니다." desc="검색어를 줄이거나 지역 조건을 전체로 바꿔보세요." />
+      )}
+    </Page>
+  );
+}
+
+function ProductDetailPage({ data, navigate, setData, productId }: MutatingPageProps & { productId: string }) {
+  const product = data.supplier_products.find((entry) => entry.id === productId);
+  if (!product || product.deleted_at || product.approval_status !== "approved" || !product.is_public) return <NotFound navigate={navigate} />;
+  const supplier = data.supplier_profiles.find((entry) => entry.id === product.supplier_id);
+  const categoryName = getProductCategoryName(data, product.category_id);
+  const favorite = data.product_favorites.some((entry) => entry.product_id === product.id && entry.buyer_id === "buyer-1");
+  const relatedProducts = getVisibleSupplierProducts(data).filter((entry) => entry.supplier_id === product.supplier_id && entry.id !== product.id).slice(0, 3);
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/products")} label="상품 목록" />
+      <section className="productDetailHero">
+        <div className="productImageFrame">
+          <img src={product.main_image_url || "/아이콘.png"} alt="" />
+        </div>
+        <div className="productDetailCopy">
+          <span className="eyebrow">{categoryName} · {supplier?.business_name ?? "공급업체"}</span>
+          <h1>{product.title}</h1>
+          <p>{product.short_description}</p>
+          <strong>{getSupplierProductPriceLabel(product)}</strong>
+          <div className="chipLine">
+            <StatusBadge tone={stockStatusTone(product.stock_status)}>{productStockStatusLabels[product.stock_status]}</StatusBadge>
+            <span className="chip">{product.package_unit || product.unit_label}</span>
+            <span className="chip">최소 {product.min_order_quantity}{product.unit_label}</span>
+            {product.tax_invoice_available && <span className="chip">세금계산서 가능</span>}
+            {product.card_payment_available && <span className="chip">카드 가능</span>}
+          </div>
+          <div className="formActions">
+            <button className="ghostButton" type="button" onClick={() => setData(toggleProductFavorite(data, product.id, "buyer-1"))}>{favorite ? "저장 해제" : "자주 쓰는 상품 저장"}</button>
+            <button className="secondaryButton" type="button" onClick={() => navigate(`/app/suppliers/${product.supplier_id}/store`)}>업체 상품관 보기</button>
+          </div>
+        </div>
+      </section>
+
+      <section className="productDetailGrid">
+        <article className="formStack">
+          <SectionHeader title="상품 정보" />
+          <p className="mutedText">{product.description || "상세 설명은 공급업체 문의로 확인할 수 있습니다."}</p>
+          <InfoPanel title="납품 조건" items={[
+            `가능 지역: ${product.available_regions.join(", ") || "문의 필요"}`,
+            `납품 소요: ${product.lead_time_text || "문의 필요"}`,
+            `배송비: ${productDeliveryFeeTypeLabels[product.delivery_fee_type]}${product.delivery_fee_amount ? ` · ${money(product.delivery_fee_amount)}` : ""}`,
+            `부가세: ${product.vat_included ? "포함" : "별도"}`,
+          ]} />
+          <InfoPanel title="거래 가능" items={[
+            `세금계산서 ${yesNo(product.tax_invoice_available)}`,
+            `카드결제 ${yesNo(product.card_payment_available)}`,
+            `안심거래 ${yesNo(product.safe_trade_available)}`,
+          ]} />
+        </article>
+        <ProductActionPanel data={data} product={product} navigate={navigate} setData={setData} />
+      </section>
+
+      <SectionHeader title="이 업체의 다른 상품" action="상품관 보기" onAction={() => navigate(`/app/suppliers/${product.supplier_id}/store`)} />
+      {relatedProducts.length ? (
+        <section className="productGrid compactProductGrid">
+          {relatedProducts.map((entry) => <ProductCard key={entry.id} data={data} product={entry} onOpen={() => navigate(`/app/products/${entry.id}`)} />)}
+        </section>
+      ) : (
+        <EmptyState icon={<Boxes />} title="아직 공개된 다른 상품이 없습니다." desc="상품 문의로 필요한 품목을 직접 요청할 수 있습니다." variant="compact" />
+      )}
+    </Page>
+  );
+}
+
+function ProductActionPanel({ data, product, navigate, setData }: MutatingPageProps & { product: SupplierProduct }) {
+  const [quantity, setQuantity] = useState(Math.max(product.min_order_quantity, 1));
+  const [region, setRegion] = useState(product.available_regions[0] ?? commonServiceRegions[0] ?? "");
+  const [date, setDate] = useState("2026-07-10");
+  const [memo, setMemo] = useState("");
+  const [doneMessage, setDoneMessage] = useState("");
+
+  function submitInquiry(type: ProductInquiryDraft["inquiry_type"]) {
+    const result = createProductInquiry(data, product.id, "buyer-1", {
+      inquiry_type: type,
+      message: memo || (type === "question" ? "상품 조건을 문의합니다." : "이 상품 기준으로 견적을 받고 싶습니다."),
+      quantity,
+      desired_delivery_date: date,
+      delivery_region: region,
+    });
+    setData(result.data);
+    if (result.threadId) navigate(`/app/chats/${result.threadId}`);
+  }
+
+  function requestQuote() {
+    const result = createQuoteRequestFromProduct(data, product.id, "buyer-1", quantity, region, date, memo);
+    setData(result.data);
+    if (result.requestId) navigate(`/app/requests/${result.requestId}`);
+  }
+
+  function requestOrder() {
+    const result = createProductOrderRequest(data, product.id, "buyer-1", { quantity, desired_delivery_date: date, delivery_region: region, buyer_memo: memo });
+    setData(result.data);
+    setDoneMessage(result.orderRequestId ? "주문요청이 공급업체에 전달되었습니다." : "주문요청을 처리하지 못했습니다.");
+  }
+
+  return (
+    <aside className="productActionPanel">
+      <SectionHeader title="문의/요청" />
+      <Field label="수량">
+        <input type="number" min={1} value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} />
+      </Field>
+      <Field label="납품지역">
+        <select value={region} onChange={(event) => setRegion(event.target.value)}>
+          {Array.from(new Set([...product.available_regions, ...commonServiceRegions])).filter(Boolean).map((entry) => <option value={entry} key={entry}>{entry}</option>)}
+        </select>
+      </Field>
+      <Field label="희망 납품일">
+        <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+      </Field>
+      <Field label="메모">
+        <textarea value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="수량, 납품 시간, 세금계산서 요청 등을 적어주세요." />
+      </Field>
+      <div className="productActionButtons">
+        <button className="secondaryButton" type="button" onClick={() => submitInquiry("question")}>문의하기</button>
+        <button className="primaryButton" type="button" onClick={requestQuote}>견적담기</button>
+        <button className="ghostButton" type="button" onClick={requestOrder}>주문요청</button>
+      </div>
+      {doneMessage && <p className="successText">{doneMessage}</p>}
+      <button className="ghostButton dangerButton" type="button" onClick={() => setData(createProductReport(data, product.id, "buyer-1", "wrong_info", "구매자 화면에서 상품 정보 검토 요청"))}>상품 정보 신고</button>
+    </aside>
+  );
+}
+
+function SupplierStorePage({ data, navigate, setData, supplierId, editable = false }: MutatingPageProps & { supplierId: string; editable?: boolean }) {
+  const supplier = data.supplier_profiles.find((entry) => entry.id === supplierId);
+  if (!supplier) return <NotFound navigate={navigate} />;
+  const store = getSupplierStoreProfile(data, supplier.id);
+  const products = getVisibleSupplierProducts(data).filter((product) => product.supplier_id === supplier.id);
+  const stats = supplierStatsFor(data, supplier.id);
+  return (
+    <Page>
+      <BackButton onClick={() => navigate(editable ? "/app/supplier/products" : "/app/products")} label={editable ? "내 상품" : "상품 목록"} />
+      <section className="supplierStoreHero">
+        <div>
+          <span className="eyebrow">공급업체 상품관</span>
+          <h1>{store?.store_name ?? `${supplier.business_name} 상품관`}</h1>
+          <p>{store?.store_description ?? supplier.description ?? "공급업체가 등록한 상품을 확인하세요."}</p>
+          <div className="chipLine">
+            {supplier.tax_invoice_available && <span className="chip">세금계산서 가능</span>}
+            {supplier.card_payment_available && <span className="chip">카드 가능</span>}
+            <span className="chip">응답률 {stats.response_rate}%</span>
+          </div>
+        </div>
+        <div className="supplierRatingBlock">
+          <strong>{products.length}</strong>
+          <span>공개 상품</span>
+        </div>
+      </section>
+      <section className="twoColumn">
+        <InfoPanel title="주요 카테고리" items={store?.main_categories.length ? store.main_categories : supplier.categories} />
+        <InfoPanel title="납품 가능 지역" items={store?.delivery_regions.length ? store.delivery_regions : supplier.service_regions} />
+        <InfoPanel title="운영 안내" items={[store?.business_hours_text ?? "영업시간 문의", store?.contact_policy_text ?? "싸와 문의로 조건 확인"]} />
+      </section>
+      <SectionHeader title="상품 목록" action={editable ? "상품 등록" : undefined} onAction={editable ? () => navigate("/app/supplier/products/new") : undefined} />
+      {products.length ? (
+        <section className="productGrid">
+          {products.map((product) => <ProductCard key={product.id} data={data} product={product} onOpen={() => navigate(`/app/products/${product.id}`)} />)}
+        </section>
+      ) : (
+        <EmptyState icon={<Boxes />} title="공개된 상품이 없습니다." desc="공급업체가 상품 공개를 완료하면 이곳에 표시됩니다." />
+      )}
+    </Page>
+  );
+}
+
+function SupplierProductsPage({ data, navigate, setData }: MutatingPageProps) {
+  const supplier = getActiveSupplier(data);
+  const products = getSupplierProducts(data, supplier.id);
+  const summary = getSupplierProductSummary(data, supplier.id);
+  const inquiries = data.product_inquiries.filter((entry) => entry.supplier_id === supplier.id).slice(0, 5);
+  const orderRequests = data.product_order_requests.filter((entry) => entry.supplier_id === supplier.id).slice(0, 5);
+  return (
+    <Page>
+      <PageTitle eyebrow="내 상품" title="상품을 등록하고 추가 주문을 받아보세요." desc="복잡한 쇼핑몰이 아니라, 구매자가 바로 문의하고 견적을 요청할 수 있는 B2B 상품관입니다." />
+      <SupplierStatusNotice supplier={supplier} navigate={navigate} />
+      <div className="dashboardGrid">
+        <Metric label="전체 상품" value={`${summary.total}개`} icon={<Boxes />} />
+        <Metric label="공개 상품" value={`${summary.publicCount}개`} icon={<BadgeCheck />} />
+        <Metric label="검토 중" value={`${summary.pendingCount}개`} icon={<ShieldCheck />} />
+        <Metric label="문의/주문" value={`${summary.inquiryCount + summary.orderRequestCount}건`} icon={<MessageCircle />} />
+      </div>
+      <section className="formActions">
+        <button className="primaryButton" type="button" onClick={() => navigate("/app/supplier/products/new")}><Plus size={16} /> 상품 등록하기</button>
+        <button className="secondaryButton" type="button" onClick={() => navigate("/app/supplier/store")}>내 상품관 보기</button>
+      </section>
+
+      <SectionHeader title="내 상품 목록" />
+      {products.length ? (
+        <section className="supplierProductList">
+          {products.map((product) => (
+            <article className="supplierProductRow" key={product.id}>
+              <ProductThumb product={product} />
+              <div>
+                <strong>{product.title}</strong>
+                <p>{product.short_description || getProductCategoryName(data, product.category_id)}</p>
+                <div className="chipLine">
+                  <StatusBadge tone={productApprovalTone(product.approval_status)}>{productApprovalStatusLabels[product.approval_status]}</StatusBadge>
+                  <span className="chip">{getSupplierProductPriceLabel(product)}</span>
+                  <span className="chip">문의 {product.inquiry_count}</span>
+                  <span className="chip">주문 {product.order_request_count}</span>
+                </div>
+              </div>
+              <div className="rowActions">
+                <button className="secondaryButton compact" type="button" onClick={() => navigate(`/app/supplier/products/${product.id}/edit`)}>수정</button>
+                <button className="ghostButton compact" type="button" onClick={() => setData(updateSupplierProduct(data, product.id, { is_public: !product.is_public }))}>{product.is_public ? "비공개" : "공개요청"}</button>
+                <button className="ghostButton compact dangerButton" type="button" onClick={() => setData(deleteSupplierProduct(data, product.id))}>삭제</button>
+              </div>
+            </article>
+          ))}
+        </section>
+      ) : (
+        <EmptyState icon={<Boxes />} title="아직 등록한 상품이 없습니다." desc="대표 사진과 필수 정보만으로 첫 상품을 등록해보세요." actionLabel="상품 등록" onAction={() => navigate("/app/supplier/products/new")} />
+      )}
+
+      <section className="twoColumn">
+        <article className="formStack">
+          <SectionHeader title="최근 상품 문의" />
+          {inquiries.length ? inquiries.map((entry) => {
+            const product = data.supplier_products.find((item) => item.id === entry.product_id);
+            return (
+              <div className="compactListItem" key={entry.id}>
+                <strong>{product?.title ?? "상품"}</strong>
+                <span>{productInquiryTypeLabels[entry.inquiry_type]} · {productInquiryStatusLabels[entry.status]}</span>
+                <p>{entry.message}</p>
+              </div>
+            );
+          }) : <EmptyState icon={<MessageCircle />} title="새 문의가 없습니다." desc="구매자가 상품을 문의하면 이곳에 표시됩니다." variant="compact" />}
+        </article>
+        <article className="formStack">
+          <SectionHeader title="주문요청 확인" />
+          {orderRequests.length ? orderRequests.map((entry) => {
+            const product = data.supplier_products.find((item) => item.id === entry.product_id);
+            return (
+              <div className="compactListItem" key={entry.id}>
+                <strong>{product?.title ?? "상품"} · {entry.quantity}{entry.unit_label}</strong>
+                <span>{productOrderRequestStatusLabels[entry.status]} · {entry.delivery_region}</span>
+                <div className="rowActions">
+                  <button className="secondaryButton compact" type="button" onClick={() => setData(updateProductOrderRequest(data, entry.id, { status: "confirmed", supplier_response: "주문 가능", final_price: entry.final_price }))}>가능</button>
+                  <button className="ghostButton compact" type="button" onClick={() => setData(updateProductOrderRequest(data, entry.id, { status: "rejected", supplier_response: "현재 재고 또는 납품 조건상 진행이 어렵습니다." }))}>진행불가</button>
+                </div>
+              </div>
+            );
+          }) : <EmptyState icon={<PackageCheck />} title="주문요청이 없습니다." desc="구매자가 주문요청을 보내면 여기서 확인합니다." variant="compact" />}
+        </article>
+      </section>
+    </Page>
+  );
+}
+
+function SupplierProductFormPage({ data, navigate, setData, productId }: MutatingPageProps & { productId?: string }) {
+  const supplier = getActiveSupplier(data);
+  const existing = productId ? data.supplier_products.find((entry) => entry.id === productId && entry.supplier_id === supplier.id) : undefined;
+  const [draft, setDraft] = useState<SupplierProductDraft>(() => existing ? productToDraft(existing) : defaultProductDraft(data, supplier));
+  const [error, setError] = useState("");
+
+  function update<K extends keyof SupplierProductDraft>(key: K, value: SupplierProductDraft[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleRegion(region: string) {
+    update("available_regions", draft.available_regions.includes(region) ? draft.available_regions.filter((entry) => entry !== region) : [...draft.available_regions, region]);
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!draft.title.trim()) return setError("상품명을 입력해 주세요.");
+    if (!draft.category_id) return setError("카테고리를 선택해 주세요.");
+    if (!draft.unit_label.trim()) return setError("단위를 입력해 주세요.");
+    if (!draft.available_regions.length) return setError("납품 가능 지역을 1개 이상 선택해 주세요.");
+    const nextDraft = {
+      ...draft,
+      is_public: supplier.approval_status === "approved" && draft.is_public,
+    };
+    if (existing) {
+      const nextData = updateSupplierProduct(data, existing.id, {
+        ...existing,
+        ...nextDraft,
+        main_image_url: nextDraft.main_image_url || "/아이콘.png",
+      });
+      setData(nextData);
+      navigate("/app/supplier/products");
+      return;
+    }
+    const result = createSupplierProduct(data, supplier.id, nextDraft);
+    setData(result.data);
+    navigate("/app/supplier/products");
+  }
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/supplier/products")} label="내 상품" />
+      <PageTitle eyebrow="상품 등록" title={existing ? "상품 정보를 수정하세요." : "3분 안에 상품을 등록하세요."} desc="가격을 모르면 견적 문의로 등록할 수 있고, 공개 상품은 관리자 검토 후 구매자에게 노출됩니다." />
+      {error && <div className="statusNotice warning"><strong>{error}</strong></div>}
+      <form className="wizardShell productFormShell" onSubmit={submit}>
+        <section className="wizardPanel">
+          <SectionHeader title="1. 기본 정보" />
+          <div className="formGrid">
+            <Field label="상품명">
+              <input value={draft.title} onChange={(event) => update("title", event.target.value)} placeholder="예: 배달 봉투 대형 1000장" />
+            </Field>
+            <Field label="카테고리">
+              <select value={draft.category_id} onChange={(event) => update("category_id", event.target.value)}>
+                {data.product_categories.filter((entry) => entry.is_active).map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}
+              </select>
+            </Field>
+            <Field label="대표 이미지">
+              <input type="file" accept="image/*" onChange={(event) => update("main_image_url", event.currentTarget.files?.[0] ? "/아이콘.png" : draft.main_image_url)} />
+            </Field>
+            <Field label="한 줄 설명">
+              <input value={draft.short_description} onChange={(event) => update("short_description", event.target.value)} placeholder="구매자가 목록에서 바로 이해할 설명" />
+            </Field>
+          </div>
+          <Field label="상세 설명">
+            <textarea value={draft.description} onChange={(event) => update("description", event.target.value)} placeholder="규격, 사용처, 주의사항을 간단히 적어주세요." />
+          </Field>
+        </section>
+
+        <section className="wizardPanel">
+          <SectionHeader title="2. 가격과 수량" />
+          <div className="formGrid">
+            <Field label="가격 표시 방식">
+              <select value={draft.price_type} onChange={(event) => update("price_type", event.target.value as SupplierProductDraft["price_type"])}>
+                {Object.entries(productPriceTypeLabels).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
+              </select>
+            </Field>
+            <Field label="고정가">
+              <input type="number" value={draft.price} onChange={(event) => update("price", Number(event.target.value))} disabled={draft.price_type !== "fixed"} />
+            </Field>
+            <Field label="시작가">
+              <input type="number" value={draft.from_price} onChange={(event) => update("from_price", Number(event.target.value))} disabled={draft.price_type !== "from_price"} />
+            </Field>
+            <Field label="단위">
+              <input value={draft.unit_label} onChange={(event) => update("unit_label", event.target.value)} placeholder="박스, 묶음, kg" />
+            </Field>
+            <Field label="포장 단위">
+              <input value={draft.package_unit} onChange={(event) => update("package_unit", event.target.value)} placeholder="1000매, 15kg" />
+            </Field>
+            <Field label="최소 주문수량">
+              <input type="number" min={1} value={draft.min_order_quantity} onChange={(event) => update("min_order_quantity", Number(event.target.value))} />
+            </Field>
+          </div>
+          <div className="toggleGrid">
+            <Toggle checked={draft.vat_included} label="부가세 포함" onChange={(value) => update("vat_included", value)} />
+            <Toggle checked={draft.tax_invoice_available} label="세금계산서 가능" onChange={(value) => update("tax_invoice_available", value)} />
+            <Toggle checked={draft.card_payment_available} label="카드결제 가능" onChange={(value) => update("card_payment_available", value)} />
+            <Toggle checked={draft.safe_trade_available} label="안심거래 가능" onChange={(value) => update("safe_trade_available", value)} />
+          </div>
+        </section>
+
+        <section className="wizardPanel">
+          <SectionHeader title="3. 납품 조건과 공개" />
+          <div className="formGrid">
+            <Field label="재고 상태">
+              <select value={draft.stock_status} onChange={(event) => update("stock_status", event.target.value as ProductStockStatus)}>
+                {Object.entries(productStockStatusLabels).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
+              </select>
+            </Field>
+            <Field label="배송비">
+              <select value={draft.delivery_fee_type} onChange={(event) => update("delivery_fee_type", event.target.value as SupplierProductDraft["delivery_fee_type"])}>
+                {Object.entries(productDeliveryFeeTypeLabels).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
+              </select>
+            </Field>
+            <Field label="배송비 금액">
+              <input type="number" value={draft.delivery_fee_amount} onChange={(event) => update("delivery_fee_amount", Number(event.target.value))} />
+            </Field>
+            <Field label="납품 소요시간">
+              <input value={draft.lead_time_text} onChange={(event) => update("lead_time_text", event.target.value)} placeholder="평일 기준 1-2일" />
+            </Field>
+          </div>
+          <div className="chipSelectGrid">
+            {commonServiceRegions.map((region) => (
+              <button className={draft.available_regions.includes(region) ? "chipSelect active" : "chipSelect"} type="button" onClick={() => toggleRegion(region)} key={region}>{region}</button>
+            ))}
+          </div>
+          <div className="toggleGrid">
+            <Toggle checked={draft.is_public} label="공개 요청" onChange={(value) => update("is_public", value)} />
+            <Toggle checked={draft.is_featured} label="대표 상품으로 표시" onChange={(value) => update("is_featured", value)} />
+          </div>
+          {supplier.approval_status !== "approved" && <p className="mutedText">입점 승인 전에는 상품이 임시저장만 가능하며 구매자에게 공개되지 않습니다.</p>}
+          <div className="formActions">
+            <button className="secondaryButton" type="button" onClick={() => navigate("/app/supplier/products")}>취소</button>
+            <button className="primaryButton" type="submit">{existing ? "수정 저장" : "상품 등록"}</button>
+          </div>
+        </section>
+      </form>
+    </Page>
+  );
+}
+
+function AdminProductsPage({ data, navigate, setData }: MutatingPageProps) {
+  const [status, setStatus] = useState("all");
+  const summary = getSupplierProductSummary(data);
+  const products = data.supplier_products
+    .filter((product) => !product.deleted_at)
+    .filter((product) => status === "all" || product.approval_status === status)
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  const openReports = data.product_reports.filter((entry) => entry.status === "pending" || entry.status === "reviewing");
+  return (
+    <Page>
+      <PageTitle eyebrow="상품 관리" title="공급업체 상품 공개 상태를 관리합니다." desc="승인 대기, 신고, 숨김 상품을 확인하고 구매자 노출을 제어합니다." />
+      <div className="dashboardGrid">
+        <Metric label="전체 상품" value={`${summary.total}개`} icon={<Boxes />} />
+        <Metric label="승인 대기" value={`${summary.pendingCount}개`} icon={<ShieldCheck />} />
+        <Metric label="공개 중" value={`${summary.publicCount}개`} icon={<BadgeCheck />} />
+        <Metric label="열린 신고" value={`${openReports.length}건`} icon={<Bell />} />
+      </div>
+      <section className="filterPanel">
+        <Field label="상태">
+          <select value={status} onChange={(event) => setStatus(event.target.value)}>
+            <option value="all">전체</option>
+            {Object.entries(productApprovalStatusLabels).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
+          </select>
+        </Field>
+      </section>
+      <div className="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>상품</th>
+              <th>업체</th>
+              <th>가격</th>
+              <th>상태</th>
+              <th>성과</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((product) => {
+              const supplier = data.supplier_profiles.find((entry) => entry.id === product.supplier_id);
+              return (
+                <tr key={product.id}>
+                  <td><strong>{product.title}</strong><br /><small>{getProductCategoryName(data, product.category_id)}</small></td>
+                  <td>{supplier?.business_name ?? "공급업체"}</td>
+                  <td>{getSupplierProductPriceLabel(product)}</td>
+                  <td><StatusBadge tone={productApprovalTone(product.approval_status)}>{productApprovalStatusLabels[product.approval_status]}</StatusBadge></td>
+                  <td>조회 {product.view_count} · 문의 {product.inquiry_count} · 주문 {product.order_request_count}</td>
+                  <td>
+                    <div className="rowActions">
+                      <button className="secondaryButton compact" type="button" onClick={() => setData(updateProductApprovalStatus(data, product.id, "approved"))}>승인</button>
+                      <button className="ghostButton compact" type="button" onClick={() => setData(updateProductApprovalStatus(data, product.id, "rejected", "상품 정보 보완이 필요합니다."))}>반려</button>
+                      <button className="ghostButton compact dangerButton" type="button" onClick={() => setData(updateProductApprovalStatus(data, product.id, "hidden", "관리자 숨김 처리"))}>숨김</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <SectionHeader title="상품 신고" />
+      {openReports.length ? (
+        <section className="reviewList">
+          {openReports.map((report) => {
+            const product = data.supplier_products.find((entry) => entry.id === report.product_id);
+            return (
+              <article className="reviewCard" key={report.id}>
+                <div>
+                  <strong>{product?.title ?? "상품"}</strong>
+                  <p>{productReportReasonLabels[report.reason]} · {report.detail}</p>
+                  <StatusBadge tone={report.status === "resolved" ? "green" : "orange"}>{productReportStatusLabels[report.status]}</StatusBadge>
+                </div>
+                <div className="rowActions">
+                  <button className="secondaryButton compact" type="button" onClick={() => setData(updateProductReportStatus(data, report.id, "resolved", "처리 완료"))}>처리 완료</button>
+                  <button className="ghostButton compact" type="button" onClick={() => setData(updateProductReportStatus(data, report.id, "dismissed", "문제 없음"))}>기각</button>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      ) : (
+        <EmptyState icon={<Bell />} title="처리할 상품 신고가 없습니다." desc="구매자 신고가 접수되면 이곳에서 검토합니다." variant="compact" />
+      )}
     </Page>
   );
 }
@@ -5958,6 +6673,7 @@ function SupplierDashboard({ data, navigate }: PageProps) {
   const supplierThreadUserId = supplierUserIdForUi(data, supplier.id);
   const supplierThreads = getThreadsForRole(data, "supplier");
   const unansweredThreads = supplierThreads.filter((thread) => getThreadUnreadCount(data, thread.id, supplierThreadUserId) > 0);
+  const productSummary = getSupplierProductSummary(data, supplier.id);
 
   return (
     <Page>
@@ -6006,7 +6722,7 @@ function SupplierDashboard({ data, navigate }: PageProps) {
         <FocusCard label="제출 견적" value={`${myQuotes.length}건`} desc="선택 여부를 확인하세요." icon={<ClipboardList />} onClick={() => navigate("/app/supplier/quotes")} />
         <FocusCard label="미응답 문의" value={`${unansweredThreads.length}건`} desc="구매자 문의에 답변하세요." icon={<Bell />} onClick={() => navigate("/app/supplier/chats")} />
         <FocusCard label="이번 달 거래액" value={money(stats.total_deal_amount)} desc="정산 예정 금액을 확인하세요." icon={<Landmark />} onClick={() => navigate("/app/supplier/settlements")} />
-        <FocusCard label="응답률" value={`${stats.response_rate}%`} desc="빠른 응답은 노출에 도움이 됩니다." icon={<BadgeCheck />} onClick={() => navigate("/app/supplier/reputation")} />
+        <FocusCard label="내 상품" value={`${productSummary.publicCount}/${productSummary.total}개`} desc={`응답률 ${stats.response_rate}% · 상품을 관리하세요.`} icon={<Boxes />} onClick={() => navigate("/app/supplier/products")} />
         <FocusCard label="업체 정보" value={supplierApprovalLabels[supplier.approval_status]} desc="노출되는 정보를 관리하세요." icon={<Store />} onClick={() => navigate("/app/supplier/profile")} />
       </section>
 

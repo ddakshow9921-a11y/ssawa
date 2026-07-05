@@ -3960,6 +3960,244 @@ tbody tr:hover {
   font-weight: 850;
 }
 
+.productFilterPanel {
+  align-items: end;
+  margin-bottom: 20px;
+}
+
+.productGrid,
+.compactProductGrid,
+.supplierProductList,
+.chipSelectGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.productGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.compactProductGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.productCard,
+.productActionPanel,
+.supplierStoreHero,
+.supplierProductRow,
+.compactListItem {
+  min-width: 0;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(16, 32, 51, 0.05);
+}
+
+.productCard {
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.productThumbButton {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.productThumb,
+.productImageFrame {
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #fff7f2;
+}
+
+.productThumb {
+  aspect-ratio: 4 / 3;
+}
+
+.productThumb img,
+.productImageFrame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 18px;
+}
+
+.productCardBody {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+}
+
+.productCard h2,
+.productDetailCopy h1,
+.supplierStoreHero h1 {
+  margin: 0;
+  color: var(--navy);
+  line-height: 1.18;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.productCard h2 {
+  font-size: 20px;
+}
+
+.productCard p,
+.productDetailCopy p,
+.supplierStoreHero p,
+.compactListItem p,
+.supplierProductRow p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.productPrice {
+  color: var(--orange);
+  font-size: 18px;
+}
+
+.productCardActions,
+.productActionButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.productDetailHero,
+.productDetailGrid {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.productDetailHero {
+  grid-template-columns: minmax(260px, 0.82fr) minmax(0, 1.18fr);
+  align-items: stretch;
+}
+
+.productImageFrame {
+  min-height: 360px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.productDetailCopy,
+.supplierStoreHero {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+  padding: 24px;
+}
+
+.productDetailCopy {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.productDetailCopy h1,
+.supplierStoreHero h1 {
+  font-size: 36px;
+}
+
+.productDetailCopy > strong {
+  color: var(--orange);
+  font-size: 24px;
+}
+
+.productDetailGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  align-items: start;
+}
+
+.productActionPanel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.successText {
+  margin: 0;
+  color: var(--green);
+  font-weight: 900;
+}
+
+.supplierStoreHero {
+  grid-template-columns: minmax(0, 1fr) 170px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.supplierProductList {
+  margin-bottom: 26px;
+}
+
+.supplierProductRow {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+}
+
+.supplierProductRow .productThumb {
+  width: 96px;
+  border-radius: 8px;
+}
+
+.supplierProductRow strong,
+.compactListItem strong {
+  color: var(--navy);
+  overflow-wrap: anywhere;
+}
+
+.compactListItem {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.compactListItem span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.chipSelectGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.chipSelect {
+  min-height: 42px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--charcoal);
+  font-weight: 850;
+}
+
+.chipSelect.active {
+  color: var(--orange);
+  border-color: var(--orange-line);
+  background: var(--orange-soft);
+}
+
+.productFormShell {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
 .protectionNotice,
 .reputationHero {
   display: flex;
@@ -4764,6 +5002,8 @@ tr.selectedRow {
 
   .quickGrid,
   .dashboardGrid,
+  .productGrid,
+  .compactProductGrid,
   .primaryActionGrid,
   .primaryActionGrid.compact,
   .roleFocusGrid,
@@ -4793,7 +5033,10 @@ tr.selectedRow {
   }
 
   .splitPanel,
+  .productDetailHero,
+  .productDetailGrid,
   .requestInsightGrid,
+  .supplierStoreHero,
   .supplierInsight,
   .adminSupplierLayout,
   .supplierFitPanel,
@@ -4908,6 +5151,11 @@ tr.selectedRow {
   .supplierJoinStrip,
   .quickGrid,
   .dashboardGrid,
+  .productGrid,
+  .compactProductGrid,
+  .productDetailHero,
+  .productDetailGrid,
+  .supplierStoreHero,
   .primaryActionGrid,
   .primaryActionGrid.compact,
   .roleFocusGrid,
@@ -4952,6 +5200,43 @@ tr.selectedRow {
   .supplierFlow,
   .faqGrid {
     grid-template-columns: 1fr;
+  }
+
+  .productImageFrame {
+    min-height: 260px;
+  }
+
+  .productDetailCopy h1,
+  .supplierStoreHero h1 {
+    font-size: 28px;
+  }
+
+  .productCardActions,
+  .productActionButtons {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .supplierProductRow {
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .supplierProductRow .productThumb {
+    width: 72px;
+  }
+
+  .supplierProductRow .rowActions {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .supplierProductRow .rowActions > * {
+    flex: 1 1 0;
+  }
+
+  .chipSelectGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .wizardSteps {
@@ -5199,6 +5484,9 @@ tr.selectedRow {
   .formStack,
   .wizardShell,
   .wizardPanel,
+  .productDetailCopy,
+  .productActionPanel,
+  .supplierStoreHero,
   .supplierProfileHero,
   .adminSupplierDetail {
     padding: 18px;

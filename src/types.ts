@@ -134,7 +134,11 @@ export type NotificationType =
   | "urgent_report_submitted"
   | "low_reputation_supplier_detected"
   | "repeated_dispute_supplier"
-  | "review_reported";
+  | "review_reported"
+  | "product_inquiry_received"
+  | "product_order_requested"
+  | "product_approval_result"
+  | "product_report_received";
 
 export type NotificationEntityType =
   | "quote_request"
@@ -152,13 +156,16 @@ export type NotificationEntityType =
   | "report"
   | "review"
   | "sanction"
-  | "reputation";
+  | "reputation"
+  | "product"
+  | "product_inquiry"
+  | "product_order_request";
 
 export type NotificationPriority = "low" | "normal" | "high" | "urgent";
 
 export type NotificationDeliveryStatus = "pending" | "sent" | "failed" | "skipped";
 
-export type MessageThreadType = "quote_request" | "deal" | "supplier" | "support";
+export type MessageThreadType = "quote_request" | "deal" | "supplier" | "support" | "product";
 
 export type MessageThreadStatus = "open" | "closed" | "reported" | "blocked" | "archived";
 
@@ -183,6 +190,24 @@ export type SettlementMode = "direct_supplier_payment" | "platform_escrow" | "of
 export type PaymentMethodStatus = "none" | "pending" | "connected" | "failed";
 
 export type BillingPaymentMethodType = "card" | "bank_transfer" | "virtual_account" | "none";
+
+export type ProductPriceType = "fixed" | "from_price" | "quote_only";
+
+export type ProductDeliveryFeeType = "included" | "separate" | "conditional" | "quote";
+
+export type ProductStockStatus = "in_stock" | "low_stock" | "out_of_stock" | "made_to_order" | "unknown";
+
+export type ProductApprovalStatus = "draft" | "pending" | "approved" | "rejected" | "hidden" | "suspended";
+
+export type ProductInquiryType = "question" | "quote_request" | "order_request";
+
+export type ProductInquiryStatus = "pending" | "answered" | "converted_to_quote" | "converted_to_deal" | "closed";
+
+export type ProductOrderRequestStatus = "pending" | "supplier_confirming" | "confirmed" | "converted_to_deal" | "rejected" | "cancelled";
+
+export type ProductReportReason = "wrong_info" | "prohibited_item" | "fake_price" | "offensive" | "external_trade" | "etc";
+
+export type ProductReportStatus = "pending" | "reviewing" | "resolved" | "dismissed";
 
 export type ReportType =
   | "deal_dispute"
@@ -445,6 +470,139 @@ export interface SupplierReview {
   rating: number;
   content: string;
   created_at: string;
+}
+
+export interface ProductCategory {
+  id: string;
+  parent_id?: string;
+  name: string;
+  slug: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierStoreProfile {
+  id: string;
+  supplier_id: string;
+  store_name: string;
+  store_description: string;
+  store_logo_url: string;
+  store_banner_url: string;
+  main_categories: string[];
+  delivery_regions: string[];
+  business_hours_text: string;
+  contact_policy_text: string;
+  return_policy_text: string;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierProduct {
+  id: string;
+  supplier_id: string;
+  category_id: string;
+  title: string;
+  short_description: string;
+  description: string;
+  main_image_url: string;
+  image_urls: string[];
+  sku: string;
+  brand: string;
+  origin: string;
+  unit_label: string;
+  package_unit: string;
+  min_order_quantity: number;
+  price_type: ProductPriceType;
+  price: number;
+  from_price: number;
+  vat_included: boolean;
+  delivery_fee_type: ProductDeliveryFeeType;
+  delivery_fee_amount: number;
+  available_regions: string[];
+  tax_invoice_available: boolean;
+  card_payment_available: boolean;
+  safe_trade_available: boolean;
+  stock_status: ProductStockStatus;
+  lead_time_text: string;
+  is_featured: boolean;
+  is_public: boolean;
+  approval_status: ProductApprovalStatus;
+  rejection_reason: string;
+  view_count: number;
+  inquiry_count: number;
+  quote_add_count: number;
+  order_request_count: number;
+  favorite_count: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+export interface ProductInquiry {
+  id: string;
+  product_id: string;
+  buyer_id: string;
+  supplier_id: string;
+  inquiry_type: ProductInquiryType;
+  message: string;
+  quantity: number;
+  desired_delivery_date: string;
+  delivery_region: string;
+  status: ProductInquiryStatus;
+  thread_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductOrderRequest {
+  id: string;
+  product_id: string;
+  buyer_id: string;
+  supplier_id: string;
+  quantity: number;
+  unit_label: string;
+  desired_delivery_date: string;
+  delivery_region: string;
+  buyer_memo: string;
+  supplier_response: string;
+  final_price: number;
+  status: ProductOrderRequestStatus;
+  deal_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductFavorite {
+  id: string;
+  product_id: string;
+  buyer_id: string;
+  created_at: string;
+}
+
+export interface ProductQuoteItem {
+  id: string;
+  quote_request_id: string;
+  product_id: string;
+  supplier_id: string;
+  quantity: number;
+  unit_label: string;
+  memo: string;
+  created_at: string;
+}
+
+export interface ProductReport {
+  id: string;
+  product_id: string;
+  reporter_id: string;
+  reason: ProductReportReason;
+  detail: string;
+  status: ProductReportStatus;
+  admin_memo: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Quote {
@@ -1556,6 +1714,14 @@ export interface AppData {
   supplier_documents: SupplierDocument[];
   supplier_stats: SupplierStats[];
   supplier_reviews: SupplierReview[];
+  product_categories: ProductCategory[];
+  supplier_store_profiles: SupplierStoreProfile[];
+  supplier_products: SupplierProduct[];
+  product_inquiries: ProductInquiry[];
+  product_order_requests: ProductOrderRequest[];
+  product_favorites: ProductFavorite[];
+  product_quote_items: ProductQuoteItem[];
+  product_reports: ProductReport[];
   quotes: Quote[];
   quote_attachments: QuoteAttachment[];
   deals: Deal[];
@@ -1692,6 +1858,50 @@ export interface SupplierDocumentDraft {
   document_type: SupplierDocumentType;
   file_name: string;
   status: SupplierDocumentStatus;
+}
+
+export interface SupplierProductDraft {
+  title: string;
+  category_id: string;
+  short_description: string;
+  description: string;
+  main_image_url: string;
+  sku: string;
+  brand: string;
+  origin: string;
+  unit_label: string;
+  package_unit: string;
+  min_order_quantity: number;
+  price_type: ProductPriceType;
+  price: number;
+  from_price: number;
+  vat_included: boolean;
+  delivery_fee_type: ProductDeliveryFeeType;
+  delivery_fee_amount: number;
+  available_regions: string[];
+  tax_invoice_available: boolean;
+  card_payment_available: boolean;
+  safe_trade_available: boolean;
+  stock_status: ProductStockStatus;
+  lead_time_text: string;
+  is_featured: boolean;
+  is_public: boolean;
+  approval_status: ProductApprovalStatus;
+}
+
+export interface ProductInquiryDraft {
+  inquiry_type: ProductInquiryType;
+  message: string;
+  quantity: number;
+  desired_delivery_date: string;
+  delivery_region: string;
+}
+
+export interface ProductOrderRequestDraft {
+  quantity: number;
+  desired_delivery_date: string;
+  delivery_region: string;
+  buyer_memo: string;
 }
 
 export interface SupplierApplicationDraft {

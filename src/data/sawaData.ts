@@ -70,6 +70,23 @@ import type {
   MessageType,
   PaymentMethod,
   PaymentMethodStatus,
+  ProductApprovalStatus,
+  ProductCategory,
+  ProductDeliveryFeeType,
+  ProductFavorite,
+  ProductInquiry,
+  ProductInquiryDraft,
+  ProductInquiryStatus,
+  ProductInquiryType,
+  ProductOrderRequest,
+  ProductOrderRequestDraft,
+  ProductOrderRequestStatus,
+  ProductPriceType,
+  ProductQuoteItem,
+  ProductReport,
+  ProductReportReason,
+  ProductReportStatus,
+  ProductStockStatus,
   Profile,
   Notification,
   NotificationDeliveryStatus,
@@ -135,8 +152,11 @@ import type {
   SupplierDocument,
   SupplierDocumentStatus,
   SupplierDocumentType,
+  SupplierProduct,
+  SupplierProductDraft,
   SupplierProfile,
   SupplierReputationScore,
+  SupplierStoreProfile,
   SupplierMatchCandidate,
   SupplierResponseOpsRow,
   SupplierResponseStatus,
@@ -278,6 +298,75 @@ export const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: "현금",
   later: "후불",
   undecided: "미정",
+};
+
+export const productPriceTypeLabels: Record<ProductPriceType, string> = {
+  fixed: "고정가",
+  from_price: "시작가",
+  quote_only: "견적 문의",
+};
+
+export const productDeliveryFeeTypeLabels: Record<ProductDeliveryFeeType, string> = {
+  included: "배송비 포함",
+  separate: "배송비 별도",
+  conditional: "조건부 무료",
+  quote: "납품지별 협의",
+};
+
+export const productStockStatusLabels: Record<ProductStockStatus, string> = {
+  in_stock: "재고 있음",
+  low_stock: "소량 남음",
+  out_of_stock: "품절",
+  made_to_order: "주문 제작",
+  unknown: "문의 필요",
+};
+
+export const productApprovalStatusLabels: Record<SupplierProduct["approval_status"], string> = {
+  draft: "임시저장",
+  pending: "검토 중",
+  approved: "공개 승인",
+  rejected: "반려",
+  hidden: "관리자 숨김",
+  suspended: "제재 숨김",
+};
+
+export const productInquiryTypeLabels: Record<ProductInquiryType, string> = {
+  question: "상품 문의",
+  quote_request: "견적 문의",
+  order_request: "주문 요청",
+};
+
+export const productInquiryStatusLabels: Record<ProductInquiryStatus, string> = {
+  pending: "답변 대기",
+  answered: "답변 완료",
+  converted_to_quote: "견적 전환",
+  converted_to_deal: "거래 전환",
+  closed: "종료",
+};
+
+export const productOrderRequestStatusLabels: Record<ProductOrderRequestStatus, string> = {
+  pending: "요청 접수",
+  supplier_confirming: "업체 확인 중",
+  confirmed: "주문 가능",
+  converted_to_deal: "거래 전환",
+  rejected: "진행 불가",
+  cancelled: "취소",
+};
+
+export const productReportReasonLabels: Record<ProductReportReason, string> = {
+  wrong_info: "정보가 달라요",
+  prohibited_item: "취급 제한 상품",
+  fake_price: "가격 표시가 부정확해요",
+  offensive: "부적절한 내용",
+  external_trade: "외부거래 유도",
+  etc: "기타",
+};
+
+export const productReportStatusLabels: Record<ProductReportStatus, string> = {
+  pending: "접수",
+  reviewing: "검토 중",
+  resolved: "처리 완료",
+  dismissed: "기각",
 };
 
 export const supplierApprovalLabels: Record<SupplierProfile["approval_status"], string> = {
@@ -476,6 +565,10 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   low_reputation_supplier_detected: "낮은 신뢰도 감지",
   repeated_dispute_supplier: "반복 분쟁 업체",
   review_reported: "후기 신고",
+  product_inquiry_received: "상품 문의",
+  product_order_requested: "상품 주문요청",
+  product_approval_result: "상품 검토 결과",
+  product_report_received: "상품 신고",
 };
 
 export const notificationPriorityLabels: Record<NotificationPriority, string> = {
@@ -502,6 +595,9 @@ export const notificationEntityLabels: Record<NotificationEntityType, string> = 
   review: "후기",
   sanction: "제재",
   reputation: "신뢰도",
+  product: "상품",
+  product_inquiry: "상품 문의",
+  product_order_request: "상품 주문요청",
 };
 
 export const messageThreadTypeLabels: Record<MessageThread["thread_type"], string> = {
@@ -509,6 +605,7 @@ export const messageThreadTypeLabels: Record<MessageThread["thread_type"], strin
   deal: "거래 문의",
   supplier: "공급업체 문의",
   support: "운영 문의",
+  product: "상품 문의",
 };
 
 export const messageThreadStatusLabels: Record<MessageThreadStatus, string> = {
@@ -1824,6 +1921,320 @@ const sampleCategoryPlaybooks: CategoryPlaybook[] = [
   ),
 ];
 
+const sampleProductCategories: ProductCategory[] = [
+  { id: "pcat-packaging", parent_id: "cat-2", name: "포장재", slug: "packaging", sort_order: 10, is_active: true, created_at: now, updated_at: now },
+  { id: "pcat-food", parent_id: "cat-1", name: "식자재", slug: "food-materials", sort_order: 20, is_active: true, created_at: now, updated_at: now },
+  { id: "pcat-consumable", parent_id: "cat-4", name: "소모품", slug: "consumables", sort_order: 30, is_active: true, created_at: now, updated_at: now },
+  { id: "pcat-facility", parent_id: "cat-5", name: "설비/닥트", slug: "facility-duct", sort_order: 40, is_active: true, created_at: now, updated_at: now },
+];
+
+const sampleSupplierStoreProfiles: SupplierStoreProfile[] = [
+  {
+    id: "store-sup-1",
+    supplier_id: "sup-1",
+    store_name: "서울포장 상품관",
+    store_description: "강남·성동권 식당에서 자주 쓰는 포장재와 소모품을 빠르게 안내합니다.",
+    store_logo_url: "/아이콘.png",
+    store_banner_url: "",
+    main_categories: ["포장재", "소모품"],
+    delivery_regions: ["서울 강남구", "서울 성동구", "서울 중구"],
+    business_hours_text: "평일 09:00-18:00, 긴급 납품은 문의",
+    contact_policy_text: "상품 문의 후 수량과 납품지를 확인해 최종 조건을 안내합니다.",
+    return_policy_text: "인쇄/맞춤 상품은 제작 전 확인 후 진행합니다.",
+    is_public: true,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "store-sup-2",
+    supplier_id: "sup-2",
+    store_name: "동대문식자재 상품관",
+    store_description: "채소와 냉장 식자재를 매장 단위로 견적 안내합니다.",
+    store_logo_url: "/아이콘.png",
+    store_banner_url: "",
+    main_categories: ["식자재"],
+    delivery_regions: ["서울 동대문구", "서울 중랑구", "서울 성북구"],
+    business_hours_text: "새벽 입고 후 오전 납품 중심",
+    contact_policy_text: "단가 변동 품목은 견적 문의로 확인합니다.",
+    return_policy_text: "신선식품 특성상 납품 당일 확인이 필요합니다.",
+    is_public: true,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "store-sup-3",
+    supplier_id: "sup-3",
+    store_name: "충주닥트자재 상품관",
+    store_description: "주방 배기와 닥트 보수에 필요한 기본 자재를 안내합니다.",
+    store_logo_url: "/아이콘.png",
+    store_banner_url: "",
+    main_categories: ["설비/닥트"],
+    delivery_regions: ["충북 충주시", "충북 음성군", "충북 제천시"],
+    business_hours_text: "현장 규격 확인 후 납품",
+    contact_policy_text: "규격이 필요한 상품은 사진과 치수를 함께 보내주세요.",
+    return_policy_text: "절단·가공 자재는 발주 후 취소가 제한됩니다.",
+    is_public: true,
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+const sampleSupplierProducts: SupplierProduct[] = [
+  {
+    id: "prod-1",
+    supplier_id: "sup-1",
+    category_id: "pcat-packaging",
+    title: "치킨 박스 무지 1000매",
+    short_description: "배달 포장용 기본 박스, 매장 로고 스티커와 함께 쓰기 좋습니다.",
+    description: "치킨·분식 매장에서 반복 구매하는 무지 박스입니다. 대량 구매 시 인쇄 옵션과 묶음 견적을 별도 안내합니다.",
+    main_image_url: "/아이콘.png",
+    image_urls: [],
+    sku: "PACK-CHICKEN-1000",
+    brand: "서울포장",
+    origin: "국내",
+    unit_label: "박스",
+    package_unit: "1000매",
+    min_order_quantity: 1,
+    price_type: "from_price",
+    price: 0,
+    from_price: 68000,
+    vat_included: true,
+    delivery_fee_type: "conditional",
+    delivery_fee_amount: 3000,
+    available_regions: ["서울 강남구", "서울 성동구", "서울 중구"],
+    tax_invoice_available: true,
+    card_payment_available: true,
+    safe_trade_available: true,
+    stock_status: "in_stock",
+    lead_time_text: "평일 기준 1-2일",
+    is_featured: true,
+    is_public: true,
+    approval_status: "approved",
+    rejection_reason: "",
+    view_count: 184,
+    inquiry_count: 7,
+    quote_add_count: 12,
+    order_request_count: 4,
+    favorite_count: 9,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "prod-2",
+    supplier_id: "sup-1",
+    category_id: "pcat-packaging",
+    title: "배달 봉투 대형 1000장",
+    short_description: "배달 주문 많은 매장에서 자주 쓰는 대형 봉투입니다.",
+    description: "대형 봉투는 두께와 손잡이 형태에 따라 단가가 달라질 수 있어 수량별 견적 문의를 권장합니다.",
+    main_image_url: "/아이콘.png",
+    image_urls: [],
+    sku: "BAG-L-1000",
+    brand: "서울포장",
+    origin: "국내",
+    unit_label: "묶음",
+    package_unit: "1000장",
+    min_order_quantity: 1,
+    price_type: "quote_only",
+    price: 0,
+    from_price: 0,
+    vat_included: true,
+    delivery_fee_type: "quote",
+    delivery_fee_amount: 0,
+    available_regions: ["서울 강남구", "서울 성동구", "서울 중구"],
+    tax_invoice_available: true,
+    card_payment_available: true,
+    safe_trade_available: true,
+    stock_status: "made_to_order",
+    lead_time_text: "재고 확인 후 안내",
+    is_featured: false,
+    is_public: true,
+    approval_status: "approved",
+    rejection_reason: "",
+    view_count: 96,
+    inquiry_count: 5,
+    quote_add_count: 6,
+    order_request_count: 2,
+    favorite_count: 4,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "prod-3",
+    supplier_id: "sup-2",
+    category_id: "pcat-food",
+    title: "국내산 양파 15kg",
+    short_description: "식당 기본 식자재, 당일 시세 기준 견적 안내",
+    description: "국내산 양파 15kg 박스 상품입니다. 시장 시세 변동이 있어 시작가로 안내하며, 납품일 기준 최종 단가를 확정합니다.",
+    main_image_url: "/아이콘.png",
+    image_urls: [],
+    sku: "FOOD-ONION-15KG",
+    brand: "동대문식자재",
+    origin: "국내",
+    unit_label: "망",
+    package_unit: "15kg",
+    min_order_quantity: 1,
+    price_type: "from_price",
+    price: 0,
+    from_price: 26000,
+    vat_included: true,
+    delivery_fee_type: "included",
+    delivery_fee_amount: 0,
+    available_regions: ["서울 동대문구", "서울 중랑구", "서울 성북구"],
+    tax_invoice_available: true,
+    card_payment_available: false,
+    safe_trade_available: true,
+    stock_status: "low_stock",
+    lead_time_text: "오전 주문 시 당일 가능",
+    is_featured: true,
+    is_public: true,
+    approval_status: "approved",
+    rejection_reason: "",
+    view_count: 143,
+    inquiry_count: 8,
+    quote_add_count: 10,
+    order_request_count: 5,
+    favorite_count: 11,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "prod-4",
+    supplier_id: "sup-3",
+    category_id: "pcat-facility",
+    title: "스파이럴 닥트 300파이 10m",
+    short_description: "주방 배기 보수용 기본 닥트 자재",
+    description: "현장 규격 확인이 필요한 설비 자재입니다. 사진과 설치 위치를 함께 보내면 필요한 부속까지 견적 안내합니다.",
+    main_image_url: "/아이콘.png",
+    image_urls: [],
+    sku: "DUCT-300-10M",
+    brand: "충주닥트자재",
+    origin: "국내",
+    unit_label: "m",
+    package_unit: "10m",
+    min_order_quantity: 10,
+    price_type: "fixed",
+    price: 55000,
+    from_price: 0,
+    vat_included: false,
+    delivery_fee_type: "separate",
+    delivery_fee_amount: 50000,
+    available_regions: ["충북 충주시", "충북 음성군", "충북 제천시"],
+    tax_invoice_available: true,
+    card_payment_available: true,
+    safe_trade_available: false,
+    stock_status: "in_stock",
+    lead_time_text: "현장 확인 후 2-3일",
+    is_featured: true,
+    is_public: true,
+    approval_status: "approved",
+    rejection_reason: "",
+    view_count: 72,
+    inquiry_count: 4,
+    quote_add_count: 5,
+    order_request_count: 1,
+    favorite_count: 2,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "prod-5",
+    supplier_id: "sup-1",
+    category_id: "pcat-consumable",
+    title: "매장 청소용 니트릴 장갑 1000매",
+    short_description: "주방·홀 공용 소모품",
+    description: "사이즈별 재고 확인이 필요한 상품입니다. 외부 연락처 안내 없이 싸와 문의로 조건을 확인합니다.",
+    main_image_url: "/아이콘.png",
+    image_urls: [],
+    sku: "GLOVE-NITRILE-1000",
+    brand: "서울포장",
+    origin: "수입",
+    unit_label: "박스",
+    package_unit: "1000매",
+    min_order_quantity: 1,
+    price_type: "fixed",
+    price: 42000,
+    from_price: 0,
+    vat_included: true,
+    delivery_fee_type: "separate",
+    delivery_fee_amount: 3000,
+    available_regions: ["서울 강남구", "서울 성동구", "서울 중구"],
+    tax_invoice_available: true,
+    card_payment_available: true,
+    safe_trade_available: true,
+    stock_status: "unknown",
+    lead_time_text: "재고 확인 후 당일 안내",
+    is_featured: false,
+    is_public: false,
+    approval_status: "pending",
+    rejection_reason: "",
+    view_count: 0,
+    inquiry_count: 0,
+    quote_add_count: 0,
+    order_request_count: 0,
+    favorite_count: 0,
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+const sampleProductInquiries: ProductInquiry[] = [
+  {
+    id: "pinquiry-1",
+    product_id: "prod-1",
+    buyer_id: "buyer-1",
+    supplier_id: "sup-1",
+    inquiry_type: "question",
+    message: "강남구 매장으로 이번 주 금요일까지 받을 수 있나요?",
+    quantity: 1,
+    desired_delivery_date: "2026-07-10",
+    delivery_region: "서울 강남구",
+    status: "pending",
+    thread_id: "thread-product-1",
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+const sampleProductOrderRequests: ProductOrderRequest[] = [
+  {
+    id: "porder-1",
+    product_id: "prod-3",
+    buyer_id: "buyer-1",
+    supplier_id: "sup-2",
+    quantity: 2,
+    unit_label: "망",
+    desired_delivery_date: "2026-07-09",
+    delivery_region: "서울 동대문구",
+    buyer_memo: "오전 납품 가능 여부 확인 부탁드립니다.",
+    supplier_response: "",
+    final_price: 0,
+    status: "supplier_confirming",
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+const sampleProductFavorites: ProductFavorite[] = [
+  { id: "pfav-1", product_id: "prod-1", buyer_id: "buyer-1", created_at: now },
+  { id: "pfav-2", product_id: "prod-3", buyer_id: "buyer-1", created_at: now },
+];
+
+const sampleProductQuoteItems: ProductQuoteItem[] = [];
+
+const sampleProductReports: ProductReport[] = [
+  {
+    id: "preport-1",
+    product_id: "prod-2",
+    reporter_id: "buyer-1",
+    reason: "fake_price",
+    detail: "가격 문의만 있고 기준 단가가 부족해 보여요.",
+    status: "reviewing",
+    admin_memo: "MVP 샘플 신고",
+    created_at: now,
+    updated_at: now,
+  },
+];
+
 const sampleRoadmapItems: RoadmapItem[] = [
   roadmapItem("roadmap-1", "견적 미도착 요청 운영 개선", "위험도 분류와 수동 매칭 보조를 운영 루틴에 넣습니다.", 1, "urgent", "admin-1", "doing", "12시간 초과 무견적 0건"),
   roadmapItem("roadmap-2", "공급업체 응답 독려", "응답 느림 업체에 교육 링크와 연락 태스크를 발송합니다.", 1, "high", "admin-1", "doing", "공급 응답률 75% 이상"),
@@ -1887,6 +2298,14 @@ export const initialData: AppData = {
     supplierReview("review-2", "sup-2", "buyer-2", "req-2", 4.5, "새벽 납품 시간이 안정적이었습니다."),
     supplierReview("review-3", "sup-3", "buyer-1", "req-3", 5, "현장 규격 상담이 꼼꼼했습니다."),
   ],
+  product_categories: sampleProductCategories,
+  supplier_store_profiles: sampleSupplierStoreProfiles,
+  supplier_products: sampleSupplierProducts,
+  product_inquiries: sampleProductInquiries,
+  product_order_requests: sampleProductOrderRequests,
+  product_favorites: sampleProductFavorites,
+  product_quote_items: sampleProductQuoteItems,
+  product_reports: sampleProductReports,
   quotes: [
     quote("quote-1", "req-1", "sup-1", 1240000, 40000, "2026-07-09", true, true, "", "치킨박스 560원, 소스컵 85원, 봉투 330원 기준", "인쇄 없는 무지 기준입니다.", "2026-07-08"),
     quote("quote-2", "req-1", "sup-4", 1185000, 70000, "2026-07-08", true, true, "소스컵 동일 규격 대체 브랜드 가능", "묶음 단가 적용 가능", "납품은 오전 11시 전 가능합니다.", "2026-07-07"),
@@ -2291,6 +2710,477 @@ export function updateSupplierProfile(data: AppData, supplier: SupplierProfile):
   let nextData: AppData = {
     ...data,
     supplier_profiles: data.supplier_profiles.map((entry) => (entry.id === supplier.id ? { ...supplier, updated_at: new Date().toISOString() } : entry)),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function getProductCategoryName(data: AppData, categoryId: string) {
+  return data.product_categories.find((entry) => entry.id === categoryId)?.name
+    ?? data.categories.find((entry) => entry.id === categoryId)?.name
+    ?? "기타";
+}
+
+function moneyLabel(value: number) {
+  return `${Math.round(value || 0).toLocaleString("ko-KR")}원`;
+}
+
+export function getSupplierProductPriceLabel(product: SupplierProduct) {
+  if (product.price_type === "fixed") return `${moneyLabel(product.price)} / ${product.unit_label}`;
+  if (product.price_type === "from_price") return `${moneyLabel(product.from_price)}부터 / ${product.unit_label}`;
+  return "견적 문의";
+}
+
+export function getVisibleSupplierProducts(data: AppData) {
+  return data.supplier_products
+    .filter((product) => !product.deleted_at && product.is_public && product.approval_status === "approved")
+    .filter((product) => data.supplier_profiles.some((supplier) => supplier.id === product.supplier_id && supplier.approval_status === "approved"))
+    .sort((a, b) => Number(b.is_featured) - Number(a.is_featured) || b.updated_at.localeCompare(a.updated_at));
+}
+
+export function getSupplierProducts(data: AppData, supplierId: string) {
+  return data.supplier_products
+    .filter((product) => product.supplier_id === supplierId && !product.deleted_at)
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+}
+
+export function getSupplierStoreProfile(data: AppData, supplierId: string) {
+  const supplier = data.supplier_profiles.find((entry) => entry.id === supplierId);
+  const existing = data.supplier_store_profiles.find((entry) => entry.supplier_id === supplierId);
+  if (existing) return existing;
+  return supplier
+    ? {
+        id: `store-${supplier.id}`,
+        supplier_id: supplier.id,
+        store_name: `${supplier.business_name} 상품관`,
+        store_description: supplier.description || "공급업체가 등록한 상품을 확인하고 문의할 수 있습니다.",
+        store_logo_url: "/아이콘.png",
+        store_banner_url: "",
+        main_categories: supplier.categories,
+        delivery_regions: supplier.service_regions,
+        business_hours_text: "영업시간은 상품 문의 후 확인합니다.",
+        contact_policy_text: "싸와 문의/견적요청으로 조건을 확인합니다.",
+        return_policy_text: "상품 특성에 따라 공급업체가 조건을 안내합니다.",
+        is_public: supplier.approval_status === "approved",
+        created_at: supplier.created_at,
+        updated_at: supplier.updated_at ?? supplier.created_at,
+      }
+    : undefined;
+}
+
+export function getSupplierProductSummary(data: AppData, supplierId?: string) {
+  const products = supplierId ? getSupplierProducts(data, supplierId) : data.supplier_products.filter((product) => !product.deleted_at);
+  return {
+    total: products.length,
+    publicCount: products.filter((product) => product.is_public && product.approval_status === "approved").length,
+    pendingCount: products.filter((product) => product.approval_status === "pending").length,
+    hiddenCount: products.filter((product) => product.approval_status === "hidden" || !product.is_public).length,
+    inquiryCount: data.product_inquiries.filter((entry) => !supplierId || entry.supplier_id === supplierId).length,
+    orderRequestCount: data.product_order_requests.filter((entry) => !supplierId || entry.supplier_id === supplierId).length,
+    reportCount: data.product_reports.filter((entry) => products.some((product) => product.id === entry.product_id) && entry.status !== "dismissed").length,
+  };
+}
+
+function hasExternalTradeSignal(value: string) {
+  return /(010[-\s]?\d{3,4}[-\s]?\d{4}|카톡|카카오|계좌|직거래|전화\s*주세요|문자\s*주세요|외부\s*결제)/i.test(value);
+}
+
+function productNeedsReview(draft: SupplierProductDraft) {
+  return hasExternalTradeSignal(`${draft.title} ${draft.short_description} ${draft.description}`);
+}
+
+export function createSupplierProduct(data: AppData, supplierId: string, draft: SupplierProductDraft): { data: AppData; productId: string } {
+  const supplier = data.supplier_profiles.find((entry) => entry.id === supplierId);
+  const createdAt = new Date().toISOString();
+  const productId = `prod-${Date.now()}`;
+  const publicAllowed = supplier?.approval_status === "approved" && draft.is_public;
+  const reviewRequired = publicAllowed || productNeedsReview(draft);
+  const productRecord: SupplierProduct = {
+    id: productId,
+    supplier_id: supplierId,
+    category_id: draft.category_id,
+    title: draft.title.trim(),
+    short_description: draft.short_description.trim(),
+    description: draft.description.trim(),
+    main_image_url: draft.main_image_url.trim() || "/아이콘.png",
+    image_urls: [],
+    sku: draft.sku.trim(),
+    brand: draft.brand.trim(),
+    origin: draft.origin.trim(),
+    unit_label: draft.unit_label.trim() || "개",
+    package_unit: draft.package_unit.trim(),
+    min_order_quantity: Math.max(1, Number(draft.min_order_quantity) || 1),
+    price_type: draft.price_type,
+    price: Number(draft.price) || 0,
+    from_price: Number(draft.from_price) || 0,
+    vat_included: draft.vat_included,
+    delivery_fee_type: draft.delivery_fee_type,
+    delivery_fee_amount: Number(draft.delivery_fee_amount) || 0,
+    available_regions: draft.available_regions.length ? draft.available_regions : supplier?.service_regions ?? [],
+    tax_invoice_available: draft.tax_invoice_available,
+    card_payment_available: draft.card_payment_available,
+    safe_trade_available: draft.safe_trade_available,
+    stock_status: draft.stock_status,
+    lead_time_text: draft.lead_time_text.trim(),
+    is_featured: draft.is_featured,
+    is_public: publicAllowed,
+    approval_status: reviewRequired ? "pending" : "draft",
+    rejection_reason: "",
+    view_count: 0,
+    inquiry_count: 0,
+    quote_add_count: 0,
+    order_request_count: 0,
+    favorite_count: 0,
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+  let nextData: AppData = {
+    ...data,
+    supplier_products: [productRecord, ...data.supplier_products],
+  };
+  if (reviewRequired) {
+    nextData = appendNotification(nextData, {
+      user_id: adminUserId(nextData),
+      user_role: "admin",
+      type: "product_approval_result",
+      title: "상품 공개 검토가 필요합니다.",
+      body: `${supplier?.business_name ?? "공급업체"}가 ${productRecord.title} 상품 공개를 요청했습니다.`,
+      link_url: "/app/admin/products",
+      related_entity_type: "product",
+      related_entity_id: productId,
+      priority: productNeedsReview(draft) ? "high" : "normal",
+      actor_user_id: supplier?.user_id ?? supplierUserId(supplierId),
+    });
+  }
+  saveData(nextData);
+  return { data: nextData, productId };
+}
+
+export function updateSupplierProduct(data: AppData, productId: string, patch: Partial<SupplierProduct>): AppData {
+  const updatedAt = new Date().toISOString();
+  const current = data.supplier_products.find((entry) => entry.id === productId);
+  const wantsPublic = patch.is_public === true || (patch.is_public === undefined && current?.is_public);
+  const nextData: AppData = {
+    ...data,
+    supplier_products: data.supplier_products.map((product) =>
+      product.id === productId
+        ? {
+            ...product,
+            ...patch,
+            approval_status: wantsPublic && product.approval_status !== "approved" ? "pending" : patch.approval_status ?? product.approval_status,
+            updated_at: updatedAt,
+          }
+        : product,
+    ),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function deleteSupplierProduct(data: AppData, productId: string): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    supplier_products: data.supplier_products.map((product) =>
+      product.id === productId
+        ? { ...product, is_public: false, approval_status: "hidden", deleted_at: updatedAt, updated_at: updatedAt }
+        : product,
+    ),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function updateProductApprovalStatus(data: AppData, productId: string, status: ProductApprovalStatus, reason = ""): AppData {
+  const updatedAt = new Date().toISOString();
+  const product = data.supplier_products.find((entry) => entry.id === productId);
+  const supplier = product ? data.supplier_profiles.find((entry) => entry.id === product.supplier_id) : undefined;
+  let nextData: AppData = {
+    ...data,
+    supplier_products: data.supplier_products.map((entry) =>
+      entry.id === productId
+        ? {
+            ...entry,
+            approval_status: status,
+            is_public: status === "approved" ? true : status === "hidden" || status === "suspended" || status === "rejected" ? false : entry.is_public,
+            rejection_reason: status === "rejected" ? reason : "",
+            updated_at: updatedAt,
+          }
+        : entry,
+    ),
+  };
+  if (product && supplier) {
+    nextData = appendNotification(nextData, {
+      user_id: supplier.user_id,
+      user_role: "supplier",
+      type: "product_approval_result",
+      title: "상품 공개 검토 결과가 도착했습니다.",
+      body: `${product.title} 상태가 ${productApprovalStatusLabels[status]}로 변경되었습니다.${reason ? ` ${reason}` : ""}`,
+      link_url: "/app/supplier/products",
+      related_entity_type: "product",
+      related_entity_id: productId,
+      priority: status === "approved" ? "normal" : "high",
+      actor_user_id: adminUserId(nextData),
+    });
+  }
+  saveData(nextData);
+  return nextData;
+}
+
+function ensureProductMessageThread(data: AppData, product: SupplierProduct, buyerId: string, createdAt: string) {
+  const existing = data.message_threads.find((entry) => entry.thread_type === "product" && entry.related_entity_id === product.id && entry.buyer_id === buyerId);
+  if (existing) return { data, threadId: existing.id };
+  const supplier = data.supplier_profiles.find((entry) => entry.id === product.supplier_id);
+  const threadId = `thread-product-${product.id}-${buyerId}-${Date.now()}`;
+  const threadRecord = messageThread(threadId, "product", product.id, buyerId, product.supplier_id, `${product.title} 상품 문의`, "open", createdAt);
+  const nextData: AppData = {
+    ...data,
+    message_threads: [threadRecord, ...data.message_threads],
+    message_read_states: [
+      readState(`mrs-${threadId}-${buyerId}`, threadId, buyerId, 0, createdAt),
+      readState(`mrs-${threadId}-${supplier?.user_id ?? supplierUserId(product.supplier_id)}`, threadId, supplier?.user_id ?? supplierUserId(product.supplier_id), 1, createdAt),
+      ...data.message_read_states,
+    ],
+  };
+  return { data: nextData, threadId };
+}
+
+export function createProductInquiry(data: AppData, productId: string, buyerId: string, draft: ProductInquiryDraft): { data: AppData; inquiryId: string; threadId: string } {
+  const product = data.supplier_products.find((entry) => entry.id === productId);
+  if (!product || product.deleted_at || product.approval_status !== "approved" || !product.is_public) return { data, inquiryId: "", threadId: "" };
+  const createdAt = new Date().toISOString();
+  const threadResult = ensureProductMessageThread(data, product, buyerId, createdAt);
+  const inquiryId = `pinquiry-${Date.now()}`;
+  const inquiryRecord: ProductInquiry = {
+    id: inquiryId,
+    product_id: product.id,
+    buyer_id: buyerId,
+    supplier_id: product.supplier_id,
+    inquiry_type: draft.inquiry_type,
+    message: draft.message.trim(),
+    quantity: Math.max(1, Number(draft.quantity) || 1),
+    desired_delivery_date: draft.desired_delivery_date,
+    delivery_region: draft.delivery_region.trim(),
+    status: "pending",
+    thread_id: threadResult.threadId,
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+  const supplier = threadResult.data.supplier_profiles.find((entry) => entry.id === product.supplier_id);
+  let nextData: AppData = {
+    ...threadResult.data,
+    product_inquiries: [inquiryRecord, ...threadResult.data.product_inquiries],
+    supplier_products: threadResult.data.supplier_products.map((entry) => entry.id === product.id ? { ...entry, inquiry_count: entry.inquiry_count + 1, updated_at: createdAt } : entry),
+    messages: [
+      message(`msg-${threadResult.threadId}-${Date.now()}`, threadResult.threadId, buyerId, "buyer", inquiryRecord.message || `${product.title} 상품 문의입니다.`, "", "", false, createdAt),
+      ...threadResult.data.messages,
+    ],
+  };
+  nextData = appendNotification(nextData, {
+    user_id: supplier?.user_id ?? supplierUserId(product.supplier_id),
+    user_role: "supplier",
+    type: "product_inquiry_received",
+    title: "상품 문의가 도착했습니다.",
+    body: `${product.title} 상품에 대한 ${productInquiryTypeLabels[draft.inquiry_type]}가 접수되었습니다.`,
+    link_url: `/app/supplier/chats/${threadResult.threadId}`,
+    related_entity_type: "product_inquiry",
+    related_entity_id: inquiryId,
+    priority: draft.inquiry_type === "order_request" ? "high" : "normal",
+    actor_user_id: buyerId,
+  });
+  saveData(nextData);
+  return { data: nextData, inquiryId, threadId: threadResult.threadId };
+}
+
+export function createProductOrderRequest(data: AppData, productId: string, buyerId: string, draft: ProductOrderRequestDraft): { data: AppData; orderRequestId: string } {
+  const product = data.supplier_products.find((entry) => entry.id === productId);
+  if (!product || product.deleted_at || product.approval_status !== "approved" || !product.is_public) return { data, orderRequestId: "" };
+  const createdAt = new Date().toISOString();
+  const orderRequestId = `porder-${Date.now()}`;
+  const orderRecord: ProductOrderRequest = {
+    id: orderRequestId,
+    product_id: product.id,
+    buyer_id: buyerId,
+    supplier_id: product.supplier_id,
+    quantity: Math.max(1, Number(draft.quantity) || 1),
+    unit_label: product.unit_label,
+    desired_delivery_date: draft.desired_delivery_date,
+    delivery_region: draft.delivery_region.trim(),
+    buyer_memo: draft.buyer_memo.trim(),
+    supplier_response: "",
+    final_price: product.price_type === "fixed" ? product.price * Math.max(1, Number(draft.quantity) || 1) : 0,
+    status: "supplier_confirming",
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+  const inquiryResult = createProductInquiry(data, product.id, buyerId, {
+    inquiry_type: "order_request",
+    message: draft.buyer_memo || `${product.title} ${orderRecord.quantity}${product.unit_label} 주문 가능 여부를 확인해주세요.`,
+    quantity: orderRecord.quantity,
+    desired_delivery_date: draft.desired_delivery_date,
+    delivery_region: draft.delivery_region,
+  });
+  let nextData: AppData = {
+    ...inquiryResult.data,
+    product_order_requests: [orderRecord, ...inquiryResult.data.product_order_requests],
+    supplier_products: inquiryResult.data.supplier_products.map((entry) => entry.id === product.id ? { ...entry, order_request_count: entry.order_request_count + 1, updated_at: createdAt } : entry),
+  };
+  const supplier = nextData.supplier_profiles.find((entry) => entry.id === product.supplier_id);
+  nextData = appendNotification(nextData, {
+    user_id: supplier?.user_id ?? supplierUserId(product.supplier_id),
+    user_role: "supplier",
+    type: "product_order_requested",
+    title: "상품 주문요청이 도착했습니다.",
+    body: `${product.title} ${orderRecord.quantity}${product.unit_label} 주문 가능 여부를 확인해주세요.`,
+    link_url: "/app/supplier/products",
+    related_entity_type: "product_order_request",
+    related_entity_id: orderRequestId,
+    priority: "high",
+    actor_user_id: buyerId,
+  });
+  saveData(nextData);
+  return { data: nextData, orderRequestId };
+}
+
+export function updateProductOrderRequest(data: AppData, orderRequestId: string, patch: Partial<ProductOrderRequest>): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    product_order_requests: data.product_order_requests.map((entry) => entry.id === orderRequestId ? { ...entry, ...patch, updated_at: updatedAt } : entry),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function toggleProductFavorite(data: AppData, productId: string, buyerId: string): AppData {
+  const existing = data.product_favorites.find((entry) => entry.product_id === productId && entry.buyer_id === buyerId);
+  const createdAt = new Date().toISOString();
+  const nextFavorites = existing
+    ? data.product_favorites.filter((entry) => entry.id !== existing.id)
+    : [{ id: `pfav-${Date.now()}`, product_id: productId, buyer_id: buyerId, created_at: createdAt }, ...data.product_favorites];
+  const nextData: AppData = {
+    ...data,
+    product_favorites: nextFavorites,
+    supplier_products: data.supplier_products.map((entry) =>
+      entry.id === productId
+        ? { ...entry, favorite_count: Math.max(0, entry.favorite_count + (existing ? -1 : 1)), updated_at: createdAt }
+        : entry,
+    ),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function createQuoteRequestFromProduct(data: AppData, productId: string, buyerId: string, quantity: number, deliveryRegion: string, desiredDeliveryDate: string, memo = ""): { data: AppData; requestId: string } {
+  const product = data.supplier_products.find((entry) => entry.id === productId);
+  if (!product || product.deleted_at || product.approval_status !== "approved" || !product.is_public) return { data, requestId: "" };
+  const category = data.categories.find((entry) => entry.name === getProductCategoryName(data, product.category_id)) ?? data.categories[0];
+  const createdAt = new Date().toISOString();
+  const draft: QuoteRequestDraft = {
+    title: `${product.title} 견적 문의`,
+    category_id: category.id,
+    delivery_region: deliveryRegion,
+    delivery_address: "",
+    desired_delivery_date: desiredDeliveryDate,
+    need_tax_invoice: product.tax_invoice_available,
+    card_payment_required: false,
+    description: memo || `${product.title} 상품을 기준으로 견적을 받고 싶습니다.`,
+    attachment_note: "",
+    previous_amount: 0,
+    input_method: "template",
+    original_text_input: "",
+    template_name: "상품관 견적 문의",
+    previous_request_id: "",
+    urgent: false,
+    preferred_delivery_time: "",
+    budget_min: 0,
+    budget_max: 0,
+    preferred_brand: product.brand,
+    allow_alternatives: true,
+    include_delivery_fee: product.delivery_fee_type !== "included",
+    items: [{
+      item_name: product.title,
+      spec: product.package_unit,
+      quantity: Math.max(1, Number(quantity) || 1),
+      unit: product.unit_label,
+      memo,
+      is_required: true,
+      allow_alternative: true,
+    }],
+    attachments: [],
+  };
+  const result = createQuoteRequest(data, draft);
+  let nextData: AppData = {
+    ...result.data,
+    product_quote_items: [{
+      id: `pquoteitem-${Date.now()}`,
+      quote_request_id: result.requestId,
+      product_id: product.id,
+      supplier_id: product.supplier_id,
+      quantity: Math.max(1, Number(quantity) || 1),
+      unit_label: product.unit_label,
+      memo,
+      created_at: createdAt,
+    }, ...result.data.product_quote_items],
+    supplier_products: result.data.supplier_products.map((entry) => entry.id === product.id ? { ...entry, quote_add_count: entry.quote_add_count + 1, updated_at: createdAt } : entry),
+  };
+  const supplier = nextData.supplier_profiles.find((entry) => entry.id === product.supplier_id);
+  nextData = appendNotification(nextData, {
+    user_id: supplier?.user_id ?? supplierUserId(product.supplier_id),
+    user_role: "supplier",
+    type: "new_matched_request",
+    title: "상품 기반 견적요청이 도착했습니다.",
+    body: `${product.title} 상품을 보고 구매자가 견적요청을 만들었습니다.`,
+    link_url: `/app/supplier/requests/${result.requestId}`,
+    related_entity_type: "quote_request",
+    related_entity_id: result.requestId,
+    priority: "high",
+    actor_user_id: buyerId,
+  });
+  saveData(nextData);
+  return { data: nextData, requestId: result.requestId };
+}
+
+export function createProductReport(data: AppData, productId: string, reporterId: string, reason: ProductReportReason, detail: string): AppData {
+  const product = data.supplier_products.find((entry) => entry.id === productId);
+  if (!product) return data;
+  const createdAt = new Date().toISOString();
+  const reportId = `preport-${Date.now()}`;
+  let nextData: AppData = {
+    ...data,
+    product_reports: [{
+      id: reportId,
+      product_id: productId,
+      reporter_id: reporterId,
+      reason,
+      detail: detail.trim(),
+      status: "pending",
+      admin_memo: "",
+      created_at: createdAt,
+      updated_at: createdAt,
+    }, ...data.product_reports],
+  };
+  nextData = appendNotification(nextData, {
+    user_id: adminUserId(nextData),
+    user_role: "admin",
+    type: "product_report_received",
+    title: "상품 신고가 접수되었습니다.",
+    body: `${product.title} 상품 신고: ${productReportReasonLabels[reason]}`,
+    link_url: "/app/admin/products",
+    related_entity_type: "product",
+    related_entity_id: productId,
+    priority: reason === "external_trade" || reason === "prohibited_item" ? "high" : "normal",
+    actor_user_id: reporterId,
+  });
+  saveData(nextData);
+  return nextData;
+}
+
+export function updateProductReportStatus(data: AppData, reportId: string, status: ProductReportStatus, adminMemo = ""): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    product_reports: data.product_reports.map((entry) => entry.id === reportId ? { ...entry, status, admin_memo: adminMemo || entry.admin_memo, updated_at: updatedAt } : entry),
   };
   saveData(nextData);
   return nextData;
@@ -7297,6 +8187,14 @@ function normalizeData(data: Partial<AppData>): AppData {
     supplier_documents: data.supplier_documents ?? initialData.supplier_documents,
     supplier_stats: data.supplier_stats ?? initialData.supplier_stats,
     supplier_reviews: data.supplier_reviews ?? initialData.supplier_reviews,
+    product_categories: data.product_categories ?? initialData.product_categories,
+    supplier_store_profiles: data.supplier_store_profiles ?? initialData.supplier_store_profiles,
+    supplier_products: data.supplier_products ?? initialData.supplier_products,
+    product_inquiries: data.product_inquiries ?? initialData.product_inquiries,
+    product_order_requests: data.product_order_requests ?? initialData.product_order_requests,
+    product_favorites: data.product_favorites ?? initialData.product_favorites,
+    product_quote_items: data.product_quote_items ?? initialData.product_quote_items,
+    product_reports: data.product_reports ?? initialData.product_reports,
     quotes: data.quotes ?? initialData.quotes,
     quote_attachments: data.quote_attachments ?? initialData.quote_attachments,
     deals: data.deals ?? initialData.deals,
