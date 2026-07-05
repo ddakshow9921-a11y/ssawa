@@ -859,12 +859,6 @@ export default function App() {
           );
         })}
       </nav>
-      {authSession && isProtectedAppPath(path) && path !== primaryAction.path && (
-        <button className="mobileFixedActionButton" type="button" onClick={() => navigate(primaryAction.path)}>
-          <PrimaryActionIcon size={18} />
-          {primaryAction.label}
-        </button>
-      )}
       {showChatShortcut && (
         <button className="chatShortcutButton" type="button" onClick={() => navigate(chatPath)} aria-label="문의/채팅 열기">
           <span className="navIconWrap">
@@ -5976,11 +5970,11 @@ function SupplierDashboard({ data, navigate }: PageProps) {
             <h2>{focusSetting.supplier_home_message}</h2>
             <p>응답 가능한 요청을 먼저 확인하고 빠른 견적으로 신규 거래처를 확보하세요.</p>
           </div>
-          <button className="primaryButton" type="button" onClick={() => navigate("/app/supplier/requests")}>빠른 견적 제출</button>
+          <button className="primaryButton mobileDuplicateAction" type="button" onClick={() => navigate("/app/supplier/requests")}>빠른 견적 제출</button>
         </section>
       )}
 
-      <section className="primaryActionGrid compact" aria-label="공급업체 주요 작업">
+      <section className="primaryActionGrid compact mobileDuplicateActionGrid" aria-label="공급업체 주요 작업">
         <QuickStartCard
           primary
           title="새 요청 보기"

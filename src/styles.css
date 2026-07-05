@@ -333,10 +333,6 @@ button:disabled {
   background: #162b43;
 }
 
-.mobileFixedActionButton {
-  display: none;
-}
-
 .page {
   width: min(1180px, calc(100% - 64px));
   max-width: 100%;
@@ -4817,7 +4813,7 @@ tr.selectedRow {
 
 @media (max-width: 760px) {
   .mainPane {
-    padding-bottom: 86px;
+    padding-bottom: 92px;
   }
 
   .topbar {
@@ -5064,8 +5060,8 @@ tr.selectedRow {
     z-index: 10;
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    gap: 5px;
+    padding: 9px 10px calc(9px + env(safe-area-inset-bottom));
     background: rgba(255, 255, 255, 0.96);
     border-top: 1px solid var(--line);
     backdrop-filter: blur(14px);
@@ -5073,20 +5069,27 @@ tr.selectedRow {
 
   .bottomNavButton {
     min-width: 0;
-    min-height: 50px;
+    min-height: 56px;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
     border: 0;
     background: transparent;
     color: var(--muted);
-    font-size: 11px;
-    font-weight: 850;
+    font-size: 12px;
+    font-weight: 900;
   }
 
   .bottomNavButton span {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .bottomNavButton svg {
+    width: 20px;
+    height: 20px;
   }
 
   .bottomNavButton.active {
@@ -5094,35 +5097,13 @@ tr.selectedRow {
     background: var(--orange-soft);
   }
 
+  .mobileDuplicateAction,
+  .mobileDuplicateActionGrid {
+    display: none;
+  }
+
   .chatShortcutButton {
-    right: 14px;
-    bottom: calc(132px + env(safe-area-inset-bottom));
-    min-height: 46px;
-    padding: 0 14px;
-    box-shadow: 0 12px 24px rgba(16, 32, 51, 0.2);
-  }
-
-  .chatShortcutButton strong {
-    font-size: 13px;
-  }
-
-  .mobileFixedActionButton {
-    position: fixed;
-    left: 14px;
-    right: 14px;
-    bottom: calc(74px + env(safe-area-inset-bottom));
-    z-index: 11;
-    min-height: 50px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: 1px solid var(--orange);
-    border-radius: 8px;
-    color: #ffffff;
-    background: var(--orange);
-    box-shadow: 0 14px 28px rgba(255, 107, 26, 0.24);
-    font-weight: 950;
+    display: none;
   }
 }
 
