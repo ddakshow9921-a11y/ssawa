@@ -9,19 +9,22 @@ function statusPayload(request) {
   const geminiApiKey = readFirstEnv(GEMINI_API_KEY_ENV_KEYS);
   const environment = process.env.VITE_APP_ENV || process.env.NEXT_PUBLIC_APP_ENV || process.env.VERCEL_ENV || process.env.NODE_ENV || "unknown";
   const effectiveAppUrl = process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || vercelDeploymentUrl();
+  const effectiveApiBaseUrl = process.env.VITE_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "same-origin";
   const effectiveSupabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const effectiveSupabaseAnonKey = readFirstEnv(["VITE_SUPABASE_PUBLISHABLE_KEY", "VITE_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"]);
   const sources = {
     appUrl: process.env.VITE_APP_URL ? "VITE_APP_URL" : process.env.NEXT_PUBLIC_APP_URL ? "NEXT_PUBLIC_APP_URL" : process.env.VERCEL_URL ? "VERCEL_URL" : "missing",
+    apiBaseUrl: process.env.VITE_API_BASE_URL ? "VITE_API_BASE_URL" : process.env.NEXT_PUBLIC_API_BASE_URL ? "NEXT_PUBLIC_API_BASE_URL" : "same-origin",
     supabaseUrl: process.env.VITE_SUPABASE_URL ? "VITE_SUPABASE_URL" : process.env.NEXT_PUBLIC_SUPABASE_URL ? "NEXT_PUBLIC_SUPABASE_URL" : "project-default",
-    supabaseAnonKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY ? "VITE_SUPABASE_PUBLISHABLE_KEY" : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "NEXT_PUBLIC_SUPABASE_ANON_KEY" : "missing",
+    supabaseAnonKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY ? "VITE_SUPABASE_PUBLISHABLE_KEY" : process.env.VITE_SUPABASE_ANON_KEY ? "VITE_SUPABASE_ANON_KEY" : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "NEXT_PUBLIC_SUPABASE_ANON_KEY" : process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ? "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" : "missing",
     supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE_KEY ? "SUPABASE_SERVICE_ROLE_KEY" : process.env.SUPABASE_SECRET_KEY ? "SUPABASE_SECRET_KEY" : "missing",
     ntsBusinessServiceKey: process.env.NTS_BUSINESS_SERVICE_KEY ? "NTS_BUSINESS_SERVICE_KEY" : "missing",
   };
   const checks = {
     appUrlConfigured: Boolean(effectiveAppUrl),
-    apiBaseUrlConfigured: Boolean(process.env.VITE_API_BASE_URL),
+    apiBaseUrlConfigured: Boolean(effectiveApiBaseUrl),
     supabaseUrlConfigured: Boolean(effectiveSupabaseUrl),
-    supabaseAnonKeyConfigured: Boolean(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    supabaseAnonKeyConfigured: Boolean(effectiveSupabaseAnonKey),
     supabaseServiceRoleConfigured: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY),
     liveDataEnabled: readBoolean(process.env.VITE_USE_LIVE_DATA || process.env.NEXT_PUBLIC_USE_LIVE_DATA, false),
     ntsBusinessServiceKeyConfigured: Boolean(process.env.NTS_BUSINESS_SERVICE_KEY),
@@ -44,7 +47,7 @@ function statusPayload(request) {
   const status = missingRequired.length ? "warning" : "ok";
 
   return {
-    ok: status !== "error",
+    ok: status === "ok",
     status,
     app: APP_ID,
     displayName: APP_NAME,

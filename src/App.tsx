@@ -178,7 +178,7 @@ import {
 import type { AccountingStatus, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, BusinessManualReviewRequest, BusinessManualReviewStatus, BusinessOperatingStatus, BusinessVerification, BusinessVerificationStatus, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, Profile, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, UserRole } from "./types";
 import { appConfig, environmentLabel, isLiveModeReady } from "./lib/env";
 import { getSupabaseClient, isSupabaseConfigured, SUPABASE_PROJECT_URL } from "./lib/supabase/client";
-import { getCurrentProfile, signOut as signOutSupabase } from "./lib/supabase/auth";
+import { ensureProfile, getCurrentProfile, signOut as signOutSupabase } from "./lib/supabase/auth";
 import { storageBuckets, uploadAppFile } from "./lib/supabase/storage";
 import { liveFeatureMatrix } from "./services/liveDataService";
 
@@ -480,6 +480,10 @@ function isBusinessDuplicated(data: AppData, businessNumber: string) {
 function parseBusinessApiError(error: unknown) {
   if (error instanceof Error) return error.message;
   return "사업자 인증 API를 호출하지 못했습니다.";
+}
+
+function loginErrorMessage() {
+  return "이메일 또는 비밀번호가 올바르지 않습니다.";
 }
 
 export default function App() {
@@ -829,6 +833,7 @@ function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: 
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const showLocalLoginShortcuts = appConfig.appEnv === "local" && appConfig.enableDemoData;
 
   async function finishLogin(profile: Profile, source: AppAuthSession["source"]) {
     const supplier = data.supplier_profiles.find((entry) => entry.user_id === profile.id);
@@ -845,29 +850,28 @@ function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: 
       const normalizedEmail = email.trim().toLowerCase();
       const localProfile = data.profiles.find((profile) => profile.email.toLowerCase() === normalizedEmail);
       const testAccount = testLoginAccounts.find((account) => account.email === normalizedEmail);
-      if (localProfile && testAccount) {
-        if (password !== testAccount.password) {
-          throw new Error(`테스트 계정 비밀번호는 ${testAccount.password} 입니다.`);
-        }
-        await finishLogin(localProfile, "local");
-        return;
-      }
-
       const client = getSupabaseClient();
       if (client) {
-        const { error } = await client.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) throw error;
-        const profile = (await getCurrentProfile()) as Profile | null;
+        const { data: authData, error } = await client.auth.signInWithPassword({ email: email.trim(), password });
+        if (error && isLiveModeReady()) throw error;
+        let profile = error ? null : (await getCurrentProfile()) as Profile | null;
+        if (!profile && authData?.user) {
+          profile = (await ensureProfile(authData.user)) as Profile | null;
+        }
         if (profile) {
           await finishLogin(profile, "supabase");
           return;
         }
       }
 
-      if (!localProfile) throw new Error("가입된 이메일을 찾을 수 없습니다.");
-      await finishLogin(localProfile, "local");
-    } catch (error) {
-      setStatus(parseBusinessApiError(error));
+      if (localProfile && testAccount && password === testAccount.password) {
+        await finishLogin(localProfile, "local");
+        return;
+      }
+
+      throw new Error(loginErrorMessage());
+    } catch {
+      setStatus(loginErrorMessage());
     } finally {
       setSubmitting(false);
     }
@@ -904,20 +908,24 @@ function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: 
           {submitting ? "확인 중" : "로그인"}
         </button>
         <button className="ghostButton full" type="button" onClick={() => navigate("/signup")}>회원가입으로 이동</button>
-        <div className="demoLoginGrid" aria-label="데모 로그인">
-          <button className="secondaryButton compact" type="button" onClick={() => demoLogin("buyer")}>구매자 데모</button>
-          <button className="secondaryButton compact" type="button" onClick={() => demoLogin("supplier")}>공급사 데모</button>
-          <button className="secondaryButton compact" type="button" onClick={() => demoLogin("admin")}>관리자 데모</button>
-        </div>
-        <div className="testAccountGrid" aria-label="테스트 계정">
-          {testLoginAccounts.map((account) => (
-            <button className="testAccountCard" type="button" onClick={() => fillTestAccount(account)} key={account.email}>
-              <strong>{account.label}</strong>
-              <span>{account.email}</span>
-              <small>비밀번호 {account.password}</small>
-            </button>
-          ))}
-        </div>
+        {showLocalLoginShortcuts && (
+          <>
+            <div className="demoLoginGrid" aria-label="데모 로그인">
+              <button className="secondaryButton compact" type="button" onClick={() => demoLogin("buyer")}>구매자 데모</button>
+              <button className="secondaryButton compact" type="button" onClick={() => demoLogin("supplier")}>공급사 데모</button>
+              <button className="secondaryButton compact" type="button" onClick={() => demoLogin("admin")}>관리자 데모</button>
+            </div>
+            <div className="testAccountGrid" aria-label="테스트 계정">
+              {testLoginAccounts.map((account) => (
+                <button className="testAccountCard" type="button" onClick={() => fillTestAccount(account)} key={account.email}>
+                  <strong>{account.label}</strong>
+                  <span>{account.email}</span>
+                  <small>로컬 테스트 계정</small>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </form>
     </section>
   );
@@ -2193,8 +2201,6 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
               <MethodCard icon={<Upload />} title="사진으로 올리기" desc="구매영수증이나 자필 메모 사진을 올리면 Gemini AI가 품목을 자동 입력합니다." active={draft.input_method === "photo"} onClick={() => selectMethod("photo")} />
               <MethodCard icon={<FilePlus2 />} title="직접 입력하기" desc="품목명, 수량, 납품 조건을 직접 입력합니다." active={draft.input_method === "manual"} onClick={() => selectMethod("manual")} />
               <MethodCard icon={<RefreshCcw />} title="지난 구매 다시 요청하기" desc="지난 요청을 복사해 수량과 납품일만 바꿉니다." active={draft.input_method === "repeat"} onClick={() => selectMethod("repeat")} />
-              <MethodCard icon={<ClipboardList />} title="문장으로 요청하기" desc="한 문장을 품목 목록으로 나눕니다." active={draft.input_method === "text"} onClick={() => selectMethod("text")} />
-              <MethodCard icon={<Boxes />} title="템플릿" desc="업종별 자주 쓰는 세트를 불러옵니다." active={draft.input_method === "template"} onClick={() => selectMethod("template")} />
             </div>
           </section>
         )}
@@ -2402,7 +2408,7 @@ function RequestDetailPage({ data, navigate, setData, requestId }: MutatingPageP
       {deal && selectedQuote && (
         <DealNotice data={data} deal={deal} quote={selectedQuote} onOpen={() => navigate(`/app/deals/${deal.id}`)} />
       )}
-      <SectionHeader title="도착한 견적 비교" action="공급업체 화면" onAction={() => navigate(`/app/supplier/requests/${currentRequest.id}`)} />
+      <SectionHeader title="도착한 견적 비교" />
       {quotes.length === 0 ? (
         <EmptyState icon={<SearchCheck />} title="아직 도착한 견적이 없습니다." desc="공급업체 화면에서 샘플 견적을 제출해 흐름을 확인할 수 있습니다." />
       ) : (
@@ -5710,6 +5716,8 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
 }
 
 function SupplierQuotesPage({ data, navigate }: PageProps) {
+  const supplier = getActiveSupplier(data);
+  const myQuotes = data.quotes.filter((quoteEntry) => quoteEntry.supplier_id === supplier.id);
   return (
     <Page>
       <PageTitle eyebrow="공급업체" title="제출한 견적" desc="공급업체별 제출 견적과 거래 성사 여부를 확인합니다." />
@@ -5726,13 +5734,13 @@ function SupplierQuotesPage({ data, navigate }: PageProps) {
             </tr>
           </thead>
           <tbody>
-            {data.quotes.map((quoteEntry) => {
-              const supplier = supplierName(data, quoteEntry.supplier_id);
+            {myQuotes.map((quoteEntry) => {
+              const supplierLabel = supplierName(data, quoteEntry.supplier_id);
               const request = data.quote_requests.find((entry) => entry.id === quoteEntry.quote_request_id);
               const deal = data.deals.find((entry) => entry.selected_quote_id === quoteEntry.id);
               return (
                 <tr key={quoteEntry.id} onClick={() => request && navigate(`/app/supplier/requests/${request.id}`)}>
-                  <td>{supplier}</td>
+                  <td>{supplierLabel}</td>
                   <td>{request?.title ?? "삭제된 요청"}</td>
                   <td>{money(quoteEntry.final_amount)}</td>
                   <td>

@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    envPrefix: ["VITE_", "NEXT_PUBLIC_"],
     plugins: [localApiPlugin()],
   };
 });

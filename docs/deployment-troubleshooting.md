@@ -8,7 +8,7 @@
 | --- | --- |
 | `appUrlConfigured` | `VITE_APP_URL` 또는 `NEXT_PUBLIC_APP_URL` |
 | `supabaseUrlConfigured` | `VITE_SUPABASE_URL` 또는 `NEXT_PUBLIC_SUPABASE_URL` |
-| `supabaseAnonKeyConfigured` | `VITE_SUPABASE_PUBLISHABLE_KEY` 또는 `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| `supabaseAnonKeyConfigured` | `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` 중 하나 |
 | `supabaseServiceRoleConfigured` | `SUPABASE_SERVICE_ROLE_KEY` |
 | `ntsBusinessServiceKeyConfigured` | `NTS_BUSINESS_SERVICE_KEY` |
 

@@ -27,14 +27,16 @@
 
 ## Next 스타일 별칭
 
-현재 앱은 Vite라 브라우저 코드는 `VITE_*`를 읽습니다. 다만 운영 런북과 `/status` 호환을 위해 아래 값도 함께 넣을 수 있습니다.
+현재 앱은 Vite지만 `vite.config.mjs`에서 `NEXT_PUBLIC_*`도 공개 환경변수로 허용합니다. 운영팀은 `VITE_*` 또는 `NEXT_PUBLIC_*` 중 하나를 일관되게 넣을 수 있습니다.
 
 | 이름 | 매핑 |
 | --- | --- |
 | `NEXT_PUBLIC_APP_ENV` | `VITE_APP_ENV`와 동일 |
 | `NEXT_PUBLIC_APP_URL` | `VITE_APP_URL`과 동일 |
+| `NEXT_PUBLIC_API_BASE_URL` | `VITE_API_BASE_URL`과 동일. 비우면 same-origin API 사용 |
 | `NEXT_PUBLIC_SUPABASE_URL` | `VITE_SUPABASE_URL`과 동일 |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `VITE_SUPABASE_PUBLISHABLE_KEY`와 동일 |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `VITE_SUPABASE_PUBLISHABLE_KEY`와 동일 |
 | `NEXT_PUBLIC_USE_LIVE_DATA` | `VITE_USE_LIVE_DATA`와 동일 |
 | `NEXT_PUBLIC_ENABLE_DEMO_DATA` | `VITE_ENABLE_DEMO_DATA`와 동일 |
 

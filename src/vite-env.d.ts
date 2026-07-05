@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_SUPABASE_URL?: string;
   readonly VITE_SUPABASE_PUBLISHABLE_KEY?: string;
+  readonly VITE_SUPABASE_ANON_KEY?: string;
   readonly VITE_ENABLE_DEMO_DATA?: string;
   readonly VITE_USE_LIVE_DATA?: string;
   readonly VITE_ENABLE_MOCK_AI?: string;
@@ -25,6 +26,18 @@ interface ImportMetaEnv {
   readonly VITE_COMPANY_NAME?: string;
   readonly VITE_COMPANY_PHONE?: string;
   readonly VITE_COMPANY_EMAIL?: string;
+  readonly NEXT_PUBLIC_APP_ENV?: "local" | "beta" | "production";
+  readonly NEXT_PUBLIC_APP_URL?: string;
+  readonly NEXT_PUBLIC_API_BASE_URL?: string;
+  readonly NEXT_PUBLIC_SUPABASE_URL?: string;
+  readonly NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
+  readonly NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?: string;
+  readonly NEXT_PUBLIC_USE_LIVE_DATA?: string;
+  readonly NEXT_PUBLIC_ENABLE_DEMO_DATA?: string;
+  readonly NEXT_PUBLIC_ENABLE_MOCK_AI?: string;
+  readonly NEXT_PUBLIC_ENABLE_MOCK_PAYMENT?: string;
+  readonly NEXT_PUBLIC_ENABLE_MOCK_SETTLEMENT?: string;
+  readonly NEXT_PUBLIC_ENABLE_BETA_BADGE?: string;
 }
 
 interface ImportMeta {
