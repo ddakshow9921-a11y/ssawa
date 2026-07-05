@@ -234,6 +234,11 @@ button:disabled {
   font-weight: 800;
 }
 
+.navButton.separated {
+  margin-top: 10px;
+  box-shadow: 0 -10px 0 -9px var(--line);
+}
+
 .sidebarFooter {
   margin-top: auto;
   display: grid;
@@ -294,6 +299,10 @@ button:disabled {
 
 .notificationTopButton {
   position: relative;
+}
+
+.notificationLabel {
+  display: inline;
 }
 
 .chatShortcutButton {
@@ -417,6 +426,162 @@ button:disabled {
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: var(--shadow);
+}
+
+.simpleHero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 24px;
+}
+
+.simpleHeroCopy {
+  min-height: 270px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: 34px;
+  overflow: hidden;
+  border: 1px solid var(--orange-line);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fff6f0, #ffffff);
+  box-shadow: var(--shadow);
+}
+
+.simpleHeroCopy h1 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 38px;
+  line-height: 1.16;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.simpleHeroCopy p {
+  margin: 0;
+  color: var(--charcoal);
+  font-size: 18px;
+  font-weight: 820;
+  line-height: 1.5;
+}
+
+.primaryActionGrid,
+.roleFocusGrid,
+.problemGrid {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.primaryActionGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.primaryActionGrid.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.roleFocusGrid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.problemGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.quickStartCard,
+.focusCard,
+.problemCard {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(16, 32, 51, 0.05);
+}
+
+.quickStartCard {
+  min-height: 124px;
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 8px;
+  padding: 18px;
+  text-align: left;
+}
+
+.quickStartCard.primary {
+  border-color: var(--orange-line);
+  background: #fff7f2;
+}
+
+.quickStartIcon,
+.focusIcon,
+.problemIcon {
+  width: 38px;
+  height: 38px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--orange);
+  background: var(--orange-soft);
+}
+
+.quickStartCard strong {
+  color: var(--navy);
+  font-size: 18px;
+}
+
+.quickStartCard span:last-child {
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.focusCard,
+.problemCard {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  text-align: left;
+}
+
+.focusCard.clickable:hover,
+.problemCard:hover,
+.quickStartCard:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 107, 26, 0.34);
+}
+
+.focusCard strong,
+.problemCard strong {
+  color: var(--navy);
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.focusCard p,
+.problemCard small {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.problemCard.urgent {
+  border-color: rgba(255, 107, 26, 0.34);
+  background: #fff8f4;
+}
+
+.problemCard > span:not(.problemIcon) {
+  color: var(--charcoal);
+  font-weight: 900;
+}
+
+.compactAdminGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .publicStatusHero {
@@ -1507,6 +1672,10 @@ code {
 .actionStack {
   display: grid;
   gap: 8px;
+}
+
+.quoteActions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .selectedButton {
@@ -2946,7 +3115,7 @@ tbody tr:hover {
 
 .wizardSteps {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -3019,6 +3188,11 @@ tbody tr:hover {
 
 .categoryChoiceGrid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.categoryChoiceGrid.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 12px;
 }
 
 .methodCard,
@@ -4397,12 +4571,21 @@ tr.selectedRow {
     grid-template-columns: 1fr;
   }
 
+  .simpleHero {
+    grid-template-columns: 1fr;
+  }
+
   .publicStatusHero {
     grid-template-columns: 1fr;
   }
 
   .quickGrid,
   .dashboardGrid,
+  .primaryActionGrid,
+  .primaryActionGrid.compact,
+  .roleFocusGrid,
+  .problemGrid,
+  .compactAdminGrid,
   .accountingValuePanel,
   .supplierJoinStrip,
   .betaOpsNav,
@@ -4481,6 +4664,22 @@ tr.selectedRow {
     display: none;
   }
 
+  .topbarActions .notificationTopButton {
+    width: 42px;
+    min-width: 42px;
+    padding: 0;
+    display: inline-flex;
+  }
+
+  .notificationTopButton .notificationLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
   .page,
   .page.narrow {
     width: calc(100% - 28px);
@@ -4515,10 +4714,16 @@ tr.selectedRow {
   }
 
   .heroPanel,
+  .simpleHero,
   .accountingValuePanel,
   .supplierJoinStrip,
   .quickGrid,
   .dashboardGrid,
+  .primaryActionGrid,
+  .primaryActionGrid.compact,
+  .roleFocusGrid,
+  .problemGrid,
+  .compactAdminGrid,
   .betaOpsNav,
   .categorySignalGrid,
   .formulaGrid,
@@ -4530,6 +4735,7 @@ tr.selectedRow {
   .twoColumn,
   .requestGrid,
   .quoteCompareGrid,
+  .quoteActions,
   .supplierGrid,
   .itemsList,
   .formGrid,

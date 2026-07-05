@@ -198,6 +198,7 @@ function apiEndpoint(path: string) {
 
 type NavItem = {
   label: string;
+  mobileLabel?: string;
   path: string;
   icon: (props: IconProps) => ReactNode;
   key?: string;
@@ -206,64 +207,38 @@ type NavItem = {
 const navItemsByRole: Record<UserRole, NavItem[]> = {
   buyer: [
     { label: "홈", path: "/app", icon: Home },
-    { label: "견적요청", path: "/app/requests", icon: ClipboardList },
-    { label: "자료 올리기", path: "/app/analyze", icon: SearchCheck },
-    { label: "거래내역", path: "/app/deals", icon: ReceiptText },
-    { label: "문의/채팅", path: "/app/chats", icon: MessageCircle },
-    { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
-    { label: "구매장부", path: "/app/accounting", icon: Landmark },
-    { label: "내 정보", path: "/app/buyer/onboarding", icon: ShieldCheck },
-  ],
-  supplier: [
-    { label: "공급업체 홈", path: "/app/supplier", icon: Store },
-    { label: "요청찾기", path: "/app/supplier/requests", icon: SearchCheck },
-    { label: "견적관리", path: "/app/supplier/quotes", icon: ClipboardList },
-    { label: "거래관리", path: "/app/supplier/deals", icon: PackageCheck },
-    { label: "문의/채팅", path: "/app/supplier/chats", icon: MessageCircle },
-    { label: "후기/신뢰도", path: "/app/supplier/reputation", icon: BadgeCheck },
-    { label: "정산/요금제", path: "/app/supplier/billing", icon: Landmark },
-    { label: "업체 정보", path: "/app/supplier/profile", icon: Building2 },
-  ],
-  admin: [
-    { label: "관리자 홈", path: "/app/admin", icon: ShieldCheck },
-    { label: "견적요청 관리", path: "/app/admin/requests", icon: ClipboardList },
-    { label: "공급업체 관리", path: "/app/admin/suppliers", icon: UsersRound },
-    { label: "거래 관리", path: "/app/admin/deals", icon: ReceiptText },
-    { label: "문의/채팅", path: "/app/admin/chats", icon: MessageCircle },
-    { label: "자료분석 관리", path: "/app/admin/analysis", icon: SearchCheck },
-    { label: "신고/분쟁", path: "/app/admin/reports", icon: Bell },
-    { label: "후기/신뢰도", path: "/app/admin/reputation", icon: BadgeCheck },
-    { label: "수익/정산", path: "/app/admin/revenue", icon: Landmark },
-    { label: "베타 운영", path: "/app/admin/beta", icon: UsersRound },
-    { label: "피드백/CS", path: "/app/admin/feedback", icon: Bell },
-    { label: "QA", path: "/app/admin/qa", icon: Check },
-    { label: "데모 데이터 관리", path: "/app/admin/mvp-cleanup", icon: RefreshCcw },
-    { label: "설정", path: "/app/admin/supabase", icon: ShieldCheck },
-  ],
-};
-
-const mobileNavItemsByRole: Record<UserRole, NavItem[]> = {
-  buyer: [
-    { label: "홈", path: "/app", icon: Home },
     { label: "견적", path: "/app/requests", icon: ClipboardList },
-    { label: "채팅", path: "/app/chats", icon: MessageCircle },
     { label: "거래", path: "/app/deals", icon: ReceiptText },
-    { label: "구매장부", path: "/app/accounting", icon: Landmark },
+    { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
+    { label: "내 사업장", mobileLabel: "사업장", path: "/app/buyer/onboarding", icon: ShieldCheck },
   ],
   supplier: [
     { label: "홈", path: "/app/supplier", icon: Store },
     { label: "요청", path: "/app/supplier/requests", icon: SearchCheck },
-    { label: "채팅", path: "/app/supplier/chats", icon: MessageCircle },
     { label: "견적", path: "/app/supplier/quotes", icon: ClipboardList },
     { label: "거래", path: "/app/supplier/deals", icon: PackageCheck },
+    { label: "문의", path: "/app/supplier/chats", icon: MessageCircle },
+    { label: "정산", path: "/app/supplier/settlements", icon: Landmark },
+    { label: "업체 정보", path: "/app/supplier/profile", icon: Building2 },
   ],
   admin: [
-    { label: "홈", path: "/app/admin", icon: ShieldCheck },
-    { label: "요청", path: "/app/admin/requests", icon: ClipboardList },
-    { label: "채팅", path: "/app/admin/chats", icon: MessageCircle },
-    { label: "신고", path: "/app/admin/reports", icon: Bell },
-    { label: "QA", path: "/app/admin/qa", icon: Check },
+    { label: "관리자 홈", mobileLabel: "홈", path: "/app/admin", icon: ShieldCheck },
+    { label: "공급업체 승인", mobileLabel: "승인", path: "/app/admin/suppliers", icon: UsersRound },
+    { label: "사업자 인증", mobileLabel: "인증", path: "/app/admin/business-verifications", icon: ShieldCheck },
+    { label: "견적 미도착", mobileLabel: "매칭", path: "/app/admin/matching-assist", icon: SearchCheck },
+    { label: "신고/피드백", mobileLabel: "신고", path: "/app/admin/feedback", icon: Bell },
+    { label: "거래 관리", path: "/app/admin/deals", icon: ReceiptText },
+    { label: "정산", path: "/app/admin/settlements", icon: Landmark },
+    { label: "문의", path: "/app/admin/chats", icon: MessageCircle },
+    { label: "운영 KPI", path: "/app/admin/beta/kpi", icon: BadgeCheck },
+    { label: "환경", path: "/app/admin/supabase", icon: ShieldCheck },
   ],
+};
+
+const mobileNavItemsByRole: Record<UserRole, NavItem[]> = {
+  buyer: navItemsByRole.buyer.slice(0, 5),
+  supplier: navItemsByRole.supplier.slice(0, 5),
+  admin: navItemsByRole.admin.slice(0, 5),
 };
 
 const emptyItem = {
@@ -792,12 +767,13 @@ export default function App() {
           </span>
         </button>
         <nav className="sideNav">
-          {navItems.map((item) => {
+          {navItems.map((item, index) => {
             const Icon = item.icon;
             const active = isNavItemActive(path, item.path);
             const badgeCount = navBadgeCount(item.path);
+            const className = `${active ? "navButton active" : "navButton"}${index === 5 ? " separated" : ""}`;
             return (
-              <button className={active ? "navButton active" : "navButton"} type="button" onClick={() => navigate(item.path)} key={item.key ?? item.path}>
+              <button className={className} type="button" onClick={() => navigate(item.path)} key={item.key ?? item.path}>
                 <span className="navIconWrap">
                   <Icon size={18} />
                   {badgeCount > 0 && <UnreadBadge count={badgeCount} />}
@@ -851,7 +827,7 @@ export default function App() {
             {authSession && (
               <button className="ghostButton compact notificationTopButton" type="button" onClick={() => navigate(notificationPath)}>
                 <Bell size={16} />
-                알림
+                <span className="notificationLabel">알림</span>
                 {unreadNotifications > 0 && <UnreadBadge count={unreadNotifications} />}
               </button>
             )}
@@ -883,7 +859,7 @@ export default function App() {
                 <Icon size={18} />
                 {badgeCount > 0 && <UnreadBadge count={badgeCount} />}
               </span>
-              <span>{item.label}</span>
+              <span>{item.mobileLabel ?? item.label}</span>
             </button>
           );
         })}
@@ -2054,9 +2030,7 @@ function QaChecklistCard({ data, item, setData }: { data: AppData; item: AppData
 
 function HomePage({ data, navigate }: PageProps) {
   const activeRequests = data.quote_requests.filter((request) => request.status === "open" || request.status === "quoted").length;
-  const submittedQuotes = data.quotes.length;
   const purchaseSummary = calculatePurchaseSummary(data.purchase_records.filter((record) => record.buyer_id === "buyer-1"));
-  const focusSetting = getActiveFocusSetting(data);
   const requestsWithQuotes = data.quote_requests.filter((request) => data.quotes.some((quote) => quote.quote_request_id === request.id) && !request.selected_quote_id).length;
   const activeDeals = data.deals.filter((deal) => deal.buyer_id === "buyer-1" && !["completed", "cancelled_by_buyer", "cancelled_by_supplier"].includes(deal.status)).length;
   const repeatablePurchases = data.purchase_records.filter((record) => record.buyer_id === "buyer-1").length;
@@ -2064,126 +2038,48 @@ function HomePage({ data, navigate }: PageProps) {
 
   return (
     <Page>
-      <section className="heroBand">
-        <div className="heroCopy">
+      <section className="simpleHero">
+        <div className="simpleHeroCopy">
           <img src="/로고.png" alt="싸와!" className="heroLogo" />
-          <h1 className="heroLead">필요한 자재를 쉽게 견적받으세요.</h1>
-          <p className="heroSub">거래명세서나 사진만 올려도 견적요청을 만들 수 있어요. 정확히 몰라도 업체가 확인 후 견적할 수 있습니다.</p>
-          <div className="heroActions">
-            <button className="primaryButton" type="button" onClick={() => navigate("/app/analyze")}>
-              <Upload size={18} />
-              거래명세서 올리기
-            </button>
-            <button className="secondaryButton" type="button" onClick={() => navigate("/app/requests/new")}>
-              <FilePlus2 size={18} />
-              직접 견적요청
-            </button>
-            <button className="secondaryButton" type="button" onClick={() => navigate("/app/quick-reorder")}>
-              <RefreshCcw size={18} />
-              지난 구매 다시 견적
-            </button>
-          </div>
+          <h1>필요한 자재를 올려보세요.</h1>
+          <p>업체들이 견적을 보내드립니다.</p>
         </div>
-        <div className="heroPanel" aria-label="싸와 핵심 지표">
-          <Metric label="도착한 견적" value={`${requestsWithQuotes}건`} icon={<ReceiptText />} desc="비교할 견적이 도착했어요." actionLabel="견적 비교하기" onClick={() => navigate("/app/requests")} />
-          <Metric label="진행 중인 요청" value={`${activeRequests}건`} icon={<ClipboardList />} desc="업체들이 견적을 확인 중입니다." actionLabel="요청 확인하기" onClick={() => navigate("/app/requests")} />
-          <Metric label="거래 진행" value={`${activeDeals}건`} icon={<PackageCheck />} desc="확인 필요한 거래가 있어요." actionLabel="거래 확인하기" onClick={() => navigate("/app/deals")} />
-          <Metric label="미확인 문의" value={`${buyerUnreadChats}건`} icon={<Bell />} desc="업체 답변을 확인합니다." actionLabel="문의함" onClick={() => navigate("/app/chats")} />
-          <Metric label="구매장부 대기" value={`${purchaseSummary.pendingCount}건`} icon={<Landmark />} desc="장부에 정리할 구매내역이 있어요." actionLabel="구매내역 확인" onClick={() => navigate("/app/accounting")} />
-        </div>
-      </section>
-
-      <BetaLimitationsNotice navigate={navigate} context="home" />
-
-      {focusSetting.focus_mode_enabled && (
-        <section className="dealNotice">
-          <div>
-            <span className="eyebrow">집중 카테고리 · {focusSetting.focus_category_name}</span>
-            <h2>{focusSetting.buyer_home_message}</h2>
-            <p>{focusSetting.priority_template_names.join(", ")} 템플릿을 우선 추천합니다.</p>
-          </div>
-          <button className="primaryButton" type="button" onClick={() => navigate("/app/quick-reorder")}>지난 구매 다시 견적</button>
-        </section>
-      )}
-
-      <section className="quickGrid" aria-label="주요 작업">
-        <ActionTile title="거래명세서 올리기" desc="영수증, 거래명세서, 자필 메모를 자동으로 읽어 품목 후보를 만듭니다." icon={<Upload />} onClick={() => navigate("/app/analyze")} />
-        <ActionTile title="견적 비교하기" desc={`도착한 견적 ${submittedQuotes}건의 금액, 납기, 결제 조건을 비교합니다.`} icon={<ReceiptText />} onClick={() => navigate("/app/requests")} />
-        <ActionTile title="거래 확인하기" desc="선택한 업체와 납품 상태, 문의, 증빙 자료를 확인합니다." icon={<PackageCheck />} onClick={() => navigate("/app/deals")} />
-        <ActionTile title="업체 문의함" desc="견적/거래와 연결된 업체 문의를 모아 확인합니다." icon={<Bell />} onClick={() => navigate("/app/chats")} />
-        <ActionTile title="구매장부 보기" desc="거래 완료 후 정리된 구매내역과 장부 반영 대기 건을 봅니다." icon={<Landmark />} onClick={() => navigate("/app/accounting")} />
-        <ActionTile title="지난 구매 다시 견적" desc={`반복 구매 가능한 내역 ${repeatablePurchases}건을 다시 요청합니다.`} icon={<RefreshCcw />} onClick={() => navigate("/app/quick-reorder")} />
-      </section>
-
-      <section className="landingSection">
-        <SectionHeader title="구매자 이용 흐름" />
-        <div className="flowGrid">
-          {["올리기", "비교하기", "선택하기", "구매내역 정리"].map((step, index) => (
-            <div className="flowStep" key={step}><span>{index + 1}</span><strong>{step}</strong></div>
-          ))}
+        <div className="primaryActionGrid" aria-label="견적요청 시작">
+          <QuickStartCard
+            primary
+            title="거래명세서 올리기"
+            desc="영수증과 거래명세서를 읽어 품목을 만듭니다."
+            icon={<Upload />}
+            onClick={() => navigate("/app/analyze")}
+          />
+          <QuickStartCard
+            title="사진으로 올리기"
+            desc="자재 사진이나 자필 메모 사진을 올립니다."
+            icon={<SearchCheck />}
+            onClick={() => navigate("/app/requests/new")}
+          />
+          <QuickStartCard
+            title="직접 입력하기"
+            desc="필요한 품목을 바로 적어서 요청합니다."
+            icon={<FilePlus2 />}
+            onClick={() => navigate("/app/requests/new")}
+          />
+          <QuickStartCard
+            title="지난 구매 다시 견적"
+            desc={`반복 구매 ${repeatablePurchases}건을 다시 요청합니다.`}
+            icon={<RefreshCcw />}
+            onClick={() => navigate("/app/quick-reorder")}
+          />
         </div>
       </section>
 
-      <section className="accountingValuePanel">
-        <div>
-          <span className="eyebrow">구매내역 자동정리</span>
-          <h2>견적을 거래로 끝내면 구매내역과 장부 준비가 같이 남습니다.</h2>
-          <p>완료된 거래, 수동 등록 매입, 업로드한 명세서를 한곳에 모아 매입비 확인과 증빙 준비가 쉬워집니다. 세무 신고를 대신한다고 말하지 않고, 장부와 세금자료 준비에 필요한 항목을 정리합니다.</p>
-        </div>
-        <div className="valueChecklist" aria-label="구매내역 정리 가치">
-          <span><PackageCheck size={18} />구매내역 자동 분류</span>
-          <span><Landmark size={18} />오늘장사 장부 반영 대기</span>
-          <span><ReceiptText size={18} />세금계산서·영수증 준비 상태 확인</span>
-        </div>
-        <button className="primaryButton" type="button" onClick={() => navigate("/app/purchases")}>구매내역 보기</button>
+      <section className="roleFocusGrid" aria-label="오늘 확인할 일">
+        <FocusCard label="도착한 견적" value={`${requestsWithQuotes}건`} desc="비교하고 업체를 선택하세요." icon={<ReceiptText />} onClick={() => navigate("/app/requests")} />
+        <FocusCard label="진행 요청" value={`${activeRequests}건`} desc="업체가 견적을 확인 중입니다." icon={<ClipboardList />} onClick={() => navigate("/app/requests")} />
+        <FocusCard label="거래" value={`${activeDeals}건`} desc="납품과 증빙 상태를 확인하세요." icon={<PackageCheck />} onClick={() => navigate("/app/deals")} />
+        <FocusCard label="알림" value={`${buyerUnreadChats}건`} desc="업체 답변과 새 소식을 봅니다." icon={<Bell />} onClick={() => navigate("/app/notifications")} />
+        <FocusCard label="구매내역" value={`${purchaseSummary.pendingCount}건`} desc="장부 반영 대기 항목입니다." icon={<Landmark />} onClick={() => navigate("/app/purchases")} />
       </section>
-
-      <section className="landingSection">
-        <SectionHeader title="주요 카테고리" />
-        <div className="categoryPillGrid">
-          {data.categories.map((category) => <span key={category.id}>{category.name}</span>)}
-        </div>
-      </section>
-
-      <section className="betaHero">
-        <div>
-          <span className="eyebrow">오늘장사 연동 가치</span>
-          <h2>구매내역 자동정리부터 매입비 리포트까지 이어집니다.</h2>
-          <p>거래 완료 후 구매내역을 장부 반영 대기 자료로 정리하고, 세금자료 준비와 절감 리포트까지 확인할 수 있습니다.</p>
-        </div>
-        <button className="secondaryButton" type="button" onClick={() => navigate("/app/accounting")}>장부 흐름 보기</button>
-      </section>
-
-      <section className="supplierJoinStrip">
-        <div>
-          <span className="eyebrow">공급업체이신가요?</span>
-          <h2>구매 요청에 견적을 보내고 거래를 관리할 수 있습니다.</h2>
-          <p>공급업체 입점은 구매자 주요 작업과 분리해 아래 보조 영역에서 안내합니다.</p>
-        </div>
-        <button className="secondaryButton" type="button" onClick={() => navigate("/partners")}>
-          <Store size={17} />
-          공급업체 입점 안내
-        </button>
-      </section>
-
-      <section className="landingSection">
-        <SectionHeader title="베타 테스트 안내" action="자세히" onAction={() => navigate("/app/beta")} />
-        <div className="faqGrid">
-          {[
-            ["구매자는 무료인가요?", "베타 기간 동안 구매자 견적요청은 무료로 제공합니다."],
-            ["공급업체 입점비가 있나요?", "초기 베타 기간에는 무료 입점을 지원합니다. 추후 요금제는 별도 안내됩니다."],
-            ["실제 결제도 앱에서 하나요?", "초기 MVP에서는 견적과 거래 상태 관리를 중심으로 제공하며, 결제 기능은 추후 단계적으로 연동됩니다."],
-            ["세금계산서 발행도 가능한가요?", "세금계산서 가능 업체를 확인할 수 있으며, 실제 발행은 공급업체와 협의합니다."],
-          ].map(([question, answer]) => (
-            <article className="faqCard" key={question}>
-              <strong>{question}</strong>
-              <p>{answer}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <PolicyLinks navigate={navigate} />
 
       <SectionHeader title="최근 견적요청" action="전체 보기" onAction={() => navigate("/app/requests")} />
       <RequestList data={data} requests={data.quote_requests.slice(0, 3)} navigate={navigate} />
@@ -2192,7 +2088,7 @@ function HomePage({ data, navigate }: PageProps) {
 }
 
 function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
-  const wizardSteps = ["입력 방식", "카테고리", "품목 검토", "납품 조건", "최종 확인"];
+  const wizardSteps = ["올리기", "품목 확인", "납품 조건", "완료"];
   const [step, setStep] = useState(0);
   const [textInput, setTextInput] = useState("치킨박스 1000개, 소스컵 2000개, 배달봉투 대형 1000장 필요해요.");
   const [receiptFileName, setReceiptFileName] = useState("치킨집_포장재_영수증.jpg");
@@ -2260,7 +2156,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
       description: template.description,
       items: template.items.map((entry) => ({ ...entry })),
     }));
-    setStep(2);
+    setStep(1);
   }
 
   function repeatRequest(previousRequest: QuoteRequest) {
@@ -2295,7 +2191,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
         review_reason: "",
       })),
     }));
-    setStep(2);
+    setStep(1);
   }
 
   function parseTextInput() {
@@ -2386,11 +2282,11 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
 
   function goNext() {
     setError("");
-    if (step === 2 && !draft.items.some((entry) => entry.item_name.trim())) {
+    if (step === 1 && !draft.items.some((entry) => entry.item_name.trim())) {
       setError("품목을 1개 이상 입력하거나 템플릿/문장 분석으로 추가해 주세요.");
       return;
     }
-    if (step === 3 && (!draft.delivery_region.trim() || !draft.desired_delivery_date)) {
+    if (step === 2 && (!draft.delivery_region.trim() || !draft.desired_delivery_date)) {
       setError("배송 지역과 희망 납품일을 입력해 주세요.");
       return;
     }
@@ -2428,7 +2324,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
         {error && <div className="alert">{error}</div>}
         {step === 0 && (
           <section className="wizardPanel">
-            <SectionHeader title="어떤 방식으로 견적요청할까요?" />
+            <SectionHeader title="어떻게 올릴까요?" />
             <p className="mutedText summaryLine">정확히 몰라도 괜찮아요. 규격을 모르시면 사진이나 메모를 남겨주세요.</p>
             <div className="methodGrid">
               <MethodCard icon={<ReceiptText />} title="거래명세서/견적서 올리기" desc="기존 명세서나 영수증을 읽어 재견적 품목을 만듭니다." active={draft.input_method === "invoice"} onClick={() => selectMethod("invoice")} />
@@ -2440,36 +2336,17 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
         )}
         {step === 1 && (
           <section className="wizardPanel">
-            <SectionHeader title="카테고리를 선택하세요" />
-            {(draft.input_method === "photo" || draft.input_method === "invoice") && (
-              <UploadMockPanel
-                attachments={draft.attachments}
-                fileName={receiptFileName}
-                onFileNameChange={setReceiptFileName}
-                onImageFileChange={updateReceiptImageFile}
-                onAnalyze={analyzeReceiptPhoto}
-                onAdd={() => addMockAttachment("analyzed")}
-                analysisPreview={receiptAnalysisPreview}
-                analysisSource={receiptAnalysisSource}
-                analysisNotice={receiptAnalysisNotice}
-                isAnalyzing={receiptAnalysisLoading}
-              />
-            )}
-            <div className="categoryChoiceGrid">
-              {data.categories.map((category) => (
-                <button className={draft.category_id === category.id ? "categoryChoiceCard active" : "categoryChoiceCard"} type="button" onClick={() => setDraft({ ...draft, category_id: category.id })} key={category.id}>
-                  <strong>{category.name}</strong>
-                  <span>{categoryDescriptions[category.name] ?? "요청 품목의 성격에 가장 가까운 카테고리"}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-        {step === 2 && (
-          <section className="wizardPanel">
             <div className="splitPanel">
               <div>
-                <SectionHeader title="품목 후보를 다듬어 주세요" action="품목 추가" onAction={() => setDraft({ ...draft, items: [...draft.items, { ...emptyItem }] })} />
+                <SectionHeader title="품목을 확인하세요" action="품목 추가" onAction={() => setDraft({ ...draft, items: [...draft.items, { ...emptyItem }] })} />
+                <div className="categoryChoiceGrid compact">
+                  {data.categories.map((category) => (
+                    <button className={draft.category_id === category.id ? "categoryChoiceCard active" : "categoryChoiceCard"} type="button" onClick={() => setDraft({ ...draft, category_id: category.id })} key={category.id}>
+                      <strong>{category.name}</strong>
+                      <span>{categoryDescriptions[category.name] ?? "요청 품목의 성격에 가장 가까운 카테고리"}</span>
+                    </button>
+                  ))}
+                </div>
                 {draft.input_method === "text" && (
                   <div className="aiReviewPanel">
                     <Field label="문장 입력">
@@ -2500,7 +2377,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
             </div>
           </section>
         )}
-        {step === 3 && (
+        {step === 2 && (
           <section className="wizardPanel">
             <SectionHeader title="납품 조건을 입력하세요" />
             <div className="conditionGrid">
@@ -2544,7 +2421,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
             </div>
           </section>
         )}
-        {step === 4 && (
+        {step === 3 && (
           <section className="wizardPanel">
             <SectionHeader title="요청 내용을 확인하세요" />
             <div className="summaryPanel">
@@ -2666,7 +2543,6 @@ function RequestDetailPage({ data, navigate, setData, requestId }: MutatingPageP
                 isSelected={selectedQuote?.id === quoteEntry.id}
                 isRejected={quoteEntry.status === "rejected"}
                 onSelect={() => setQuoteToConfirm(quoteEntry)}
-                onOpenSupplier={() => navigate(`/app/suppliers/${quoteEntry.supplier_id}`)}
                 onAskSupplier={() => askSupplier(quoteEntry)}
               />
             ))}
@@ -5912,7 +5788,7 @@ function SupplierDashboard({ data, navigate }: PageProps) {
 
   return (
     <Page>
-      <PageTitle eyebrow="공급업체 홈" title="오늘 견적 가능한 요청을 바로 확인하세요." desc={`${supplier.business_name} 기준으로 지역과 카테고리에 맞는 요청, 제출 견적, 거래 상태를 관리합니다.`} />
+      <PageTitle eyebrow="공급업체 홈" title="오늘 견적 가능한 요청" desc={`${supplier.business_name}에 맞는 요청과 선택된 거래를 먼저 보여드립니다.`} />
       <SupplierStatusNotice supplier={supplier} navigate={navigate} />
       {focusSetting.focus_mode_enabled && supplier.categories.includes(focusSetting.focus_category_name) && (
         <section className="dealNotice">
@@ -5924,39 +5800,43 @@ function SupplierDashboard({ data, navigate }: PageProps) {
           <button className="primaryButton" type="button" onClick={() => navigate("/app/supplier/requests")}>빠른 견적 제출</button>
         </section>
       )}
-      <div className="dashboardGrid">
-        <Metric label="오늘 도착한 요청" value={`${todayRequests}건`} icon={<ClipboardList />} desc="응답 가능한 요청을 먼저 확인합니다." actionLabel="요청찾기" onClick={() => navigate("/app/supplier/requests")} />
-        <Metric label="견적 제출 대기" value={`${pendingQuoteRequests.length}건`} icon={<SearchCheck />} desc="아직 견적을 보내지 않은 요청입니다." actionLabel="견적 보내기" onClick={() => navigate("/app/supplier/requests")} />
-        <Metric label="제출한 견적" value={`${myQuotes.length}건`} icon={<ReceiptText />} desc="선택 여부와 문의를 확인합니다." actionLabel="견적관리" onClick={() => navigate("/app/supplier/quotes")} />
-        <Metric label="선택된 견적" value={`${selectedQuotes}건`} icon={<PackageCheck />} desc="납품과 거래 상태를 관리합니다." actionLabel="거래관리" onClick={() => navigate("/app/supplier/deals")} />
-        <Metric label="미응답 문의" value={`${unansweredThreads.length}건`} icon={<Bell />} desc="구매자 문의와 거래 문의를 확인합니다." actionLabel="문의함" onClick={() => navigate("/app/supplier/chats")} />
-        <Metric label="이번 달 예상 거래액" value={money(stats.total_deal_amount)} icon={<ReceiptText />} desc="완료/진행 거래 기준 금액입니다." actionLabel="정산 보기" onClick={() => navigate("/app/supplier/settlements")} />
-        <Metric label="견적 응답률" value={`${stats.response_rate}%`} icon={<BadgeCheck />} desc="응답 품질과 신뢰도에 반영됩니다." actionLabel="신뢰도 보기" onClick={() => navigate("/app/supplier/reputation")} />
-        <Metric label="평균 응답 시간" value={stats.average_response_minutes ? `${stats.average_response_minutes}분` : "신규"} icon={<RefreshCcw />} />
-        <Metric label="승인 상태" value={supplierApprovalLabels[supplier.approval_status]} icon={<BadgeCheck />} desc="업체 정보와 증빙을 관리합니다." actionLabel="업체 정보" onClick={() => navigate("/app/supplier/profile")} />
-      </div>
-      <section className="dealNotice">
-        <div>
-          <span className="eyebrow">응답 가이드</span>
-          <h2>빠른 견적 제출이 거래 성사율을 높입니다.</h2>
-          <p>{supplier.categories.join(", ")} 카테고리에서 응답 가능한 요청 {matchingRequests.length}건이 있습니다.</p>
-        </div>
-        <button className="primaryButton" type="button" onClick={() => navigate("/app/supplier/requests")}>견적요청 보기</button>
+
+      <section className="primaryActionGrid compact" aria-label="공급업체 주요 작업">
+        <QuickStartCard
+          primary
+          title="새 요청 보기"
+          desc={`${todayRequests}건을 확인할 수 있습니다.`}
+          icon={<SearchCheck />}
+          onClick={() => navigate("/app/supplier/requests")}
+        />
+        <QuickStartCard
+          title="견적 제출"
+          desc={`${pendingQuoteRequests.length}건이 견적을 기다립니다.`}
+          icon={<FilePlus2 />}
+          onClick={() => navigate("/app/supplier/requests")}
+        />
+        <QuickStartCard
+          title="선택된 견적"
+          desc={`${selectedQuotes}건의 납품을 준비합니다.`}
+          icon={<PackageCheck />}
+          onClick={() => navigate("/app/supplier/deals")}
+        />
+        <QuickStartCard
+          title="거래관리"
+          desc="납품 상태와 증빙을 관리합니다."
+          icon={<ReceiptText />}
+          onClick={() => navigate("/app/supplier/deals")}
+        />
       </section>
-      <div className="twoColumn">
-        <ActionTile title="견적 가능한 요청" desc="지역과 카테고리에 맞는 요청을 봅니다." icon={<SearchCheck />} onClick={() => navigate("/app/supplier/requests")} />
-        <ActionTile title="응답 개선 가이드" desc="선택되는 견적 작성 기준과 응답률 개선 방법을 봅니다." icon={<BadgeCheck />} onClick={() => navigate("/app/supplier/response-guide")} />
-        <ActionTile title="제출한 견적" desc="내가 제출한 견적과 선택 여부를 확인합니다." icon={<ReceiptText />} onClick={() => navigate("/app/supplier/quotes")} />
-        <ActionTile title="거래관리" desc="선택된 거래의 납품 상태를 관리합니다." icon={<PackageCheck />} onClick={() => navigate("/app/supplier/deals")} />
-        <ActionTile title="구매자 문의" desc="견적/거래와 연결된 문의에 빠르게 답변합니다." icon={<Bell />} onClick={() => navigate("/app/supplier/chats")} />
-        <ActionTile title="신뢰도/후기" desc="내 업체 신뢰도, 후기, 운영 가이드를 봅니다." icon={<ShieldCheck />} onClick={() => navigate("/app/supplier/reputation")} />
-        <ActionTile title="요금제/이용현황" desc="견적 참여 한도와 업그레이드 안내를 봅니다." icon={<BadgeCheck />} onClick={() => navigate("/app/supplier/billing")} />
-        <ActionTile title="정산 예정 내역" desc="거래 완료 후 플랫폼 수수료를 확인합니다." icon={<Landmark />} onClick={() => navigate("/app/supplier/settlements")} />
-        <ActionTile title="견적 참여 사용량" desc="월 참여권과 남은 건수를 확인합니다." icon={<Bell />} onClick={() => navigate("/app/supplier/usage")} />
-        <ActionTile title="프로필 관리" desc="구매자에게 보이는 업체 정보를 관리합니다." icon={<Store />} onClick={() => navigate("/app/supplier/profile")} />
-        <ActionTile title="매칭 조건 설정" desc="납품 지역, 카테고리, 결제 조건을 관리합니다." icon={<Boxes />} onClick={() => navigate("/app/supplier/settings")} />
-        <ActionTile title="입점 신청 체험" desc="신규 파트너 신청 흐름을 확인합니다." icon={<FilePlus2 />} onClick={() => navigate("/app/supplier/apply")} />
-      </div>
+
+      <section className="roleFocusGrid" aria-label="공급업체 확인 항목">
+        <FocusCard label="제출 견적" value={`${myQuotes.length}건`} desc="선택 여부를 확인하세요." icon={<ClipboardList />} onClick={() => navigate("/app/supplier/quotes")} />
+        <FocusCard label="미응답 문의" value={`${unansweredThreads.length}건`} desc="구매자 문의에 답변하세요." icon={<Bell />} onClick={() => navigate("/app/supplier/chats")} />
+        <FocusCard label="이번 달 거래액" value={money(stats.total_deal_amount)} desc="정산 예정 금액을 확인하세요." icon={<Landmark />} onClick={() => navigate("/app/supplier/settlements")} />
+        <FocusCard label="응답률" value={`${stats.response_rate}%`} desc="빠른 응답은 노출에 도움이 됩니다." icon={<BadgeCheck />} onClick={() => navigate("/app/supplier/reputation")} />
+        <FocusCard label="업체 정보" value={supplierApprovalLabels[supplier.approval_status]} desc="노출되는 정보를 관리하세요." icon={<Store />} onClick={() => navigate("/app/supplier/profile")} />
+      </section>
+
       <SectionHeader title="최근 요청" action="전체 보기" onAction={() => navigate("/app/supplier/requests")} />
       {supplier.approval_status === "approved" ? (
         <SupplierRequestList data={data} supplier={supplier} requests={matchingRequests.slice(0, 3)} navigate={navigate} />
@@ -6423,76 +6303,50 @@ function AdminDashboard({ data, navigate }: PageProps) {
   const selected = data.quote_requests.filter((request) => request.status === "selected").length;
   const qualityScores = data.quote_requests.map((request) => request.request_quality_score ?? calculateRequestQuality(request, data.quote_request_items.filter((item) => item.quote_request_id === request.id)));
   const averageQuality = qualityScores.length ? Math.round(qualityScores.reduce((sum, score) => sum + score, 0) / qualityScores.length) : 0;
-  const templateOrRepeat = data.quote_requests.filter((request) => request.input_method === "template" || request.input_method === "repeat").length;
   const noQuoteCount = data.quote_requests.filter((request) => data.quotes.every((quote) => quote.quote_request_id !== request.id)).length;
-  const attachmentRequestCount = data.quote_requests.filter((request) => data.quote_attachments.some((attachment) => attachment.quote_request_id === request.id) || request.attachment_note).length;
-  const categoryCounts = countBy(data.quote_requests, (request) => request.category_name);
-  const regionCounts = countBy(data.quote_requests, (request) => request.delivery_region.split(" ")[0] || "미입력");
   const pendingSupplierApprovals = data.supplier_profiles.filter((supplier) => supplier.approval_status === "pending" || supplier.approval_status === "needs_revision").length;
   const manualBusinessReviews = data.business_verifications.filter((verification) => verification.verification_status === "manual_review_required" || verification.verification_status === "failed").length;
   const openReports = data.reports.filter((report) => !["resolved", "dismissed", "cancelled"].includes(report.status)).length;
   const openFeedback = data.feedbacks.filter((feedback) => feedback.status !== "resolved" && feedback.status !== "dismissed").length;
-  const todayDeals = data.deals.filter((deal) => deal.created_at.slice(0, 10) === today).length;
   const todayQuotes = data.quotes.filter((quote) => quote.created_at.slice(0, 10) === today).length;
   const environmentReady = isLiveModeReady() && !appConfig.enableDemoData;
+  const settlementHolds = data.platform_fees.filter((fee) => !["paid", "waived", "cancelled"].includes(fee.fee_status)).length;
+  const environmentIssues = environmentReady ? 0 : 1;
+  const responseRiskSuppliers = getSupplierResponseOps(data).filter((entry) => ["slow", "low_participation", "dormant_risk", "needs_contact", "needs_education"].includes(entry.status)).length;
+  const unreadAdminThreads = getThreadsForRole(data, "admin").filter((thread) => getThreadUnreadCount(data, thread.id) > 0).length;
 
   return (
     <Page>
-      <PageTitle eyebrow="관리자 홈" title="운영 상태와 문제 구간을 바로 확인합니다." desc="견적요청, 공급업체, 거래, 분석, 신고/분쟁, 수익 지표를 관리자 업무 단위로 정리합니다." />
-      <div className="dashboardGrid">
-        <Metric label="공급업체 승인 대기" value={`${pendingSupplierApprovals}건`} icon={<Building2 />} desc="승인/보완 요청이 필요한 업체입니다." actionLabel="승인하기" onClick={() => navigate("/app/admin/suppliers")} />
-        <Metric label="견적 미도착 요청" value={`${noQuoteCount}건`} icon={<SearchCheck />} desc="이탈 위험이 높은 요청입니다." actionLabel="매칭 처리" onClick={() => navigate("/app/admin/matching-assist")} />
-        <Metric label="사업자 인증 수동검토" value={`${manualBusinessReviews}건`} icon={<ShieldCheck />} desc="API 오류나 진위 불일치 건입니다." actionLabel="수동검토" onClick={() => navigate("/app/admin/manual-reviews")} />
-        <Metric label="신고/피드백" value={`${openReports + openFeedback}건`} icon={<Bell />} desc="운영자가 먼저 확인해야 할 항목입니다." actionLabel="확인하기" onClick={() => navigate("/app/admin/feedback")} />
-        <Metric label="오늘 거래 수" value={`${todayDeals}건`} icon={<PackageCheck />} desc="오늘 생성된 거래입니다." actionLabel="거래 보기" onClick={() => navigate("/app/admin/deals")} />
-        <Metric label="오늘 견적 수" value={`${todayQuotes}건`} icon={<ReceiptText />} desc="오늘 제출된 견적입니다." actionLabel="견적 모니터링" onClick={() => navigate("/app/admin/requests")} />
-        <Metric label="환경 상태" value={environmentReady ? "Live 준비" : "점검 필요"} icon={<ShieldCheck />} desc="Supabase, 실데이터, 데모 모드 상태를 확인합니다." actionLabel="환경 점검" onClick={() => navigate("/app/admin/supabase")} />
-        <Metric label="데모 데이터 상태" value={data.is_demo ? "사용 중" : "실데이터"} icon={<RefreshCcw />} desc="초기화 기능은 관리자에게만 보입니다." actionLabel="데모 관리" onClick={() => navigate("/app/admin/mvp-cleanup")} />
-      </div>
-      <div className="dashboardGrid compactStats">
-        <Metric label="전체 요청" value={`${data.quote_requests.length}건`} icon={<ClipboardList />} />
-        <Metric label="전체 견적" value={`${data.quotes.length}건`} icon={<ReceiptText />} />
-        <Metric label="선택 완료" value={`${selected}건`} icon={<PackageCheck />} />
-        <Metric label="평균 요청 품질" value={`${averageQuality}점`} icon={<BadgeCheck />} />
-        <Metric label="첨부 요청" value={`${attachmentRequestCount}건`} icon={<Upload />} />
-        <Metric label="템플릿/반복" value={`${templateOrRepeat}건`} icon={<RefreshCcw />} />
-      </div>
-      <div className="adminInsightGrid">
-        <StatList title="카테고리별 요청" items={categoryCounts} />
-        <StatList title="지역별 요청" items={regionCounts} />
-      </div>
-      <div className="quickGrid">
-        <ActionTile title="제품 집중 보드" desc="핵심 카테고리와 집중 모드를 결정합니다." icon={<Boxes />} onClick={() => navigate("/app/admin/product-focus")} />
-        <ActionTile title="수동 매칭 보조" desc="견적 미도착 요청에 추천 공급업체를 연결합니다." icon={<SearchCheck />} onClick={() => navigate("/app/admin/matching-assist")} />
-        <ActionTile title="응답률 운영" desc="공급업체 응답 상태와 독려 액션을 봅니다." icon={<BadgeCheck />} onClick={() => navigate("/app/admin/response-ops")} />
-        <ActionTile title="반복 사용 분석" desc="재요청/반복구매 가능성을 확인합니다." icon={<RefreshCcw />} onClick={() => navigate("/app/admin/repeat-insights")} />
-        <ActionTile title="이탈 구간 분석" desc="구매자와 공급업체의 막힌 구간을 봅니다." icon={<Bell />} onClick={() => navigate("/app/admin/dropoff")} />
-        <ActionTile title="개선 우선순위" desc="피드백을 제품 개선과 로드맵에 연결합니다." icon={<Check />} onClick={() => navigate("/app/admin/improvement-priorities")} />
-        <ActionTile title="MVP 기능 정리" desc="기능 숨김, 베타 표시, 관리자 전용 상태를 봅니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/mvp-cleanup")} />
-        <ActionTile title="운영 플레이북" desc="카테고리별 영업/운영 대응 기준을 봅니다." icon={<ClipboardList />} onClick={() => navigate("/app/admin/playbooks")} />
-        <ActionTile title="베타 운영" desc="KPI, CRM, CS, 실험, 의사결정 보드를 봅니다." icon={<UsersRound />} onClick={() => navigate("/app/admin/beta")} />
-        <ActionTile title="운영 대시보드" desc="신고, 후기, 신뢰도, 제재 지표를 봅니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/operations")} />
-        <ActionTile title="사업자 인증 이력" desc="회원가입 사업자번호 검증 결과를 확인합니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/business-verifications")} />
-        <ActionTile title="수동 검토 큐" desc="API 오류와 진위 불일치 가입 건을 처리합니다." icon={<BadgeCheck />} onClick={() => navigate("/app/admin/manual-reviews")} />
-        <ActionTile title="QA 체크리스트" desc="베타 출시 전 기능별 점검 상태를 관리합니다." icon={<Check />} onClick={() => navigate("/app/admin/qa")} />
-        <ActionTile title="Supabase/배포 준비" desc="DB, RLS, Storage, 환경변수 상태를 점검합니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/supabase")} />
-        <ActionTile title="베타 피드백" desc="테스터 오류와 사용성 의견을 분류합니다." icon={<Bell />} onClick={() => navigate("/app/admin/feedback")} />
-        <ActionTile title="신고/분쟁 관리" desc="접수된 신고와 거래 분쟁을 처리합니다." icon={<Bell />} onClick={() => navigate("/app/admin/reports")} />
-        <ActionTile title="후기 관리" desc="후기 신고와 숨김 처리를 검토합니다." icon={<BadgeCheck />} onClick={() => navigate("/app/admin/reviews")} />
-        <ActionTile title="신뢰도 관리" desc="공급업체 점수와 배지를 재계산합니다." icon={<Store />} onClick={() => navigate("/app/admin/reputation")} />
-        <ActionTile title="제재/블랙리스트" desc="경고, 이용제한, 차단 목록을 관리합니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/sanctions")} />
-        <ActionTile title="견적요청 관리" desc="전체 요청 상태와 견적 수를 봅니다." icon={<ClipboardList />} onClick={() => navigate("/app/admin/requests")} />
-        <ActionTile title="분석 모니터링" desc="OCR/AI 분석 요청과 변환 이력을 봅니다." icon={<SearchCheck />} onClick={() => navigate("/app/admin/analysis")} />
-        <ActionTile title="거래 모니터링" desc="전체 거래 상태와 문제 발생 여부를 봅니다." icon={<ReceiptText />} onClick={() => navigate("/app/admin/deals")} />
-        <ActionTile title="구매내역 모니터링" desc="매입 자료와 증빙 상태를 봅니다." icon={<PackageCheck />} onClick={() => navigate("/app/admin/purchases")} />
-        <ActionTile title="장부 연동 관리" desc="오늘장사 전표 반영 상태를 봅니다." icon={<Landmark />} onClick={() => navigate("/app/admin/accounting")} />
-        <ActionTile title="매출 대시보드" desc="거래액, 수수료, 구독 예상 매출을 봅니다." icon={<Landmark />} onClick={() => navigate("/app/admin/revenue")} />
-        <ActionTile title="수수료 정책" desc="카테고리별 플랫폼 이용 수수료율을 관리합니다." icon={<Boxes />} onClick={() => navigate("/app/admin/commissions")} />
-        <ActionTile title="요금제 관리" desc="공급업체 플랜과 참여 한도를 관리합니다." icon={<BadgeCheck />} onClick={() => navigate("/app/admin/plans")} />
-        <ActionTile title="정산 관리" desc="공급업체별 수수료와 면제 처리를 봅니다." icon={<ReceiptText />} onClick={() => navigate("/app/admin/settlements")} />
-        <ActionTile title="공급업체 관리" desc="승인 상태와 대응 카테고리를 확인합니다." icon={<UsersRound />} onClick={() => navigate("/app/admin/suppliers")} />
-        <ActionTile title="카테고리 관리" desc="초기 카테고리 구조를 확인합니다." icon={<Boxes />} onClick={() => navigate("/app/admin/categories")} />
-        <ActionTile title="청구 통합 관리" desc="PG/구독/청구 연동 준비 데이터를 확인합니다." icon={<Bell />} onClick={() => navigate("/app/admin/billing")} />
+      <PageTitle eyebrow="관리자 홈" title="확인 필요" desc="운영자가 먼저 처리해야 하는 문제만 모았습니다." />
+
+      <section className="problemGrid" aria-label="관리자 확인 필요 항목">
+        <ProblemCard title="공급업체 승인 대기" count={pendingSupplierApprovals} desc="승인 또는 보완 요청" icon={<Building2 />} urgent={pendingSupplierApprovals > 0} onClick={() => navigate("/app/admin/suppliers")} />
+        <ProblemCard title="견적 미도착" count={noQuoteCount} desc="수동 매칭 필요" icon={<SearchCheck />} urgent={noQuoteCount > 0} onClick={() => navigate("/app/admin/matching-assist")} />
+        <ProblemCard title="사업자 인증 실패" count={manualBusinessReviews} desc="수동 검토 필요" icon={<ShieldCheck />} urgent={manualBusinessReviews > 0} onClick={() => navigate("/app/admin/manual-reviews")} />
+        <ProblemCard title="문제 신고" count={openReports} desc="분쟁과 신고 처리" icon={<Bell />} urgent={openReports > 0} onClick={() => navigate("/app/admin/reports")} />
+        <ProblemCard title="정산 보류" count={settlementHolds} desc="수수료 정산 확인" icon={<Landmark />} urgent={settlementHolds > 0} onClick={() => navigate("/app/admin/settlements")} />
+        <ProblemCard title="환경 오류" count={environmentIssues} desc="배포와 DB 설정" icon={<RefreshCcw />} urgent={environmentIssues > 0} onClick={() => navigate("/app/admin/supabase")} />
+        <ProblemCard title="미응답 업체" count={responseRiskSuppliers} desc="응답 독려 대상" icon={<Store />} urgent={responseRiskSuppliers > 0} onClick={() => navigate("/app/admin/response-ops")} />
+        <ProblemCard title="베타 피드백" count={openFeedback} desc="사용성 의견 정리" icon={<Check />} urgent={openFeedback > 0} onClick={() => navigate("/app/admin/feedback")} />
+      </section>
+
+      <section className="roleFocusGrid" aria-label="관리자 운영 요약">
+        <FocusCard label="전체 요청" value={`${data.quote_requests.length}건`} desc="견적요청 운영 현황입니다." icon={<ClipboardList />} onClick={() => navigate("/app/admin/requests")} />
+        <FocusCard label="전체 견적" value={`${data.quotes.length}건`} desc="공급업체 참여 현황입니다." icon={<ReceiptText />} onClick={() => navigate("/app/admin/requests")} />
+        <FocusCard label="선택 완료" value={`${selected}건`} desc="거래 전환된 요청입니다." icon={<PackageCheck />} onClick={() => navigate("/app/admin/deals")} />
+        <FocusCard label="요청 품질" value={`${averageQuality}점`} desc="품목과 납품 조건 완성도입니다." icon={<BadgeCheck />} onClick={() => navigate("/app/admin/product-focus")} />
+        <FocusCard label="문의 확인" value={`${unreadAdminThreads}건`} desc="운영자가 확인할 메시지입니다." icon={<MessageCircle />} onClick={() => navigate("/app/admin/chats")} />
+        <FocusCard label="오늘 견적" value={`${todayQuotes}건`} desc="오늘 제출된 견적입니다." icon={<FilePlus2 />} onClick={() => navigate("/app/admin/requests")} />
+      </section>
+
+      <SectionHeader title="운영 바로가기" />
+      <div className="quickGrid compactAdminGrid">
+        <ActionTile title="공급업체 승인" desc="입점 신청과 증빙을 확인합니다." icon={<UsersRound />} onClick={() => navigate("/app/admin/suppliers")} />
+        <ActionTile title="매칭 보조" desc="견적 미도착 요청에 업체를 연결합니다." icon={<SearchCheck />} onClick={() => navigate("/app/admin/matching-assist")} />
+        <ActionTile title="사업자 인증" desc="국세청 API와 수동 검토 결과를 봅니다." icon={<ShieldCheck />} onClick={() => navigate("/app/admin/business-verifications")} />
+        <ActionTile title="신고/피드백" desc="신고, CS, 베타 의견을 처리합니다." icon={<Bell />} onClick={() => navigate("/app/admin/feedback")} />
+        <ActionTile title="정산 관리" desc="수수료와 정산 상태를 확인합니다." icon={<Landmark />} onClick={() => navigate("/app/admin/settlements")} />
+        <ActionTile title="환경 점검" desc="Supabase, Vercel, 상태 API를 확인합니다." icon={<RefreshCcw />} onClick={() => navigate("/app/admin/supabase")} />
       </div>
     </Page>
   );
@@ -8987,7 +8841,7 @@ function QuoteItemComparisonTable({ data, quotes, items }: { data: AppData; quot
   );
 }
 
-function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFastest, isSelected, isRejected, onSelect, onOpenSupplier, onAskSupplier }: {
+function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFastest, isSelected, isRejected, onSelect, onAskSupplier }: {
   data: AppData;
   quote: Quote;
   requestItems: QuoteRequestItem[];
@@ -8997,7 +8851,6 @@ function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFas
   isSelected: boolean;
   isRejected: boolean;
   onSelect: () => void;
-  onOpenSupplier: () => void;
   onAskSupplier: () => void;
 }) {
   const supplier = data.supplier_profiles.find((entry) => entry.id === quote.supplier_id);
@@ -9059,19 +8912,15 @@ function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFas
       </dl>
       {quote.alternative_proposal && <p className="proposal">{quote.alternative_proposal}</p>}
       <div className="quoteActions">
-        <button className="secondaryButton full" type="button" onClick={onOpenSupplier}>
-          <Store size={17} />
-          업체 상세보기
+        <button className="secondaryButton full" type="button" onClick={onAskSupplier}>
+          <MessageCircle size={17} />
+          문의하기
         </button>
-        <button className="ghostButton full" type="button" onClick={onAskSupplier}>
-          <ReceiptText size={17} />
-          업체에 문의하기
+        <button className={isSelected ? "selectedButton full" : "primaryButton full"} type="button" onClick={onSelect} disabled={isSelected}>
+          <Check size={17} />
+          {isSelected ? "선택된 견적" : "이 업체 선택"}
         </button>
       </div>
-      <button className={isSelected ? "selectedButton" : "primaryButton full"} type="button" onClick={onSelect} disabled={isSelected}>
-        <Check size={17} />
-        {isSelected ? "선택된 견적" : "이 업체 선택하기"}
-      </button>
     </article>
   );
 }
@@ -9435,6 +9284,49 @@ function ScoreCircle({ score, label }: { score: number; label: string }) {
       <strong>{score}</strong>
       <span>{label}</span>
     </div>
+  );
+}
+
+function QuickStartCard({ title, desc, icon, onClick, primary = false }: { title: string; desc: string; icon: ReactNode; onClick: () => void; primary?: boolean }) {
+  return (
+    <button className={primary ? "quickStartCard primary" : "quickStartCard"} type="button" onClick={onClick}>
+      <span className="quickStartIcon">{icon}</span>
+      <strong>{title}</strong>
+      <span>{desc}</span>
+    </button>
+  );
+}
+
+function FocusCard({ label, value, desc, icon, onClick }: { label: string; value: string; desc: string; icon: ReactNode; onClick?: () => void }) {
+  const content = (
+    <>
+      <span className="focusIcon">{icon}</span>
+      <span className="eyebrow">{label}</span>
+      <strong>{value}</strong>
+      <p>{desc}</p>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button className="focusCard clickable" type="button" onClick={onClick}>
+        {content}
+      </button>
+    );
+  }
+
+  return <article className="focusCard">{content}</article>;
+}
+
+function ProblemCard({ title, count, desc, icon, urgent = false, onClick }: { title: string; count: number | string; desc: string; icon: ReactNode; urgent?: boolean; onClick: () => void }) {
+  const normalizedCount = typeof count === "number" ? `${count}건` : count;
+  return (
+    <button className={urgent ? "problemCard urgent" : "problemCard"} type="button" onClick={onClick}>
+      <span className="problemIcon">{icon}</span>
+      <span>{title}</span>
+      <strong>{normalizedCount}</strong>
+      <small>{desc}</small>
+    </button>
   );
 }
 
