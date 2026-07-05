@@ -735,7 +735,7 @@ export default function App() {
   const unreadChats = authSession ? getChatUnreadCountForRole(data, shellRole) : 0;
   const primaryAction = getPrimaryAction(shellRole);
   const PrimaryActionIcon = primaryAction.icon;
-  const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole);
+  const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole, handleSignOut);
   const showChatShortcut = Boolean(authSession && isProtectedAppPath(path) && !isNavItemActive(path, chatPath));
 
   function navBadgeCount(itemPath: string) {
@@ -797,11 +797,11 @@ export default function App() {
           </button>
           <div className="topbarActions">
             {authSession ? (
-              <span className="authBadge">
+              <button className="authBadge" type="button" onClick={() => navigate(getProfilePath(shellRole))} aria-label={`${authSession.businessName || authSession.email} 내 정보 수정`}>
                 <ShieldCheck size={15} />
-                {authSession.businessName || authSession.email}
+                <span className="authBadgeName">{authSession.businessName || authSession.email}</span>
                 <small>{getRoleLabel(authSession.role)}</small>
-              </span>
+              </button>
             ) : authReady ? (
               <>
                 <button className="ghostButton compact" type="button" onClick={() => navigate("/login")}>
@@ -896,7 +896,7 @@ function LaunchScreen() {
   );
 }
 
-function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (data: AppData) => void, authSession: AppAuthSession | null, onAuthChange: (session: AppAuthSession | null) => void, shellRole: UserRole) {
+function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (data: AppData) => void, authSession: AppAuthSession | null, onAuthChange: (session: AppAuthSession | null) => void, shellRole: UserRole, onSignOut: () => void | Promise<void>) {
   if (path === "/health" || path === "/status" || path === "/beta-status") return <PublicDeploymentStatusPage navigate={navigate} />;
   if (path === "/login") return <LoginPage data={data} navigate={navigate} onAuthChange={onAuthChange} />;
   if (path === "/signup") return <SignupPage data={data} navigate={navigate} setData={setData} onAuthChange={onAuthChange} />;
@@ -919,8 +919,8 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
     if (shellRole === "supplier") return <SupplierDashboard data={data} navigate={navigate} />;
     return <HomePage data={data} navigate={navigate} />;
   }
-  if (path === "/app/onboarding" || path === "/app/buyer/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="buyer" />;
-  if (path === "/app/supplier/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="supplier" />;
+  if (path === "/app/onboarding" || path === "/app/buyer/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="buyer" onSignOut={onSignOut} />;
+  if (path === "/app/supplier/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="supplier" onSignOut={onSignOut} />;
   if (path === "/app/beta") return <BetaNoticePage navigate={navigate} appMode />;
   if (path === "/app/beta-guide") return <BuyerBetaGuidePage navigate={navigate} />;
   if (path === "/app/quick-reorder") return <QuickReorderPage data={data} navigate={navigate} setData={setData} />;
@@ -965,7 +965,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/supplier/beta-guide") return <SupplierBetaGuidePage navigate={navigate} />;
   if (path === "/app/supplier/response-guide") return <SupplierResponseGuidePage data={data} navigate={navigate} />;
   if (path === "/app/supplier/apply") return <SupplierApplyPage data={data} navigate={navigate} setData={setData} />;
-  if (path === "/app/supplier/profile") return <SupplierProfilePage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/supplier/profile") return <SupplierProfilePage data={data} navigate={navigate} setData={setData} onSignOut={onSignOut} />;
   if (path === "/app/supplier/settings") return <SupplierSettingsPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/deals") return <SupplierDealsPage data={data} navigate={navigate} />;
   if (path.startsWith("/app/supplier/deals/") && path.endsWith("/messages")) return <DealMessagesPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[4] ?? ""} role="supplier" />;
@@ -1736,7 +1736,7 @@ function AdminManualReviewsPage({ data, setData, navigate }: MutatingPageProps) 
   );
 }
 
-function OnboardingPage({ data, navigate, setData, role }: MutatingPageProps & { role: "buyer" | "supplier" }) {
+function OnboardingPage({ data, navigate, setData, role, onSignOut }: MutatingPageProps & { role: "buyer" | "supplier"; onSignOut?: () => void | Promise<void> }) {
   const steps = role === "buyer"
     ? [
         ["필요한 자재를 올리세요", "사진, 거래명세서, 문장으로 쉽게 견적요청을 만들 수 있습니다."],
@@ -1774,6 +1774,7 @@ function OnboardingPage({ data, navigate, setData, role }: MutatingPageProps & {
         <button className="secondaryButton" type="button" onClick={() => navigate(role === "buyer" ? "/app" : "/app/supplier")}>나중에 보기</button>
         <button className="primaryButton" type="button" onClick={complete}>{role === "buyer" ? "견적요청 시작" : "공급업체 홈으로"}</button>
       </div>
+      <AccountAccessPanel onSignOut={onSignOut} />
     </Page>
   );
 }
@@ -5667,7 +5668,7 @@ function SupplierApplyPage({ data, navigate, setData }: MutatingPageProps) {
   );
 }
 
-function SupplierProfilePage({ data, navigate, setData }: MutatingPageProps) {
+function SupplierProfilePage({ data, navigate, setData, onSignOut }: MutatingPageProps & { onSignOut?: () => void | Promise<void> }) {
   const supplier = getActiveSupplier(data);
   const [draft, setDraft] = useState<SupplierProfile>({ ...supplier });
 
@@ -5697,7 +5698,25 @@ function SupplierProfilePage({ data, navigate, setData }: MutatingPageProps) {
           <button className="secondaryButton" type="button" onClick={() => navigate(`/app/suppliers/${supplier.id}`)}>공개 프로필 보기</button>
         </div>
       </section>
+      <AccountAccessPanel onSignOut={onSignOut} />
     </Page>
+  );
+}
+
+function AccountAccessPanel({ onSignOut }: { onSignOut?: () => void | Promise<void> }) {
+  if (!onSignOut) return null;
+  return (
+    <section className="accountAccessPanel">
+      <div>
+        <span className="eyebrow">계정</span>
+        <h2>로그인 계정 관리</h2>
+        <p>현재 계정에서 나가려면 로그아웃을 눌러주세요.</p>
+      </div>
+      <button className="secondaryButton dangerButton" type="button" onClick={onSignOut}>
+        <SignOut size={17} />
+        로그아웃
+      </button>
+    </section>
   );
 }
 

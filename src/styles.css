@@ -2690,6 +2690,31 @@ code {
   border-color: #f4b5ad;
 }
 
+.accountAccessPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #f4b5ad;
+  border-radius: 8px;
+  background: #fff7f5;
+}
+
+.accountAccessPanel h2 {
+  margin: 4px 0 6px;
+  color: var(--navy);
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.accountAccessPanel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .reportBox textarea {
   min-height: 90px;
   padding: 10px 12px;
@@ -4108,8 +4133,25 @@ button.riskRow {
   white-space: nowrap;
 }
 
+.authBadge:hover {
+  border-color: var(--orange-line);
+  background: var(--orange-soft);
+}
+
+.authBadge:focus-visible {
+  outline: 3px solid rgba(255, 107, 26, 0.22);
+  outline-offset: 2px;
+}
+
 .authBadge svg {
   flex: 0 0 auto;
+}
+
+.authBadgeName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .authBadge small {
@@ -5098,6 +5140,15 @@ tr.selectedRow {
 
   .confirmGrid {
     grid-template-columns: 1fr;
+  }
+
+  .accountAccessPanel {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .accountAccessPanel button {
+    justify-content: center;
   }
 }
 
