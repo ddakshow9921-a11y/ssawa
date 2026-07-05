@@ -210,7 +210,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "견적", path: "/app/requests", icon: ClipboardList },
     { label: "거래", path: "/app/deals", icon: ReceiptText },
     { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
-    { label: "내 사업장", mobileLabel: "사업장", path: "/app/buyer/onboarding", icon: ShieldCheck },
+    { label: "내 사업장", mobileLabel: "사업장", path: "/app/buyer/profile", icon: ShieldCheck },
   ],
   supplier: [
     { label: "홈", path: "/app/supplier", icon: Store },
@@ -382,7 +382,7 @@ async function playOneShotNotificationSound() {
 function getProfilePath(role: UserRole) {
   if (role === "supplier") return "/app/supplier/profile";
   if (role === "admin") return "/app/admin/supabase";
-  return "/app/buyer/onboarding";
+  return "/app/buyer/profile";
 }
 
 function getPrimaryAction(role: UserRole) {
@@ -832,12 +832,6 @@ export default function App() {
                 {unreadNotifications > 0 && <UnreadBadge count={unreadNotifications} />}
               </button>
             )}
-            {authSession && shellRole !== "admin" && (
-              <button className="ghostButton compact" type="button" onClick={() => navigate(getProfilePath(shellRole))}>
-                <ShieldCheck size={16} />
-                내 정보
-              </button>
-            )}
             {authSession && (
               <button className="primaryButton compact" type="button" onClick={() => navigate(primaryAction.path)}>
                 <PrimaryActionIcon size={16} />
@@ -919,6 +913,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
     if (shellRole === "supplier") return <SupplierDashboard data={data} navigate={navigate} />;
     return <HomePage data={data} navigate={navigate} />;
   }
+  if (path === "/app/buyer/profile") return <BuyerProfilePage data={data} navigate={navigate} setData={setData} authSession={authSession} onAuthChange={onAuthChange} onSignOut={onSignOut} />;
   if (path === "/app/onboarding" || path === "/app/buyer/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="buyer" onSignOut={onSignOut} />;
   if (path === "/app/supplier/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="supplier" onSignOut={onSignOut} />;
   if (path === "/app/beta") return <BetaNoticePage navigate={navigate} appMode />;
@@ -1774,6 +1769,124 @@ function OnboardingPage({ data, navigate, setData, role, onSignOut }: MutatingPa
         <button className="secondaryButton" type="button" onClick={() => navigate(role === "buyer" ? "/app" : "/app/supplier")}>나중에 보기</button>
         <button className="primaryButton" type="button" onClick={complete}>{role === "buyer" ? "견적요청 시작" : "공급업체 홈으로"}</button>
       </div>
+      <AccountAccessPanel onSignOut={onSignOut} />
+    </Page>
+  );
+}
+
+function BuyerProfilePage({
+  data,
+  navigate,
+  setData,
+  authSession,
+  onAuthChange,
+  onSignOut,
+}: MutatingPageProps & {
+  authSession: AppAuthSession | null;
+  onAuthChange: (session: AppAuthSession | null) => void;
+  onSignOut?: () => void | Promise<void>;
+}) {
+  const profile = data.profiles.find((entry) => entry.id === authSession?.id && entry.role === "buyer") ?? data.profiles.find((entry) => entry.role === "buyer");
+  const fallbackProfile: Profile = profile ?? {
+    id: "",
+    name: "",
+    email: "",
+    role: "buyer",
+    business_name: "",
+    business_number: "",
+    phone: "",
+    region: "",
+    created_at: new Date().toISOString(),
+  };
+  const [draft, setDraft] = useState<Profile>({ ...fallbackProfile });
+  const [saved, setSaved] = useState(false);
+
+  if (!profile) return <NotFound navigate={navigate} />;
+
+  function updateDraft(key: keyof Profile, value: string) {
+    setDraft((current) => ({ ...current, [key]: value }));
+    setSaved(false);
+  }
+
+  function saveProfile() {
+    if (!profile) return;
+    const nextProfile: Profile = {
+      ...profile,
+      ...draft,
+      business_number: profile.business_number,
+      business_name: draft.business_name.trim(),
+      name: draft.name.trim(),
+      email: draft.email.trim(),
+      phone: draft.phone.trim(),
+      region: draft.region.trim(),
+      representative_name: draft.representative_name?.trim(),
+      business_address: draft.business_address?.trim(),
+      business_type: draft.business_type?.trim(),
+    };
+    const nextData: AppData = {
+      ...data,
+      profiles: data.profiles.map((entry) => (entry.id === profile.id ? nextProfile : entry)),
+    };
+    saveData(nextData);
+    setData(nextData);
+    if (authSession?.id === profile.id) {
+      onAuthChange({
+        ...authSession,
+        email: nextProfile.email,
+        name: nextProfile.name,
+        businessName: nextProfile.business_name,
+        businessNumber: nextProfile.business_number,
+        verificationStatus: nextProfile.business_verification_status ?? authSession.verificationStatus,
+      });
+    }
+    setSaved(true);
+  }
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app")} label="구매자 홈" />
+      <PageTitle eyebrow="내 사업장" title="기본 정보 수정" desc="견적요청과 거래에 표시되는 사업장 기본 정보를 관리합니다." />
+      <section className="formStack">
+        <div className="conditionGrid">
+          <Field label="상호">
+            <input value={draft.business_name} onChange={(event) => updateDraft("business_name", event.target.value)} />
+          </Field>
+          <Field label="대표자명">
+            <input value={draft.representative_name ?? ""} onChange={(event) => updateDraft("representative_name", event.target.value)} />
+          </Field>
+          <Field label="담당자명">
+            <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} />
+          </Field>
+          <Field label="연락처">
+            <input value={draft.phone} onChange={(event) => updateDraft("phone", event.target.value)} placeholder="010-0000-0000" />
+          </Field>
+          <Field label="이메일">
+            <input type="email" value={draft.email} onChange={(event) => updateDraft("email", event.target.value)} />
+          </Field>
+          <Field label="지역">
+            <input value={draft.region} onChange={(event) => updateDraft("region", event.target.value)} placeholder="예: 서울 노원구" />
+          </Field>
+          <Field label="사업장 주소">
+            <input value={draft.business_address ?? ""} onChange={(event) => updateDraft("business_address", event.target.value)} placeholder="견적 납품지 기본값으로 활용됩니다." />
+          </Field>
+          <Field label="업종">
+            <input value={draft.business_type ?? ""} onChange={(event) => updateDraft("business_type", event.target.value)} placeholder="예: 음식점, 카페, 프랜차이즈" />
+          </Field>
+          <Field label="사업자등록번호">
+            <input className="lockedInput" value={profile.business_number} readOnly aria-readonly="true" />
+            <small className="fieldHelp">사업자등록번호 변경은 관리자 승인 요청 후 반영됩니다.</small>
+          </Field>
+          <Field label="사업자 인증 상태">
+            <input className="lockedInput" value={businessVerificationStatusLabels[profile.business_verification_status ?? "not_started"]} readOnly aria-readonly="true" />
+          </Field>
+        </div>
+        <BusinessNumberChangeNotice navigate={navigate} />
+        {saved && <p className="savingText">기본 정보가 저장되었습니다.</p>}
+        <div className="formActions">
+          <button className="primaryButton" type="button" onClick={saveProfile}><Check size={17} /> 저장</button>
+          <button className="secondaryButton" type="button" onClick={() => navigate("/app")}>홈으로</button>
+        </div>
+      </section>
       <AccountAccessPanel onSignOut={onSignOut} />
     </Page>
   );
@@ -5673,7 +5786,7 @@ function SupplierProfilePage({ data, navigate, setData, onSignOut }: MutatingPag
   const [draft, setDraft] = useState<SupplierProfile>({ ...supplier });
 
   function saveProfile() {
-    setData(updateSupplierProfile(data, draft));
+    setData(updateSupplierProfile(data, { ...draft, business_number: supplier.business_number }));
     navigate("/app/supplier");
   }
 
@@ -5685,13 +5798,17 @@ function SupplierProfilePage({ data, navigate, setData, onSignOut }: MutatingPag
         <div className="conditionGrid">
           <Field label="업체명"><input value={draft.business_name} onChange={(event) => setDraft({ ...draft, business_name: event.target.value })} /></Field>
           <Field label="대표자명"><input value={draft.representative_name} onChange={(event) => setDraft({ ...draft, representative_name: event.target.value })} /></Field>
-          <Field label="사업자등록번호"><input value={draft.business_number} onChange={(event) => setDraft({ ...draft, business_number: event.target.value })} /></Field>
+          <Field label="사업자등록번호">
+            <input className="lockedInput" value={supplier.business_number} readOnly aria-readonly="true" />
+            <small className="fieldHelp">사업자등록번호 변경은 관리자 승인 요청 후 반영됩니다.</small>
+          </Field>
           <Field label="연락처"><input value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} /></Field>
           <Field label="이메일"><input value={draft.email ?? ""} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /></Field>
           <Field label="주소"><input value={draft.address ?? ""} onChange={(event) => setDraft({ ...draft, address: event.target.value })} /></Field>
           <Field label="담당자명"><input value={draft.manager_name ?? ""} onChange={(event) => setDraft({ ...draft, manager_name: event.target.value })} /></Field>
           <Field label="담당자 연락처"><input value={draft.manager_phone ?? ""} onChange={(event) => setDraft({ ...draft, manager_phone: event.target.value })} /></Field>
         </div>
+        <BusinessNumberChangeNotice navigate={navigate} />
         <Field label="소개글"><textarea value={draft.description ?? ""} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></Field>
         <div className="formActions">
           <button className="primaryButton" type="button" onClick={saveProfile}><Check size={17} /> 저장</button>
@@ -5715,6 +5832,21 @@ function AccountAccessPanel({ onSignOut }: { onSignOut?: () => void | Promise<vo
       <button className="secondaryButton dangerButton" type="button" onClick={onSignOut}>
         <SignOut size={17} />
         로그아웃
+      </button>
+    </section>
+  );
+}
+
+function BusinessNumberChangeNotice({ navigate }: { navigate: Navigate }) {
+  return (
+    <section className="lockedInfoPanel">
+      <div>
+        <span className="eyebrow">관리자 승인 필요</span>
+        <strong>사업자등록번호는 직접 수정할 수 없습니다.</strong>
+        <p>사업자 정보 변경은 운영팀 검토와 관리자 승인 후 반영됩니다.</p>
+      </div>
+      <button className="secondaryButton compact" type="button" onClick={() => navigate("/app/feedback")}>
+        변경 요청
       </button>
     </section>
   );

@@ -2715,6 +2715,46 @@ code {
   line-height: 1.5;
 }
 
+.lockedInput {
+  color: var(--muted) !important;
+  background: #f4f6f8 !important;
+  border-color: #d8dee6 !important;
+  cursor: not-allowed;
+}
+
+.fieldHelp {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.45;
+}
+
+.lockedInfoPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--orange-line);
+  border-radius: 8px;
+  background: var(--orange-soft);
+}
+
+.lockedInfoPanel strong {
+  display: block;
+  margin: 4px 0;
+  color: var(--navy);
+  font-size: 17px;
+}
+
+.lockedInfoPanel p {
+  margin: 0;
+  color: #9a3412;
+  line-height: 1.5;
+}
+
 .reportBox textarea {
   min-height: 90px;
   padding: 10px 12px;
@@ -5147,7 +5187,13 @@ tr.selectedRow {
     align-items: stretch;
   }
 
-  .accountAccessPanel button {
+  .lockedInfoPanel {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .accountAccessPanel button,
+  .lockedInfoPanel button {
     justify-content: center;
   }
 }
