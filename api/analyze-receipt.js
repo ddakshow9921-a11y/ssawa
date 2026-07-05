@@ -197,7 +197,7 @@ function geminiErrorMessage(payload) {
 
 function looksLikeGoogleOAuthCredential(value) {
   const text = cleanString(value);
-  return text.includes(".apps.googleusercontent.com") || text.startsWith("GOCSPX-");
+  return text.includes(".apps.googleusercontent.com") || text.startsWith("GOCSPX-") || text.startsWith("AQ.");
 }
 
 function hasGoogleOAuthCredentials() {
@@ -213,7 +213,7 @@ function getGeminiApiKey() {
 }
 
 function googleOAuthCredentialMessage() {
-  return "Google OAuth 클라이언트 ID/Secret은 Gemini API 키가 아닙니다. 영수증 AI 분석은 Google AI Studio에서 발급한 Gemini API 키를 서버 환경변수 GEMINI_API_KEY로 설정해야 합니다.";
+  return "Google OAuth 클라이언트 ID/Secret 또는 AQ.로 시작하는 액세스 토큰은 Gemini API 키가 아닙니다. 영수증 AI 분석은 Google AI Studio에서 발급한 AIza로 시작하는 Gemini API 키를 서버 환경변수 GEMINI_API_KEY로 설정해야 합니다.";
 }
 
 function missingGeminiKeyMessage() {

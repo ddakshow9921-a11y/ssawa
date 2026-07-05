@@ -1,7 +1,9 @@
 const APP_NAME = "싸와!";
+const GEMINI_API_KEY_ENV_KEYS = ["GEMINI_API_KEY", "GOOGLE_AI_API_KEY", "GOOGLE_GENAI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"];
 
 function statusPayload(request) {
   const url = readUrl(request);
+  const geminiApiKey = readFirstEnv(GEMINI_API_KEY_ENV_KEYS);
   return {
     ok: true,
     status: "OK",
@@ -12,6 +14,10 @@ function statusPayload(request) {
     supabaseUrlConfigured: Boolean(process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
     supabasePublishableKeyConfigured: Boolean(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     liveDataEnabled: readBoolean(process.env.VITE_USE_LIVE_DATA || process.env.NEXT_PUBLIC_USE_LIVE_DATA, false),
+    geminiApiKeyConfigured: Boolean(geminiApiKey),
+    geminiApiKeyLooksValid: looksLikeGeminiApiKey(geminiApiKey),
+    geminiModel: process.env.GEMINI_MODEL || "",
+    ntsBusinessServiceKeyConfigured: Boolean(process.env.NTS_BUSINESS_SERVICE_KEY),
     vercelEnv: process.env.VERCEL_ENV || "",
     commitSha: process.env.VERCEL_GIT_COMMIT_SHA || "",
     deploymentUrl: process.env.VERCEL_URL || "",
@@ -55,4 +61,16 @@ function readUrl(request) {
 function readBoolean(value, fallback) {
   if (value == null || value === "") return fallback;
   return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
+}
+
+function readFirstEnv(keys) {
+  for (const key of keys) {
+    const value = String(process.env[key] || "").trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+function looksLikeGeminiApiKey(value) {
+  return String(value || "").startsWith("AIza");
 }
