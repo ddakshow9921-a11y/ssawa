@@ -7020,48 +7020,102 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
 function SupplierQuotesPage({ data, navigate }: PageProps) {
   const supplier = getActiveSupplier(data);
   const myQuotes = data.quotes.filter((quoteEntry) => quoteEntry.supplier_id === supplier.id);
+  const quoteSummaries = myQuotes.map((quoteEntry) => {
+    const supplierLabel = supplierName(data, quoteEntry.supplier_id);
+    const request = data.quote_requests.find((entry) => entry.id === quoteEntry.quote_request_id);
+    const deal = data.deals.find((entry) => entry.selected_quote_id === quoteEntry.id);
+    return { deal, quoteEntry, request, supplierLabel };
+  });
+
   return (
     <Page>
       <PageTitle eyebrow="공급업체" title="제출한 견적" desc="공급업체별 제출 견적과 거래 성사 여부를 확인합니다." />
-      <div className="tableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>공급업체</th>
-              <th>요청</th>
-              <th>최종금액</th>
-              <th>상태</th>
-              <th>납품 가능일</th>
-              <th>거래</th>
-            </tr>
-          </thead>
-          <tbody>
-            {myQuotes.map((quoteEntry) => {
-              const supplierLabel = supplierName(data, quoteEntry.supplier_id);
-              const request = data.quote_requests.find((entry) => entry.id === quoteEntry.quote_request_id);
-              const deal = data.deals.find((entry) => entry.selected_quote_id === quoteEntry.id);
-              return (
-                <tr key={quoteEntry.id} onClick={() => request && navigate(`/app/supplier/requests/${request.id}`)}>
-                  <td>{supplierLabel}</td>
-                  <td>{request?.title ?? "삭제된 요청"}</td>
-                  <td>{money(quoteEntry.final_amount)}</td>
-                  <td>
-                    <StatusBadge tone={quoteEntry.status === "selected" ? "green" : "blue"}>{quoteStatusLabels[quoteEntry.status]}</StatusBadge>
-                  </td>
-                  <td>{quoteEntry.available_delivery_date}</td>
-                  <td>
-                    {deal ? (
-                      <button className="primaryButton compact" type="button" onClick={(event) => { event.stopPropagation(); navigate(`/app/deals/${deal.id}`); }}>
-                        거래 상세
-                      </button>
-                    ) : "없음"}
-                  </td>
+      {quoteSummaries.length > 0 ? (
+        <>
+          <div className="tableWrap supplierQuotesTable">
+            <table>
+              <thead>
+                <tr>
+                  <th>공급업체</th>
+                  <th>요청</th>
+                  <th>최종금액</th>
+                  <th>상태</th>
+                  <th>납품 가능일</th>
+                  <th>거래</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {quoteSummaries.map(({ deal, quoteEntry, request, supplierLabel }) => (
+                  <tr key={quoteEntry.id} onClick={() => request && navigate(`/app/supplier/requests/${request.id}`)}>
+                    <td>{supplierLabel}</td>
+                    <td>{request?.title ?? "삭제된 요청"}</td>
+                    <td>{money(quoteEntry.final_amount)}</td>
+                    <td>
+                      <StatusBadge tone={quoteEntry.status === "selected" ? "green" : "blue"}>{quoteStatusLabels[quoteEntry.status]}</StatusBadge>
+                    </td>
+                    <td>{quoteEntry.available_delivery_date}</td>
+                    <td>
+                      {deal ? (
+                        <button className="primaryButton compact" type="button" onClick={(event) => { event.stopPropagation(); navigate(`/app/deals/${deal.id}`); }}>
+                          거래 상세
+                        </button>
+                      ) : "없음"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <section className="supplierQuoteCards" aria-label="제출한 견적 목록">
+            {quoteSummaries.map(({ deal, quoteEntry, request, supplierLabel }) => (
+              <article className="supplierQuoteCard" key={quoteEntry.id}>
+                <div className="supplierQuoteCardHeader">
+                  <span>{supplierLabel}</span>
+                  <StatusBadge tone={quoteEntry.status === "selected" ? "green" : "blue"}>{quoteStatusLabels[quoteEntry.status]}</StatusBadge>
+                </div>
+                <div className="supplierQuoteMain">
+                  <h2>{request?.title ?? "삭제된 요청"}</h2>
+                  <strong>{money(quoteEntry.final_amount)}</strong>
+                </div>
+                <div className="supplierQuoteFacts">
+                  <span>
+                    <small>납품 가능일</small>
+                    {quoteEntry.available_delivery_date}
+                  </span>
+                  <span>
+                    <small>상품 금액</small>
+                    {money(quoteEntry.total_amount)}
+                  </span>
+                  <span>
+                    <small>배송비</small>
+                    {money(quoteEntry.delivery_fee)}
+                  </span>
+                  <span>
+                    <small>거래 상태</small>
+                    {deal ? "거래 연결됨" : "거래 대기"}
+                  </span>
+                </div>
+                <div className="formActions supplierQuoteActions">
+                  {request && (
+                    <button className="secondaryButton" type="button" onClick={() => navigate(`/app/supplier/requests/${request.id}`)}>
+                      요청 보기
+                    </button>
+                  )}
+                  {deal ? (
+                    <button className="primaryButton" type="button" onClick={() => navigate(`/app/deals/${deal.id}`)}>
+                      거래 상세
+                    </button>
+                  ) : (
+                    <span className="quoteNoDeal">거래 대기</span>
+                  )}
+                </div>
+              </article>
+            ))}
+          </section>
+        </>
+      ) : (
+        <EmptyState icon={<ReceiptText />} title="제출한 견적이 없습니다." desc="조건에 맞는 요청을 확인하고 첫 견적을 제출해보세요." />
+      )}
     </Page>
   );
 }
