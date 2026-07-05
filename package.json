@@ -17,6 +17,9 @@
     "check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/app": "8.0.0",
+    "@capacitor/core": "^8.4.1",
     "@supabase/supabase-js": "2.110.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -24,6 +27,7 @@
     "vite": "^6.0.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.1",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2"
   }

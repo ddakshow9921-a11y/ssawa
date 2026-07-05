@@ -1,4 +1,6 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 import {
   addDealAttachment,
   addPurchaseDocument,
@@ -309,6 +311,12 @@ function getRoleHomePath(role: UserRole) {
   return "/app";
 }
 
+function isAppExitPoint(path: string, session: AppAuthSession | null) {
+  if (path === "/" || path === "/login") return true;
+  if (!session) return path === "/app";
+  return path === getRoleHomePath(session.role);
+}
+
 function isProtectedAppPath(path: string) {
   return path === "/app" || path.startsWith("/app/");
 }
@@ -437,6 +445,8 @@ type BusinessCheckResult = {
 };
 
 const AUTH_STORAGE_KEY = "ssawa-auth-session-v1";
+const LAUNCH_SCREEN_MIN_MS = 700;
+const EXIT_CONFIRM_MESSAGE = "싸와! 앱을 종료하시겠습니까?";
 
 const defaultSignupDraft: BusinessSignupDraft = {
   role: "buyer",
@@ -553,8 +563,13 @@ export default function App() {
   const [data, setData] = useState<AppData>(() => loadData());
   const [authSession, setAuthSession] = useState<AppAuthSession | null>(() => loadStoredAuthSession());
   const [authReady, setAuthReady] = useState(false);
+  const [showLaunchScreen, setShowLaunchScreen] = useState(true);
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const previousUnreadByUserRef = useRef<Record<string, number>>({});
+  const launchStartedAtRef = useRef(typeof performance !== "undefined" ? performance.now() : Date.now());
+  const pathRef = useRef(path);
+  const authSessionRef = useRef(authSession);
+  const exitConfirmOpenRef = useRef(false);
 
   useEffect(() => {
     if (window.location.pathname === "/") {
@@ -563,6 +578,63 @@ export default function App() {
     const onPopState = () => setPath(normalizePath(window.location.pathname));
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    pathRef.current = path;
+  }, [path]);
+
+  useEffect(() => {
+    authSessionRef.current = authSession;
+  }, [authSession]);
+
+  useEffect(() => {
+    if (!authReady) return;
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const delay = Math.max(0, LAUNCH_SCREEN_MIN_MS - (now - launchStartedAtRef.current));
+    const timer = window.setTimeout(() => setShowLaunchScreen(false), delay);
+    return () => window.clearTimeout(timer);
+  }, [authReady]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let mounted = true;
+    let removeBackButtonListener: (() => Promise<void>) | undefined;
+
+    void CapacitorApp.addListener("backButton", ({ canGoBack }) => {
+      const currentPath = pathRef.current;
+      const currentSession = authSessionRef.current;
+
+      if (!isAppExitPoint(currentPath, currentSession)) {
+        if (canGoBack) {
+          window.history.back();
+          return;
+        }
+
+        const homePath = currentSession ? getRoleHomePath(currentSession.role) : "/login";
+        window.history.replaceState({}, "", homePath);
+        setPath(homePath);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      if (exitConfirmOpenRef.current) return;
+      exitConfirmOpenRef.current = true;
+      const shouldExit = window.confirm(EXIT_CONFIRM_MESSAGE);
+      exitConfirmOpenRef.current = false;
+      if (shouldExit) void CapacitorApp.exitApp();
+    }).then((listener) => {
+      if (!mounted) {
+        void listener.remove();
+        return;
+      }
+      removeBackButtonListener = () => listener.remove();
+    });
+
+    return () => {
+      mounted = false;
+      void removeBackButtonListener?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -686,7 +758,9 @@ export default function App() {
   }, [authSession, notificationUserId, unreadNotifications]);
 
   return (
-    <div className="appShell">
+    <>
+      {showLaunchScreen && <LaunchScreen />}
+      <div className="appShell" aria-hidden={showLaunchScreen ? true : undefined}>
       <aside className="sidebar" aria-label="주요 메뉴">
         <button className="brandButton" type="button" onClick={() => navigate("/app")}>
           <img src="/아이콘.png" alt="" className="brandIcon" />
@@ -786,6 +860,18 @@ export default function App() {
           );
         })}
       </nav>
+      </div>
+    </>
+  );
+}
+
+function LaunchScreen() {
+  return (
+    <div className="launchScreen" role="status" aria-label="싸와 앱을 여는 중">
+      <div className="launchScreenInner">
+        <img src="/로고.png" alt="싸와!" className="launchLogo" />
+        <div className="launchPulse" aria-hidden="true" />
+      </div>
     </div>
   );
 }

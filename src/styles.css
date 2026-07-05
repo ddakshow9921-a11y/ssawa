@@ -34,6 +34,56 @@ body {
   background: var(--background);
 }
 
+.launchScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+}
+
+.launchScreenInner {
+  width: min(72vw, 340px);
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+}
+
+.launchLogo {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+}
+
+.launchPulse {
+  width: 72px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ffe0d1;
+}
+
+.launchPulse::after {
+  content: "";
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--orange);
+  animation: launchPulseSlide 840ms ease-in-out infinite alternate;
+}
+
+@keyframes launchPulseSlide {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(138%);
+  }
+}
+
 button,
 input,
 select,
