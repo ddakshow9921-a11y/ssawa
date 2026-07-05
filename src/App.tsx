@@ -813,8 +813,9 @@ export default function App() {
               </>
             ) : null}
             {authSession && (
-              <button className="ghostButton compact" type="button" onClick={handleSignOut}>
-                로그아웃
+              <button className="ghostButton compact signOutTopButton" type="button" onClick={handleSignOut} aria-label="로그아웃" title="로그아웃">
+                <SignOut size={16} />
+                <span className="signOutLabel">로그아웃</span>
               </button>
             )}
             {authSession && isDemoMode(data) && shellRole === "admin" && <span className="demoBadge">{environmentLabels[data.environment]} 데이터</span>}
@@ -10034,6 +10035,10 @@ function SearchCheck(props: IconProps) {
 
 function ShieldCheck(props: IconProps) {
   return <LineIcon {...props}><path d="M12 2 4 5v6c0 5 3.4 9 8 11 4.6-2 8-6 8-11V5Z" /><path d="m8.5 12 2 2 5-5" /></LineIcon>;
+}
+
+function SignOut(props: IconProps) {
+  return <LineIcon {...props}><path d="M10 17 15 12l-5-5" /><path d="M15 12H3" /><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" /></LineIcon>;
 }
 
 function Store(props: IconProps) {

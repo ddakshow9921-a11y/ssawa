@@ -301,7 +301,8 @@ button:disabled {
   position: relative;
 }
 
-.notificationLabel {
+.notificationLabel,
+.signOutLabel {
   display: inline;
 }
 
@@ -4664,14 +4665,16 @@ tr.selectedRow {
     display: none;
   }
 
-  .topbarActions .notificationTopButton {
+  .topbarActions .notificationTopButton,
+  .topbarActions .signOutTopButton {
     width: 42px;
     min-width: 42px;
     padding: 0;
     display: inline-flex;
   }
 
-  .notificationTopButton .notificationLabel {
+  .notificationTopButton .notificationLabel,
+  .signOutTopButton .signOutLabel {
     position: absolute;
     width: 1px;
     height: 1px;
