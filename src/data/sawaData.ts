@@ -2045,19 +2045,7 @@ export function estimateSupplierMatches(
   needTaxInvoice = false,
   cardPaymentRequired = false,
 ): number {
-  const regionTokens = deliveryRegion.split(/\s+/).filter(Boolean);
-  const approved = data.supplier_profiles.filter((supplier) => supplier.approval_status === "approved");
-  const strictMatches = approved.filter((supplier) => {
-    const categoryMatch = supplier.categories.includes(categoryName);
-    const regionMatch = !deliveryRegion || supplier.service_regions.some((region) => regionTokens.some((token) => token.includes(region) || region.includes(token)));
-    const taxMatch = !needTaxInvoice || supplier.tax_invoice_available;
-    const cardMatch = !cardPaymentRequired || supplier.card_payment_available;
-    return categoryMatch && regionMatch && taxMatch && cardMatch;
-  }).length;
-
-  if (strictMatches > 0) return strictMatches;
-
-  return approved.filter((supplier) => supplier.categories.includes(categoryName) || supplier.service_regions.some((region) => deliveryRegion.includes(region))).length;
+  return data.supplier_profiles.filter((supplier) => matchesSupplierRequestConditions(supplier, categoryName, deliveryRegion, needTaxInvoice, cardPaymentRequired)).length;
 }
 
 export function calculateSupplierMatchScore(supplier: SupplierProfile, request: QuoteRequest, data?: AppData): number {
@@ -2065,38 +2053,43 @@ export function calculateSupplierMatchScore(supplier: SupplierProfile, request: 
   let score = 0;
   const stats = data?.supplier_stats.find((entry) => entry.supplier_id === supplier.id);
   const reputation = data ? getSupplierReputation(data, supplier.id) : undefined;
+  const categoryMatch = matchesSupplierCategory(supplier, request.category_name);
   const regionMatch = matchesSupplierRegion(supplier, request.delivery_region);
-  const nearbyRegion = !regionMatch && supplier.service_regions.some((region) => region.slice(0, 2) === request.delivery_region.slice(0, 2));
+  const requestPrimaryRegion = primaryRegion(request.delivery_region);
+  const nearbyRegion = !regionMatch && Boolean(requestPrimaryRegion && supplier.service_regions.some((region) => primaryRegion(region) === requestPrimaryRegion));
   const subCategoryMatch = (supplier.sub_categories ?? []).some((subCategory) => request.description.includes(subCategory) || request.title.includes(subCategory));
+  const taxMatch = !request.need_tax_invoice || supplier.tax_invoice_available;
+  const cardMatch = !request.card_payment_required || supplier.card_payment_available;
 
-  if (supplier.categories.includes(request.category_name)) score += 25;
+  if (categoryMatch) score += 35;
   if (subCategoryMatch) score += 10;
-  if (regionMatch) score += 20;
+  if (regionMatch) score += 25;
   else if (nearbyRegion) score += 10;
-  if (!request.need_tax_invoice || supplier.tax_invoice_available) score += 5;
-  if (!request.card_payment_required || supplier.card_payment_available) score += 5;
-  if ((stats?.average_response_minutes ?? 999) <= 90) score += 10;
-  if ((stats?.response_rate ?? 0) >= 80) score += 10;
-  if ((reputation?.total_score ?? 0) >= 80) score += 10;
+  if (taxMatch) score += 6;
+  if (cardMatch) score += 6;
+  if (stats && stats.average_response_minutes <= 90) score += 8;
+  if (stats && stats.response_rate >= 80) score += 8;
+  if ((reputation?.total_score ?? 0) >= 80) score += 8;
   if (data?.quotes.some((quoteRecord) => quoteRecord.supplier_id === supplier.id && data.quote_requests.some((requestRecord) => requestRecord.id === quoteRecord.quote_request_id && requestRecord.category_name === request.category_name))) score += 10;
   if ((supplier.default_quote_valid_days ?? 3) <= 3) score += 3;
   if (supplier.urgent_delivery_available && request.urgent) score += 5;
   if ((stats?.response_rate ?? 100) < 45) score -= 10;
   if ((reputation?.risk_level ?? "normal") === "high" || supplier.approval_status !== "approved") score -= 20;
+  if (categoryMatch && regionMatch && taxMatch && cardMatch && score < SUPPLIER_VISIBLE_MATCH_THRESHOLD) score = SUPPLIER_VISIBLE_MATCH_THRESHOLD;
   return Math.max(0, Math.min(100, score));
 }
 
-export function getMatchedSuppliersForRequest(request: QuoteRequest, suppliers: SupplierProfile[]): SupplierProfile[] {
+export function getMatchedSuppliersForRequest(request: QuoteRequest, suppliers: SupplierProfile[], data?: AppData): SupplierProfile[] {
   return suppliers
-    .filter((supplier) => calculateSupplierMatchScore(supplier, request) >= 70)
-    .sort((a, b) => calculateSupplierMatchScore(b, request) - calculateSupplierMatchScore(a, request));
+    .filter((supplier) => calculateSupplierMatchScore(supplier, request, data) >= SUPPLIER_VISIBLE_MATCH_THRESHOLD)
+    .sort((a, b) => calculateSupplierMatchScore(b, request, data) - calculateSupplierMatchScore(a, request, data));
 }
 
-export function getVisibleRequestsForSupplier(supplier: SupplierProfile, requests: QuoteRequest[]): QuoteRequest[] {
+export function getVisibleRequestsForSupplier(supplier: SupplierProfile, requests: QuoteRequest[], data?: AppData): QuoteRequest[] {
   if (supplier.approval_status !== "approved") return [];
   return requests
-    .filter((request) => calculateSupplierMatchScore(supplier, request) >= 70)
-    .sort((a, b) => calculateSupplierMatchScore(supplier, b) - calculateSupplierMatchScore(supplier, a));
+    .filter((request) => calculateSupplierMatchScore(supplier, request, data) >= SUPPLIER_VISIBLE_MATCH_THRESHOLD)
+    .sort((a, b) => calculateSupplierMatchScore(supplier, b, data) - calculateSupplierMatchScore(supplier, a, data));
 }
 
 export function createSupplierApplication(data: AppData, draft: SupplierApplicationDraft): { data: AppData; supplierId: string } {
@@ -2301,11 +2294,7 @@ export function createQuoteRequest(data: AppData, draft: QuoteRequestDraft): { d
     quote_attachments: [...attachments, ...data.quote_attachments],
   };
 
-  const matchedSuppliers = data.supplier_profiles.filter((supplier) =>
-    supplier.approval_status === "approved" &&
-    supplier.categories.includes(category.name) &&
-    supplier.service_regions.some((region) => draft.delivery_region.includes(region.split(" ")[0]) || region.includes(draft.delivery_region.split(" ")[0])),
-  );
+  const matchedSuppliers = getMatchedSuppliersForRequest(requestRecord, data.supplier_profiles, nextData);
   matchedSuppliers.forEach((supplier) => {
     nextData = appendNotification(nextData, {
       user_id: supplier.user_id,
@@ -4451,7 +4440,7 @@ export function getSupplierMatchCandidates(data: AppData, requestId: string): Su
       const remainingCredits = credits.length ? credits.reduce((sum, entry) => sum + entry.remaining_credits, 0) : Math.max(0, (getSupplierCurrentPlan(data, supplierRecord.id)?.quote_participation_limit ?? 0) - (data.supplier_usage.find((entry) => entry.supplier_id === supplierRecord.id)?.quotes_submitted_count ?? 0));
       const score = calculateSupplierMatchScore(supplierRecord, requestRecord, data);
       const reasons = [
-        supplierRecord.categories.includes(requestRecord.category_name) ? "카테고리 일치" : "카테고리 확인 필요",
+        matchesSupplierCategory(supplierRecord, requestRecord.category_name) ? "카테고리 일치" : "카테고리 확인 필요",
         matchesSupplierRegion(supplierRecord, requestRecord.delivery_region) ? "지역 일치" : "인접/수동 확인",
         (stats?.response_rate ?? 0) >= 80 ? "응답률 우수" : "응답 독려 필요",
         reputation.total_score >= 80 ? "신뢰도 우수" : "신뢰도 확인",
@@ -5911,13 +5900,91 @@ function supplierReview(id: string, supplierId: string, buyerId: string, request
   };
 }
 
+const SUPPLIER_VISIBLE_MATCH_THRESHOLD = 70;
+
+function normalizeCategoryForMatch(value: string): string {
+  return value.trim().replace(/\s+/g, "");
+}
+
+function matchesSupplierCategory(supplier: SupplierProfile, categoryName: string): boolean {
+  const targetCategory = normalizeCategoryForMatch(categoryName);
+  return supplier.categories.some((category) => normalizeCategoryForMatch(category) === targetCategory);
+}
+
+function normalizeRegionForMatch(value: string): string {
+  return value
+    .trim()
+    .replace(/[,\u00b7/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/서울특별시/g, "서울")
+    .replace(/부산광역시/g, "부산")
+    .replace(/대구광역시/g, "대구")
+    .replace(/인천광역시/g, "인천")
+    .replace(/광주광역시/g, "광주")
+    .replace(/대전광역시/g, "대전")
+    .replace(/울산광역시/g, "울산")
+    .replace(/세종특별자치시/g, "세종")
+    .replace(/경기도/g, "경기")
+    .replace(/강원특별자치도/g, "강원")
+    .replace(/강원도/g, "강원")
+    .replace(/충청북도/g, "충북")
+    .replace(/충청남도/g, "충남")
+    .replace(/전라북도/g, "전북")
+    .replace(/전북특별자치도/g, "전북")
+    .replace(/전라남도/g, "전남")
+    .replace(/경상북도/g, "경북")
+    .replace(/경상남도/g, "경남")
+    .replace(/제주특별자치도/g, "제주");
+}
+
+function compactRegionForMatch(value: string): string {
+  return normalizeRegionForMatch(value).replace(/\s+/g, "");
+}
+
+function regionTokens(value: string): string[] {
+  return normalizeRegionForMatch(value).split(/\s+/).filter(Boolean);
+}
+
+function primaryRegion(value: string): string {
+  return regionTokens(value)[0] ?? "";
+}
+
+function isWholeRegion(value: string): boolean {
+  const normalized = normalizeRegionForMatch(value);
+  const tokens = regionTokens(value);
+  return tokens.length <= 1 || /전체|전지역|전 지역/.test(normalized);
+}
+
+function serviceRegionMatchesDelivery(serviceRegion: string, deliveryRegion: string): boolean {
+  const service = compactRegionForMatch(serviceRegion);
+  const delivery = compactRegionForMatch(deliveryRegion);
+  if (!delivery) return true;
+  if (!service) return false;
+  if (/전국/.test(service)) return true;
+  if (/수도권/.test(service)) return ["서울", "경기", "인천"].includes(primaryRegion(deliveryRegion));
+  if (service.includes(delivery) || delivery.includes(service)) return true;
+  const servicePrimary = primaryRegion(serviceRegion);
+  const deliveryPrimary = primaryRegion(deliveryRegion);
+  return Boolean(servicePrimary && servicePrimary === deliveryPrimary && (isWholeRegion(serviceRegion) || isWholeRegion(deliveryRegion)));
+}
+
 function matchesSupplierRegion(supplier: SupplierProfile, deliveryRegion: string): boolean {
   if (!deliveryRegion.trim()) return true;
-  const normalizedDelivery = deliveryRegion.replace(/\s+/g, "");
-  return supplier.service_regions.some((region) => {
-    const normalizedRegion = region.replace(/\s+/g, "");
-    return normalizedDelivery.includes(normalizedRegion) || normalizedRegion.includes(normalizedDelivery) || normalizedDelivery.startsWith(normalizedRegion.slice(0, 2));
-  });
+  return supplier.service_regions.some((region) => serviceRegionMatchesDelivery(region, deliveryRegion));
+}
+
+function matchesSupplierRequestConditions(
+  supplier: SupplierProfile,
+  categoryName: string,
+  deliveryRegion: string,
+  needTaxInvoice = false,
+  cardPaymentRequired = false,
+): boolean {
+  return supplier.approval_status === "approved"
+    && matchesSupplierCategory(supplier, categoryName)
+    && matchesSupplierRegion(supplier, deliveryRegion)
+    && (!needTaxInvoice || supplier.tax_invoice_available)
+    && (!cardPaymentRequired || supplier.card_payment_available);
 }
 
 function draftItem(

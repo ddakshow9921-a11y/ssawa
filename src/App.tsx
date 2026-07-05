@@ -4039,7 +4039,10 @@ function RequestMessagesPage({ data, navigate, setData, requestId }: MutatingPag
   if (!request) return <NotFound navigate={navigate} />;
   const requestThreads = data.message_threads.filter((entry) => entry.thread_type === "quote_request" && entry.related_entity_id === requestId);
   const selectedThread = data.message_threads.find((entry) => entry.id === (selectedThreadId || requestThreads[0]?.id));
-  const availableSuppliers = data.supplier_profiles.filter((supplier) => supplier.approval_status === "approved" && supplier.categories.includes(request.category_name)).slice(0, 4);
+  const availableSuppliers = data.supplier_profiles
+    .filter((supplier) => calculateSupplierMatchScore(supplier, request, data) >= 70)
+    .sort((a, b) => calculateSupplierMatchScore(b, request, data) - calculateSupplierMatchScore(a, request, data))
+    .slice(0, 4);
 
   function startThread(supplierId: string) {
     const result = ensureRequestMessageThread(data, requestId, supplierId);
@@ -5427,7 +5430,7 @@ function SupplierDashboard({ data, navigate }: PageProps) {
   const supplier = getActiveSupplier(data);
   const stats = supplierStatsFor(data, supplier.id);
   const focusSetting = getActiveFocusSetting(data);
-  const matchingRequests = getVisibleRequestsForSupplier(supplier, data.quote_requests);
+  const matchingRequests = getVisibleRequestsForSupplier(supplier, data.quote_requests, data);
   const myQuotes = data.quotes.filter((quoteEntry) => quoteEntry.supplier_id === supplier.id);
   const selectedQuotes = myQuotes.filter((quoteEntry) => quoteEntry.status === "selected").length;
   const pendingQuoteRequests = matchingRequests.filter((request) => !myQuotes.some((quote) => quote.quote_request_id === request.id));
@@ -5498,7 +5501,7 @@ function SupplierRequestsPage({ data, navigate }: PageProps) {
   const [urgentOnly, setUrgentOnly] = useState(false);
   const [unquotedOnly, setUnquotedOnly] = useState(false);
   const myQuotes = data.quotes.filter((quote) => quote.supplier_id === supplier.id);
-  const baseRequests = getVisibleRequestsForSupplier(supplier, data.quote_requests);
+  const baseRequests = getVisibleRequestsForSupplier(supplier, data.quote_requests, data);
   const requests = baseRequests
     .filter((request) => categoryFilter === "전체" || request.category_name === categoryFilter)
     .filter((request) => regionFilter === "전체" || request.delivery_region.includes(regionFilter) || regionFilter.includes(request.delivery_region.split(" ")[0]))
@@ -7049,7 +7052,7 @@ function AdminBetaKpiPage({ data, navigate }: PageProps) {
   const supplierResponseRows = data.supplier_profiles
     .filter((supplier) => supplier.approval_status === "approved")
     .map((supplier) => {
-      const targetRequests = data.quote_requests.filter((request) => supplier.categories.includes(request.category_name)).length;
+      const targetRequests = data.quote_requests.filter((request) => calculateSupplierMatchScore(supplier, request, data) >= 70).length;
       const submittedQuotes = data.quotes.filter((quote) => quote.supplier_id === supplier.id).length;
       const responseRate = Math.round((submittedQuotes / Math.max(1, targetRequests)) * 100);
       return { supplier, targetRequests, submittedQuotes, responseRate };
@@ -7326,9 +7329,8 @@ function AdminBetaTasksPage({ data, navigate }: PageProps) {
   const noQuoteRequests = data.quote_requests
     .filter((request) => !data.quotes.some((quote) => quote.quote_request_id === request.id))
     .slice(0, 8);
-  const countMatchingSuppliers = (categoryName: string) => data.supplier_profiles
-    .filter((supplier) => supplier.approval_status === "approved" && supplier.categories.includes(categoryName))
-    .length;
+  const countMatchingSuppliers = (request: QuoteRequest) =>
+    estimateSupplierMatches(data, request.category_name, request.delivery_region, request.need_tax_invoice, request.card_payment_required);
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/admin/beta")} label="베타 운영" />
@@ -7360,7 +7362,7 @@ function AdminBetaTasksPage({ data, navigate }: PageProps) {
               <thead><tr><th>요청</th><th>카테고리</th><th>지역</th><th>매칭 후보</th><th>상태</th><th>다음 액션</th></tr></thead>
               <tbody>
                 {noQuoteRequests.map((request) => {
-                  const matches = countMatchingSuppliers(request.category_name);
+                  const matches = countMatchingSuppliers(request);
                   return (
                     <tr key={request.id}>
                       <td><strong>{request.title}</strong></td>
@@ -7779,7 +7781,7 @@ function SupplierRequestList({ data, supplier, requests, navigate }: { data: App
         const itemCount = data.quote_request_items.filter((item) => item.quote_request_id === request.id).length;
         const quoteCount = data.quotes.filter((quote) => quote.quote_request_id === request.id).length;
         const submitted = data.quotes.some((quote) => quote.quote_request_id === request.id && quote.supplier_id === supplier.id);
-        const matchScore = calculateSupplierMatchScore(supplier, request);
+        const matchScore = calculateSupplierMatchScore(supplier, request, data);
         return (
           <article className="requestCard supplierRequestCard" key={request.id} onClick={() => navigate(`/app/supplier/requests/${request.id}`)}>
             <div className="cardTopline">

@@ -60,6 +60,7 @@ export async function listLiveQuoteRequestItems(requestId: string): Promise<Live
 export async function createLiveQuoteRequest(buyerId: string, draft: QuoteRequestDraft): Promise<LiveResult<QuoteRequest | null>> {
   const client = getSupabaseClient();
   if (!client || !isLiveModeReady()) return unavailable(null);
+  const categoryName = await resolveLiveCategoryName(draft);
 
   const { data: request, error: requestError } = await client
     .from("quote_requests")
@@ -67,7 +68,7 @@ export async function createLiveQuoteRequest(buyerId: string, draft: QuoteReques
       buyer_id: buyerId,
       title: draft.title,
       category_id: draft.category_id || null,
-      category_name: draft.template_name || draft.title,
+      category_name: categoryName,
       delivery_region: draft.delivery_region,
       delivery_address: draft.delivery_address || null,
       desired_delivery_date: draft.desired_delivery_date || null,
@@ -106,6 +107,15 @@ export async function createLiveQuoteRequest(buyerId: string, draft: QuoteReques
   }
 
   return { ok: true, data: request as QuoteRequest };
+}
+
+async function resolveLiveCategoryName(draft: QuoteRequestDraft): Promise<string> {
+  const client = getSupabaseClient();
+  if (client && draft.category_id) {
+    const { data, error } = await client.from("categories").select("name").eq("id", draft.category_id).maybeSingle();
+    if (!error && data?.name) return data.name;
+  }
+  return draft.template_name || draft.title || "기타";
 }
 
 export async function listMyLiveNotifications(userId: string): Promise<LiveResult<Notification[]>> {
