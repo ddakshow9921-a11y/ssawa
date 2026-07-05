@@ -238,7 +238,9 @@ export type Database = {
         supplier_id: string | null;
         admin_id: string | null;
         title: string;
-        status: "open" | "closed" | "reported";
+        status: "open" | "closed" | "reported" | "blocked" | "archived";
+        admin_memo?: string | null;
+        is_admin_watching?: boolean;
         last_message_at: string;
         created_at: string;
         updated_at: string;
@@ -248,12 +250,49 @@ export type Database = {
         thread_id: string;
         sender_id: string;
         sender_role: UserRole | "system";
+        message_type?: "text" | "template" | "image" | "file" | "system" | "quote_condition" | "deal_update";
         body: string;
         attachment_url: string | null;
         attachment_name: string | null;
+        is_deleted?: boolean;
+        is_flagged?: boolean;
+        flagged_reason?: string | null;
         is_read: boolean;
         read_at: string | null;
         created_at: string;
+      }>;
+      message_read_states: PublicTable<{
+        id: string;
+        thread_id: string;
+        user_id: string;
+        last_read_message_id?: string | null;
+        last_read_at: string;
+        unread_count: number;
+        created_at: string;
+        updated_at: string;
+      }>;
+      message_reports: PublicTable<{
+        id: string;
+        thread_id: string;
+        message_id?: string | null;
+        reported_by?: string | null;
+        reason: string;
+        detail?: string | null;
+        status: "pending" | "reviewed" | "resolved" | "dismissed";
+        admin_memo?: string | null;
+        created_at: string;
+        updated_at: string;
+      }>;
+      message_templates: PublicTable<{
+        id: string;
+        template_for: "buyer" | "supplier" | "both" | "admin";
+        context: "quote" | "deal" | "delivery" | "tax_invoice" | "payment" | "item_check" | "etc";
+        label: string;
+        body: string;
+        sort_order: number;
+        is_active: boolean;
+        created_at: string;
+        updated_at: string;
       }>;
       feedbacks: PublicTable<
         {

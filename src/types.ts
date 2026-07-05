@@ -77,6 +77,8 @@ export type NotificationType =
   | "quote_updated"
   | "quote_expiring"
   | "supplier_message_received"
+  | "buyer_quote_question"
+  | "deal_message_received"
   | "deal_created"
   | "deal_confirmed"
   | "deal_preparing"
@@ -104,6 +106,10 @@ export type NotificationType =
   | "deal_dispute_created"
   | "analysis_failed"
   | "message_reported"
+  | "chat_reported"
+  | "suspicious_chat_detected"
+  | "long_unanswered_chat"
+  | "external_payment_keyword_detected"
   | "system_error"
   | "message_received"
   | "usage_limit_warning"
@@ -154,7 +160,9 @@ export type NotificationDeliveryStatus = "pending" | "sent" | "failed" | "skippe
 
 export type MessageThreadType = "quote_request" | "deal" | "supplier" | "support";
 
-export type MessageThreadStatus = "open" | "closed" | "reported";
+export type MessageThreadStatus = "open" | "closed" | "reported" | "blocked" | "archived";
+
+export type MessageType = "text" | "template" | "image" | "file" | "system" | "quote_condition" | "deal_update";
 
 export type MessageReportStatus = "pending" | "reviewed" | "resolved" | "dismissed";
 
@@ -739,6 +747,8 @@ export interface MessageThread {
   admin_id: string;
   title: string;
   status: MessageThreadStatus;
+  admin_memo?: string;
+  is_admin_watching?: boolean;
   last_message_at: string;
   created_at: string;
   updated_at: string;
@@ -749,9 +759,13 @@ export interface Message {
   thread_id: string;
   sender_id: string;
   sender_role: UserRole | "system";
+  message_type?: MessageType;
   body: string;
   attachment_url: string;
   attachment_name: string;
+  is_deleted?: boolean;
+  is_flagged?: boolean;
+  flagged_reason?: string;
   is_read: boolean;
   read_at?: string;
   created_at: string;

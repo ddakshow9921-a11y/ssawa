@@ -67,6 +67,7 @@ import type {
   MessageReport,
   MessageThread,
   MessageThreadStatus,
+  MessageType,
   PaymentMethod,
   PaymentMethodStatus,
   Profile,
@@ -417,6 +418,8 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   quote_updated: "견적 수정",
   quote_expiring: "견적 만료 임박",
   supplier_message_received: "공급업체 문의",
+  buyer_quote_question: "구매자 견적 문의",
+  deal_message_received: "거래 문의",
   deal_created: "거래 생성",
   deal_confirmed: "거래 수락",
   deal_preparing: "납품 준비",
@@ -444,6 +447,10 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   deal_dispute_created: "거래 문제 신고",
   analysis_failed: "분석 실패",
   message_reported: "메시지 신고",
+  chat_reported: "대화 신고",
+  suspicious_chat_detected: "위험 대화 감지",
+  long_unanswered_chat: "장기 미응답 문의",
+  external_payment_keyword_detected: "외부거래 키워드",
   system_error: "시스템 오류",
   message_received: "문의 도착",
   usage_limit_warning: "견적 참여 한도 임박",
@@ -508,7 +515,81 @@ export const messageThreadStatusLabels: Record<MessageThreadStatus, string> = {
   open: "진행 중",
   closed: "종료됨",
   reported: "신고됨",
+  blocked: "차단됨",
+  archived: "보관됨",
 };
+
+export const chatQuickTemplates = {
+  buyerQuote: [
+    "배송비 포함인가요?",
+    "세금계산서 발행 가능한가요?",
+    "카드결제 가능한가요?",
+    "내일까지 납품 가능한가요?",
+    "이 품목은 정품/동일 규격인가요?",
+    "수량을 늘리면 단가가 낮아지나요?",
+  ],
+  buyerDeal: [
+    "납품 예정 시간을 확인해주세요.",
+    "거래 조건 확인 부탁드립니다.",
+    "세금계산서 발행 정보를 확인해주세요.",
+    "최종 거래 전 확인 부탁드립니다.",
+  ],
+  supplierQuote: [
+    "정확한 규격 확인이 필요합니다.",
+    "해당 품목은 대체품으로 견적 가능합니다.",
+    "배송비는 별도입니다.",
+    "세금계산서 발행 가능합니다.",
+    "카드결제 가능합니다.",
+    "희망 납품일 조정이 필요합니다.",
+  ],
+  supplierDeal: [
+    "납품 준비 중입니다.",
+    "배송 출발했습니다.",
+    "도착 예정 시간은 오늘 오후입니다.",
+    "세금계산서 발행 정보를 확인해주세요.",
+    "거래 완료 확인 부탁드립니다.",
+  ],
+  admin: [
+    "대화 내용을 확인 중입니다.",
+    "거래 조건을 채팅에 남겨주세요.",
+    "외부거래 유도는 이용 제한 사유가 될 수 있습니다.",
+    "신고가 접수되어 확인 중입니다.",
+  ],
+};
+
+const suspiciousChatKeywords = [
+  "010",
+  "전화",
+  "연락처",
+  "카톡",
+  "카카오",
+  "오픈채팅",
+  "문자",
+  "번호",
+  "계좌",
+  "입금",
+  "현금",
+  "송금",
+  "외부결제",
+  "따로 결제",
+  "플랫폼 밖",
+  "카카오페이",
+  "토스",
+  "직접 거래",
+  "싸와 밖",
+  "수수료 없이",
+  "따로 연락",
+];
+
+export function detectSuspiciousMessage(body: string) {
+  const normalized = body.replace(/\s+/g, " ").toLowerCase();
+  const matchedKeyword = suspiciousChatKeywords.find((keyword) => normalized.includes(keyword.toLowerCase()));
+  return {
+    isSuspicious: Boolean(matchedKeyword),
+    keyword: matchedKeyword ?? "",
+    reason: matchedKeyword ? `외부거래/연락처 의심 키워드: ${matchedKeyword}` : "",
+  };
+}
 
 export const commissionFeeTypeLabels: Record<CommissionFeeType, string> = {
   percentage: "정률",
@@ -1354,7 +1435,7 @@ const sampleNotifications: Notification[] = [
   notification("notif-6", "sup-1-user", "supplier", "quote_selected", "내 견적이 선택되었습니다.", "월계치킨이 서울포장의 견적을 선택했습니다. 거래 확인이 필요합니다.", "/app/deals/deal-1", "quote", "quote-1", "high", false, "2026-07-04T10:22:00.000Z"),
   notification("notif-7", "admin-1", "admin", "supplier_apply_submitted", "공급업체 입점 신청이 들어왔습니다.", "서울주방파트너가 입점 신청을 완료했습니다.", "/app/admin/suppliers", "supplier", "sup-5", "normal", false, "2026-07-04T09:20:00.000Z"),
   notification("notif-8", "admin-1", "admin", "deal_dispute_created", "거래 문제 신고가 접수되었습니다.", "고깃집 식자재 거래에서 문제가 신고되었습니다.", "/app/admin/deals", "deal", "deal-5", "urgent", false, "2026-07-04T10:40:00.000Z"),
-  notification("notif-9", "admin-1", "admin", "message_reported", "문의 메시지 신고가 접수되었습니다.", "외부 결제 유도 의심 메시지가 신고되었습니다.", "/app/admin/messages/thread-deal-1", "message", "msg-deal-2", "urgent", false, "2026-07-04T11:20:00.000Z"),
+  notification("notif-9", "admin-1", "admin", "chat_reported", "문의 메시지 신고가 접수되었습니다.", "외부 결제 유도 의심 메시지가 신고되었습니다.", "/app/admin/chats/thread-deal-1", "message", "msg-deal-2", "urgent", false, "2026-07-04T11:20:00.000Z"),
   notification("notif-10", "sup-1-user", "supplier", "platform_fee_created", "플랫폼 수수료가 정산 예정에 추가되었습니다.", "치킨집 포장재 거래 수수료 16,800원을 확인해 주세요.", "/app/supplier/settlements", "platform_fee", "fee-deal-1", "normal", false, "2026-07-04T12:00:00.000Z"),
   notification("notif-11", "sup-2-user", "supplier", "usage_limit_reached", "이번 달 무료 견적 참여 한도에 도달했습니다.", "무료 플랜 월 5건을 모두 사용했습니다. 요금제 업그레이드를 검토해 주세요.", "/app/supplier/billing", "supplier_plan", "plan-free", "high", false, "2026-07-04T12:05:00.000Z"),
   notification("notif-12", "admin-1", "admin", "settlement_pending", "정산 대기 건이 생성되었습니다.", "서울포장 7월 플랫폼 이용 수수료가 정산 대기 상태입니다.", "/app/admin/settlements", "settlement", "settlement-sup-1-july", "normal", false, "2026-07-04T12:10:00.000Z"),
@@ -1373,7 +1454,7 @@ const sampleNotificationSettings: NotificationSettings[] = [
 const sampleMessageThreads: MessageThread[] = [
   messageThread("thread-req-1-sup-1", "quote_request", "req-1", "buyer-1", "sup-1", "치킨집 포장재 견적 요청 - 서울포장 문의", "open", "2026-07-04T10:25:00.000Z"),
   messageThread("thread-req-1-sup-4", "quote_request", "req-1", "buyer-1", "sup-4", "치킨집 포장재 견적 요청 - 경기소모품센터 문의", "open", "2026-07-04T10:05:00.000Z"),
-  messageThread("thread-deal-1", "deal", "deal-1", "buyer-1", "sup-1", "치킨집 포장재 거래 문의", "reported", "2026-07-04T11:18:00.000Z"),
+  messageThread("thread-deal-1", "deal", "deal-1", "buyer-1", "sup-1", "치킨집 포장재 거래 문의", "reported", "2026-07-04T11:22:00.000Z"),
 ];
 
 const sampleMessages: Message[] = [
@@ -1385,6 +1466,7 @@ const sampleMessages: Message[] = [
   message("msg-deal-1", "thread-deal-1", "sup-1-user", "supplier", "내일 오전 10시 전 납품 가능합니다.", "", "", false, "2026-07-04T10:48:00.000Z"),
   message("msg-deal-2", "thread-deal-1", "buyer-1", "buyer", "가게 뒷문으로 납품 부탁드립니다.", "", "", false, "2026-07-04T11:02:00.000Z"),
   message("msg-deal-system-2", "thread-deal-1", "system", "system", "공급업체가 납품 준비를 시작했습니다.", "", "", true, "2026-07-04T11:18:00.000Z"),
+  message("msg-deal-3", "thread-deal-1", "buyer-1", "buyer", "연락은 010으로 따로 드려도 될까요?", "", "", false, "2026-07-04T11:22:00.000Z", "text", "외부거래/연락처 의심 키워드: 010"),
 ];
 
 const sampleMessageReadStates: MessageReadState[] = [
@@ -4793,6 +4875,9 @@ export function ensureRequestMessageThread(data: AppData, requestId: string, sup
   if (existing) return { data, threadId: existing.id };
   const requestRecord = data.quote_requests.find((entry) => entry.id === requestId);
   const supplier = data.supplier_profiles.find((entry) => entry.id === supplierId);
+  const hasSubmittedQuote = data.quotes.some((entry) => entry.quote_request_id === requestId && entry.supplier_id === supplierId);
+  const isMatchedSupplier = requestRecord && supplier ? calculateSupplierMatchScore(supplier, requestRecord, data) >= 70 : false;
+  if (!requestRecord || !supplier || (!hasSubmittedQuote && !isMatchedSupplier)) return { data, threadId: "" };
   const createdAt = new Date().toISOString();
   const threadId = `thread-${requestId}-${supplierId}-${Date.now()}`;
   const threadRecord: MessageThread = {
@@ -4857,31 +4942,79 @@ export function sendThreadMessage(
   if (!body.trim() && !attachmentName.trim()) return data;
   const thread = data.message_threads.find((entry) => entry.id === threadId);
   if (!thread) return data;
+  if (thread.status === "closed" || thread.status === "blocked" || thread.status === "archived") return data;
+  const participantIds = threadRecipientIds(thread);
+  if (senderRole !== "admin" && senderRole !== "system" && !participantIds.includes(senderId)) return data;
   const createdAt = new Date().toISOString();
-  const messageRecord = message(`msg-${Date.now()}`, threadId, senderId, senderRole, body.trim(), "#", attachmentName.trim(), false, createdAt);
+  const suspicious = detectSuspiciousMessage(body);
+  const messageRecord = message(
+    `msg-${Date.now()}`,
+    threadId,
+    senderId,
+    senderRole,
+    body.trim(),
+    attachmentName.trim() ? "#" : "",
+    attachmentName.trim(),
+    false,
+    createdAt,
+    attachmentName.trim() ? "file" : body.trim().length < 80 ? "template" : "text",
+    suspicious.reason,
+  );
   const recipients = threadRecipientIds(thread).filter((userId) => userId !== senderId);
   let nextData: AppData = {
     ...data,
     messages: [messageRecord, ...data.messages],
-    message_threads: data.message_threads.map((entry) => (entry.id === threadId ? { ...entry, last_message_at: createdAt, updated_at: createdAt } : entry)),
+    message_threads: data.message_threads.map((entry) =>
+      entry.id === threadId ? { ...entry, is_admin_watching: entry.is_admin_watching || suspicious.isSuspicious, last_message_at: createdAt, updated_at: createdAt } : entry,
+    ),
     message_read_states: updateMessageUnreadCounts(data.message_read_states, thread, recipients, createdAt),
   };
 
   recipients.forEach((recipientId) => {
     const recipientRole = recipientId === thread.buyer_id ? "buyer" : recipientId === "admin-1" ? "admin" : "supplier";
+    const notificationType: NotificationType =
+      thread.thread_type === "deal"
+        ? "deal_message_received"
+        : senderRole === "buyer"
+          ? "buyer_quote_question"
+          : senderRole === "supplier"
+            ? "supplier_message_received"
+            : "message_received";
     nextData = appendNotification(nextData, {
       user_id: recipientId,
       user_role: recipientRole,
-      type: senderRole === "buyer" ? "buyer_message_received" : senderRole === "supplier" ? "supplier_message_received" : "message_received",
-      title: senderRole === "buyer" ? "구매자 문의가 도착했어요." : senderRole === "supplier" ? "공급업체 문의가 도착했어요." : "문의 메시지가 도착했어요.",
+      type: notificationType,
+      title: thread.thread_type === "deal" ? "거래 문의 메시지가 도착했어요." : senderRole === "buyer" ? "구매자 문의가 도착했어요." : senderRole === "supplier" ? "공급업체 답변이 도착했어요." : "문의 메시지가 도착했어요.",
       body: thread.title,
-      link_url: thread.thread_type === "deal" ? `/app/deals/${thread.related_entity_id}/messages` : `/app/requests/${thread.related_entity_id}/messages`,
+      link_url:
+        recipientRole === "supplier"
+          ? thread.thread_type === "deal"
+            ? `/app/supplier/deals/${thread.related_entity_id}/messages`
+            : `/app/supplier/requests/${thread.related_entity_id}/messages`
+          : thread.thread_type === "deal"
+            ? `/app/deals/${thread.related_entity_id}/messages`
+            : `/app/requests/${thread.related_entity_id}/messages`,
       related_entity_type: "message",
       related_entity_id: threadId,
       priority: "normal",
       actor_user_id: senderId,
     });
   });
+
+  if (suspicious.isSuspicious && senderRole !== "admin" && senderRole !== "system") {
+    nextData = appendNotification(nextData, {
+      user_id: "admin-1",
+      user_role: "admin",
+      type: suspicious.keyword?.includes("계좌") || suspicious.keyword?.includes("결제") || suspicious.keyword?.includes("입금") || suspicious.keyword?.includes("송금") ? "external_payment_keyword_detected" : "suspicious_chat_detected",
+      title: "외부거래 의심 메시지가 감지되었습니다.",
+      body: `${thread.title} · ${suspicious.keyword}`,
+      link_url: `/app/admin/chats/${threadId}`,
+      related_entity_type: "message",
+      related_entity_id: messageRecord.id,
+      priority: "urgent",
+      actor_user_id: senderId,
+    });
+  }
 
   saveData(nextData);
   return nextData;
@@ -4922,10 +5055,10 @@ export function reportMessage(data: AppData, threadId: string, messageId: string
   nextData = appendNotification(nextData, {
     user_id: "admin-1",
     user_role: "admin",
-    type: "message_reported",
+    type: "chat_reported",
     title: "문의 메시지 신고가 접수되었습니다.",
     body: thread?.title ?? "문의 스레드 신고",
-    link_url: `/app/admin/messages/${threadId}`,
+    link_url: `/app/admin/chats/${threadId}`,
     related_entity_type: "message",
     related_entity_id: messageId,
     priority: "urgent",
@@ -4950,6 +5083,30 @@ export function closeMessageThread(data: AppData, threadId: string): AppData {
   const nextData: AppData = {
     ...data,
     message_threads: data.message_threads.map((entry) => (entry.id === threadId ? { ...entry, status: "closed", updated_at: updatedAt } : entry)),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function blockMessageThread(data: AppData, threadId: string, adminMemo: string): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    message_threads: data.message_threads.map((entry) =>
+      entry.id === threadId ? { ...entry, status: "blocked", admin_memo: adminMemo.trim() || entry.admin_memo, is_admin_watching: true, updated_at: updatedAt } : entry,
+    ),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function updateMessageThreadAdminMemo(data: AppData, threadId: string, adminMemo: string): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    message_threads: data.message_threads.map((entry) =>
+      entry.id === threadId ? { ...entry, admin_memo: adminMemo.trim(), is_admin_watching: true, updated_at: updatedAt } : entry,
+    ),
   };
   saveData(nextData);
   return nextData;
@@ -6402,15 +6559,21 @@ function message(
   attachmentName: string,
   isRead: boolean,
   createdAt: string,
+  messageType: MessageType = senderRole === "system" ? "system" : attachmentName ? "file" : "text",
+  flaggedReason = "",
 ): Message {
   return {
     id,
     thread_id: threadId,
     sender_id: senderId,
     sender_role: senderRole,
+    message_type: messageType,
     body,
     attachment_url: attachmentUrl,
     attachment_name: attachmentName,
+    is_deleted: false,
+    is_flagged: Boolean(flaggedReason),
+    flagged_reason: flaggedReason,
     is_read: isRead,
     read_at: isRead ? createdAt : undefined,
     created_at: createdAt,

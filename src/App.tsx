@@ -34,9 +34,11 @@ import {
   calculatePurchaseSummary,
   calculateRequestQuality,
   calculateSupplierMatchScore,
+  blockMessageThread,
   canSubmitQuoteByPlan,
   categoryFocusStatusLabels,
   categoryDescriptions,
+  chatQuickTemplates,
   commissionFeeTypeLabels,
   convertAnalysisToPurchaseRecord,
   convertAnalysisToQuoteRequest,
@@ -50,6 +52,7 @@ import {
   createQuoteRequest,
   createSupplierApplication,
   dealStatusLabels,
+  detectSuspiciousMessage,
   deliveryNoteStatusLabels,
   closeMessageThread,
   ensureDealMessageThread,
@@ -159,6 +162,7 @@ import {
   updateAnalysisJob,
   updateFeedback,
   updateMessageReportStatus,
+  updateMessageThreadAdminMemo,
   updateNotificationSettings,
   updatePlatformFeeStatus,
   updatePurchaseAccountingStatus,
@@ -203,6 +207,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "견적요청", path: "/app/requests", icon: ClipboardList },
     { label: "자료 올리기", path: "/app/analyze", icon: SearchCheck },
     { label: "거래내역", path: "/app/deals", icon: ReceiptText },
+    { label: "문의", path: "/app/chats", icon: Bell },
     { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
     { label: "구매장부", path: "/app/accounting", icon: Landmark },
     { label: "내 정보", path: "/app/buyer/onboarding", icon: ShieldCheck },
@@ -212,6 +217,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "요청찾기", path: "/app/supplier/requests", icon: SearchCheck },
     { label: "견적관리", path: "/app/supplier/quotes", icon: ClipboardList },
     { label: "거래관리", path: "/app/supplier/deals", icon: PackageCheck },
+    { label: "문의", path: "/app/supplier/chats", icon: Bell },
     { label: "후기/신뢰도", path: "/app/supplier/reputation", icon: BadgeCheck },
     { label: "정산/요금제", path: "/app/supplier/billing", icon: Landmark },
     { label: "업체 정보", path: "/app/supplier/profile", icon: Building2 },
@@ -221,6 +227,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "견적요청 관리", path: "/app/admin/requests", icon: ClipboardList },
     { label: "공급업체 관리", path: "/app/admin/suppliers", icon: UsersRound },
     { label: "거래 관리", path: "/app/admin/deals", icon: ReceiptText },
+    { label: "문의/채팅", path: "/app/admin/chats", icon: Bell },
     { label: "자료분석 관리", path: "/app/admin/analysis", icon: SearchCheck },
     { label: "신고/분쟁", path: "/app/admin/reports", icon: Bell },
     { label: "후기/신뢰도", path: "/app/admin/reputation", icon: BadgeCheck },
@@ -288,6 +295,7 @@ type AppAuthSession = {
 function getRouteRole(path: string): UserRole | null {
   if (path.startsWith("/app/admin")) return "admin";
   if (path.startsWith("/app/supplier") || path === "/partners" || path === "/supplier/apply") return "supplier";
+  if (path.startsWith("/app/chats")) return "buyer";
   return null;
 }
 
@@ -321,6 +329,38 @@ function getNotificationPath(role: UserRole) {
   if (role === "supplier") return "/app/supplier/notifications";
   if (role === "admin") return "/app/admin/notifications";
   return "/app/notifications";
+}
+
+function supplierUserIdForUi(data: AppData, supplierId: string) {
+  return data.supplier_profiles.find((supplier) => supplier.id === supplierId)?.user_id ?? `${supplierId}-user`;
+}
+
+function getThreadsForRole(data: AppData, role: UserRole) {
+  if (role === "admin") return data.message_threads.filter((thread) => thread.status !== "archived");
+  if (role === "supplier") {
+    const supplier = getActiveSupplier(data);
+    return data.message_threads.filter((thread) => thread.supplier_id === supplier.id && thread.status !== "archived");
+  }
+  return data.message_threads.filter((thread) => thread.buyer_id === "buyer-1" && thread.status !== "archived");
+}
+
+function canAccessMessageThread(data: AppData, thread: MessageThread | undefined, role: UserRole) {
+  if (!thread) return false;
+  if (role === "admin") return true;
+  if (role === "supplier") return thread.supplier_id === getActiveSupplier(data).id;
+  return thread.buyer_id === "buyer-1";
+}
+
+function getThreadUnreadCount(data: AppData, threadId: string, userId?: string) {
+  return data.message_read_states
+    .filter((entry) => entry.thread_id === threadId && (!userId || entry.user_id === userId))
+    .reduce((sum, entry) => sum + entry.unread_count, 0);
+}
+
+function threadStatusTone(status: MessageThread["status"]): "orange" | "blue" | "green" | "gray" {
+  if (status === "reported") return "orange";
+  if (status === "blocked" || status === "closed" || status === "archived") return "gray";
+  return "green";
 }
 
 function getNotificationAudio(ref: { current: HTMLAudioElement | null }) {
@@ -782,13 +822,15 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/feedback") return <FeedbackPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/notifications/settings") return <NotificationSettingsPage data={data} setData={setData} userId="buyer-1" navigate={navigate} />;
   if (path === "/app/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId="buyer-1" userRole="buyer" />;
+  if (path === "/app/chats") return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="buyer" />;
+  if (path.startsWith("/app/chats/")) return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="buyer" selectedThreadId={path.split("/").pop() ?? ""} />;
   if (path === "/app/analyze") return <AnalyzePage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/analyze/history") return <AnalysisHistoryPage data={data} navigate={navigate} />;
   if (path.startsWith("/app/analyze/")) return <AnalysisDetailPage data={data} navigate={navigate} setData={setData} analysisId={path.split("/").pop() ?? ""} />;
   if (path.startsWith("/app/requests/new/from-analysis/")) return <AnalysisToRequestPage data={data} navigate={navigate} setData={setData} analysisId={path.split("/").pop() ?? ""} />;
   if (path === "/app/requests/new") return <NewRequestPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/requests") return <RequestsPage data={data} navigate={navigate} />;
-  if (path.startsWith("/app/requests/") && path.endsWith("/messages")) return <RequestMessagesPage data={data} navigate={navigate} setData={setData} requestId={path.split("/")[3] ?? ""} />;
+  if (path.startsWith("/app/requests/") && path.endsWith("/messages")) return <RequestMessagesPage data={data} navigate={navigate} setData={setData} requestId={path.split("/")[3] ?? ""} role="buyer" />;
   if (path.startsWith("/app/requests/")) return <RequestDetailPage data={data} navigate={navigate} setData={setData} requestId={path.split("/").pop() ?? ""} />;
   if (path.startsWith("/app/purchases/from-analysis/")) return <AnalysisToPurchasePage data={data} navigate={navigate} setData={setData} analysisId={path.split("/").pop() ?? ""} />;
   if (path === "/app/purchases/new") return <NewPurchasePage data={data} navigate={navigate} setData={setData} />;
@@ -808,6 +850,8 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path.startsWith("/app/suppliers/")) return <SupplierPublicProfilePage data={data} navigate={navigate} supplierId={path.split("/").pop() ?? ""} />;
   if (path === "/app/supplier") return <SupplierDashboard data={data} navigate={navigate} />;
   if (path === "/app/supplier/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId="sup-1-user" userRole="supplier" />;
+  if (path === "/app/supplier/chats") return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="supplier" />;
+  if (path.startsWith("/app/supplier/chats/")) return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="supplier" selectedThreadId={path.split("/").pop() ?? ""} />;
   if (path === "/app/supplier/reputation") return <SupplierReputationPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/billing") return <SupplierBillingPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/usage") return <SupplierUsagePage data={data} navigate={navigate} />;
@@ -818,7 +862,10 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/supplier/profile") return <SupplierProfilePage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/settings") return <SupplierSettingsPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/deals") return <SupplierDealsPage data={data} navigate={navigate} />;
+  if (path.startsWith("/app/supplier/deals/") && path.endsWith("/messages")) return <DealMessagesPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[4] ?? ""} role="supplier" />;
+  if (path.startsWith("/app/supplier/deals/")) return <DealDetailPage data={data} navigate={navigate} setData={setData} dealId={path.split("/").pop() ?? ""} role="supplier" />;
   if (path === "/app/supplier/requests") return <SupplierRequestsPage data={data} navigate={navigate} />;
+  if (path.startsWith("/app/supplier/requests/") && path.endsWith("/messages")) return <RequestMessagesPage data={data} navigate={navigate} setData={setData} requestId={path.split("/")[4] ?? ""} role="supplier" />;
   if (path.startsWith("/app/supplier/requests/")) return <SupplierRequestDetailPage data={data} navigate={navigate} setData={setData} requestId={path.split("/").pop() ?? ""} />;
   if (path === "/app/supplier/quotes") return <SupplierQuotesPage data={data} navigate={navigate} />;
   if (path === "/app/admin") return <AdminDashboard data={data} navigate={navigate} />;
@@ -842,8 +889,9 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/admin/beta/decision") return <AdminBetaDecisionPage data={data} navigate={navigate} />;
   if (path === "/app/admin/beta/scripts") return <AdminBetaScriptsPage navigate={navigate} />;
   if (path === "/app/admin/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId="admin-1" userRole="admin" admin />;
-  if (path === "/app/admin/messages") return <AdminMessagesPage data={data} navigate={navigate} />;
-  if (path.startsWith("/app/admin/messages/")) return <AdminMessageDetailPage data={data} navigate={navigate} setData={setData} threadId={path.split("/").pop() ?? ""} />;
+  if (path === "/app/admin/chats" || path === "/app/admin/messages") return <AdminMessagesPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/chat-reports") return <AdminMessagesPage data={data} navigate={navigate} initialFilter="신고됨" />;
+  if (path.startsWith("/app/admin/chats/") || path.startsWith("/app/admin/messages/")) return <AdminMessageDetailPage data={data} navigate={navigate} setData={setData} threadId={path.split("/").pop() ?? ""} />;
   if (path === "/app/admin/reports") return <AdminReportsPage data={data} navigate={navigate} />;
   if (path.startsWith("/app/admin/reports/")) return <AdminReportDetailPage data={data} navigate={navigate} setData={setData} reportId={path.split("/").pop() ?? ""} />;
   if (path === "/app/admin/reviews") return <AdminReviewsPage data={data} navigate={navigate} setData={setData} />;
@@ -863,6 +911,8 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/admin/analysis") return <AdminAnalysisPage data={data} navigate={navigate} />;
   if (path.startsWith("/app/admin/analysis/")) return <AdminAnalysisDetailPage data={data} navigate={navigate} analysisId={path.split("/").pop() ?? ""} />;
   if (path === "/app/admin/deals") return <AdminDealsPage data={data} navigate={navigate} />;
+  if (path.startsWith("/app/admin/deals/") && path.endsWith("/messages")) return <DealMessagesPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[4] ?? ""} role="admin" />;
+  if (path.startsWith("/app/admin/deals/")) return <DealDetailPage data={data} navigate={navigate} setData={setData} dealId={path.split("/").pop() ?? ""} role="admin" />;
   if (path === "/app/admin/purchases") return <AdminPurchasesPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/admin/accounting") return <AdminAccountingPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/admin/requests") return <AdminRequestsPage data={data} navigate={navigate} />;
@@ -1887,6 +1937,7 @@ function HomePage({ data, navigate }: PageProps) {
   const requestsWithQuotes = data.quote_requests.filter((request) => data.quotes.some((quote) => quote.quote_request_id === request.id) && !request.selected_quote_id).length;
   const activeDeals = data.deals.filter((deal) => deal.buyer_id === "buyer-1" && !["completed", "cancelled_by_buyer", "cancelled_by_supplier"].includes(deal.status)).length;
   const repeatablePurchases = data.purchase_records.filter((record) => record.buyer_id === "buyer-1").length;
+  const buyerUnreadChats = getThreadsForRole(data, "buyer").filter((thread) => getThreadUnreadCount(data, thread.id, "buyer-1") > 0).length;
 
   return (
     <Page>
@@ -1914,6 +1965,7 @@ function HomePage({ data, navigate }: PageProps) {
           <Metric label="도착한 견적" value={`${requestsWithQuotes}건`} icon={<ReceiptText />} desc="비교할 견적이 도착했어요." actionLabel="견적 비교하기" onClick={() => navigate("/app/requests")} />
           <Metric label="진행 중인 요청" value={`${activeRequests}건`} icon={<ClipboardList />} desc="업체들이 견적을 확인 중입니다." actionLabel="요청 확인하기" onClick={() => navigate("/app/requests")} />
           <Metric label="거래 진행" value={`${activeDeals}건`} icon={<PackageCheck />} desc="확인 필요한 거래가 있어요." actionLabel="거래 확인하기" onClick={() => navigate("/app/deals")} />
+          <Metric label="미확인 문의" value={`${buyerUnreadChats}건`} icon={<Bell />} desc="업체 답변을 확인합니다." actionLabel="문의함" onClick={() => navigate("/app/chats")} />
           <Metric label="구매장부 대기" value={`${purchaseSummary.pendingCount}건`} icon={<Landmark />} desc="장부에 정리할 구매내역이 있어요." actionLabel="구매내역 확인" onClick={() => navigate("/app/accounting")} />
         </div>
       </section>
@@ -1935,6 +1987,7 @@ function HomePage({ data, navigate }: PageProps) {
         <ActionTile title="거래명세서 올리기" desc="영수증, 거래명세서, 자필 메모를 자동으로 읽어 품목 후보를 만듭니다." icon={<Upload />} onClick={() => navigate("/app/analyze")} />
         <ActionTile title="견적 비교하기" desc={`도착한 견적 ${submittedQuotes}건의 금액, 납기, 결제 조건을 비교합니다.`} icon={<ReceiptText />} onClick={() => navigate("/app/requests")} />
         <ActionTile title="거래 확인하기" desc="선택한 업체와 납품 상태, 문의, 증빙 자료를 확인합니다." icon={<PackageCheck />} onClick={() => navigate("/app/deals")} />
+        <ActionTile title="업체 문의함" desc="견적/거래와 연결된 업체 문의를 모아 확인합니다." icon={<Bell />} onClick={() => navigate("/app/chats")} />
         <ActionTile title="구매장부 보기" desc="거래 완료 후 정리된 구매내역과 장부 반영 대기 건을 봅니다." icon={<Landmark />} onClick={() => navigate("/app/accounting")} />
         <ActionTile title="지난 구매 다시 견적" desc={`반복 구매 가능한 내역 ${repeatablePurchases}건을 다시 요청합니다.`} icon={<RefreshCcw />} onClick={() => navigate("/app/quick-reorder")} />
       </section>
@@ -2453,6 +2506,12 @@ function RequestDetailPage({ data, navigate, setData, requestId }: MutatingPageP
     if (result.dealId) navigate(`/app/deals/${result.dealId}`);
   }
 
+  function askSupplier(quote: Quote) {
+    const result = ensureRequestMessageThread(data, currentRequest.id, quote.supplier_id);
+    setData(result.data);
+    navigate(`/app/requests/${currentRequest.id}/messages`);
+  }
+
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/requests")} label="요청 목록" />
@@ -2485,6 +2544,7 @@ function RequestDetailPage({ data, navigate, setData, requestId }: MutatingPageP
                 isRejected={quoteEntry.status === "rejected"}
                 onSelect={() => setQuoteToConfirm(quoteEntry)}
                 onOpenSupplier={() => navigate(`/app/suppliers/${quoteEntry.supplier_id}`)}
+                onAskSupplier={() => askSupplier(quoteEntry)}
               />
             ))}
           </div>
@@ -2565,7 +2625,7 @@ function SupplierDealsPage({ data, navigate }: PageProps) {
         <Metric label="취소율 mock" value="6%" icon={<ShieldCheck />} />
       </div>
       <FilterTabs options={["전체", "거래 확인 대기", "거래 확정", "납품 준비 중", "배송/납품 중", "납품 완료", "거래 완료", "취소", "문제 발생"]} active={filter} onChange={setFilter} />
-      <DealTable data={data} deals={visibleDeals} navigate={navigate} basePath="/app/deals" role="supplier" />
+      <DealTable data={data} deals={visibleDeals} navigate={navigate} basePath="/app/supplier/deals" role="supplier" />
     </Page>
   );
 }
@@ -2594,7 +2654,7 @@ function AdminDealsPage({ data, navigate }: PageProps) {
         <Metric label="평균 거래금액" value={money(average)} icon={<BadgeCheck />} />
       </div>
       <FilterTabs options={["전체", "진행 중", "완료", "취소", "문제 발생", "포장재", "식자재", "설비/닥트/환기자재"]} active={filter} onChange={setFilter} />
-      <DealTable data={data} deals={visibleDeals} navigate={navigate} basePath="/app/deals" role="admin" />
+      <DealTable data={data} deals={visibleDeals} navigate={navigate} basePath="/app/admin/deals" role="admin" />
     </Page>
   );
 }
@@ -2711,7 +2771,7 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
         <div className="toolPanel">
           <SectionHeader title="상태 변경" />
           <DealActions deal={deal} role={role} onChange={changeStatus} onCancel={() => setModalMode("cancel")} onDispute={() => setModalMode("dispute")} navigate={navigate} purchaseRecordId={purchaseRecord?.id} />
-          <button className="secondaryButton full" type="button" onClick={() => navigate(`/app/deals/${currentDeal.id}/messages`)}>
+          <button className="secondaryButton full" type="button" onClick={() => navigate(role === "supplier" ? `/app/supplier/deals/${currentDeal.id}/messages` : role === "admin" ? `/app/admin/deals/${currentDeal.id}/messages` : `/app/deals/${currentDeal.id}/messages`)}>
             <Bell size={16} />
             거래 문의 보기
           </button>
@@ -4131,16 +4191,68 @@ function NotificationSettingsPage({ data, setData, userId, navigate }: { data: A
   );
 }
 
-function RequestMessagesPage({ data, navigate, setData, requestId }: MutatingPageProps & { requestId: string }) {
+function ChatInboxPage({ data, navigate, setData, role, selectedThreadId }: MutatingPageProps & { role: "buyer" | "supplier"; selectedThreadId?: string }) {
+  const userId = role === "supplier" ? supplierUserIdForUi(data, getActiveSupplier(data).id) : "buyer-1";
+  const threads = getThreadsForRole(data, role).sort((a, b) => b.last_message_at.localeCompare(a.last_message_at));
+  const selectedThread = threads.find((thread) => thread.id === selectedThreadId) ?? threads[0];
+  const quoteThreads = threads.filter((thread) => thread.thread_type === "quote_request").length;
+  const dealThreads = threads.filter((thread) => thread.thread_type === "deal").length;
+  const unreadThreads = threads.filter((thread) => getThreadUnreadCount(data, thread.id, userId) > 0).length;
+
+  return (
+    <Page>
+      <PageTitle
+        eyebrow={role === "supplier" ? "공급업체 문의" : "구매자 문의"}
+        title={role === "supplier" ? "구매자 문의함" : "업체 문의함"}
+        desc="견적요청과 거래에 연결된 문의만 모아 봅니다. 자유 DM이 아니라 거래 조건 확인용 대화입니다."
+      />
+      <div className="dashboardGrid">
+        <Metric label="전체 문의" value={`${threads.length}건`} icon={<Bell />} />
+        <Metric label="견적 문의" value={`${quoteThreads}건`} icon={<ClipboardList />} />
+        <Metric label="거래 문의" value={`${dealThreads}건`} icon={<ReceiptText />} />
+        <Metric label="미읽음" value={`${unreadThreads}건`} icon={<SearchCheck />} />
+      </div>
+      <section className="messageLayout">
+        <aside className="threadListPanel">
+          <SectionHeader title="최근 문의" />
+          {threads.map((thread) => (
+            <ThreadListButton
+              key={thread.id}
+              data={data}
+              thread={thread}
+              userId={userId}
+              active={selectedThread?.id === thread.id}
+              onClick={() => navigate(role === "supplier" ? `/app/supplier/chats/${thread.id}` : `/app/chats/${thread.id}`)}
+            />
+          ))}
+          {threads.length === 0 && <p className="mutedText">아직 연결된 문의가 없습니다.</p>}
+        </aside>
+        {selectedThread && canAccessMessageThread(data, selectedThread, role) ? (
+          <MessageThreadPanel data={data} setData={setData} thread={selectedThread} currentUserId={userId} currentRole={role} />
+        ) : (
+          <EmptyState icon={<Bell />} title="문의 스레드를 선택해주세요." desc="견적 또는 거래와 연결된 대화만 열 수 있습니다." />
+        )}
+      </section>
+    </Page>
+  );
+}
+
+function RequestMessagesPage({ data, navigate, setData, requestId, role }: MutatingPageProps & { requestId: string; role: "buyer" | "supplier" }) {
   const request = data.quote_requests.find((entry) => entry.id === requestId);
   const [selectedThreadId, setSelectedThreadId] = useState("");
   if (!request) return <NotFound navigate={navigate} />;
+  const supplier = getActiveSupplier(data);
   const requestThreads = data.message_threads.filter((entry) => entry.thread_type === "quote_request" && entry.related_entity_id === requestId);
-  const selectedThread = data.message_threads.find((entry) => entry.id === (selectedThreadId || requestThreads[0]?.id));
-  const availableSuppliers = data.supplier_profiles
-    .filter((supplier) => calculateSupplierMatchScore(supplier, request, data) >= 70)
-    .sort((a, b) => calculateSupplierMatchScore(b, request, data) - calculateSupplierMatchScore(a, request, data))
-    .slice(0, 4);
+  const roleThreads = role === "supplier" ? requestThreads.filter((entry) => entry.supplier_id === supplier.id) : requestThreads.filter((entry) => entry.buyer_id === request.buyer_id);
+  const selectedThread = roleThreads.find((entry) => entry.id === (selectedThreadId || roleThreads[0]?.id));
+  const quotedSupplierIds = new Set(data.quotes.filter((quote) => quote.quote_request_id === request.id).map((quote) => quote.supplier_id));
+  const availableSuppliers =
+    role === "supplier"
+      ? [supplier]
+      : data.supplier_profiles
+          .filter((entry) => quotedSupplierIds.has(entry.id))
+          .sort((a, b) => calculateSupplierMatchScore(b, request, data) - calculateSupplierMatchScore(a, request, data));
+  const currentUserId = role === "supplier" ? supplierUserIdForUi(data, supplier.id) : request.buyer_id;
 
   function startThread(supplierId: string) {
     const result = ensureRequestMessageThread(data, requestId, supplierId);
@@ -4150,36 +4262,38 @@ function RequestMessagesPage({ data, navigate, setData, requestId }: MutatingPag
 
   return (
     <Page>
-      <BackButton onClick={() => navigate(`/app/requests/${requestId}`)} label="견적요청 상세" />
-      <PageTitle eyebrow="견적요청 문의" title={request.title} desc="업체에 추가 조건을 문의해보세요. 개인정보나 외부 결제 요청은 주의해주세요." />
+      <BackButton onClick={() => navigate(role === "supplier" ? `/app/supplier/requests/${requestId}` : `/app/requests/${requestId}`)} label={role === "supplier" ? "요청 상세" : "견적요청 상세"} />
+      <PageTitle eyebrow="견적 문의" title={request.title} desc={role === "supplier" ? "견적 제출 전 필요한 조건만 빠르게 확인합니다." : "견적을 제출한 업체와 조건을 확인합니다. 개인정보나 외부 결제 요청은 주의해주세요."} />
       <section className="messageLayout">
         <aside className="threadListPanel">
           <SectionHeader title="공급업체별 문의" />
-          {requestThreads.map((thread) => (
-            <ThreadListButton key={thread.id} data={data} thread={thread} active={selectedThread?.id === thread.id} onClick={() => setSelectedThreadId(thread.id)} />
+          {roleThreads.map((thread) => (
+            <ThreadListButton key={thread.id} data={data} thread={thread} userId={currentUserId} active={selectedThread?.id === thread.id} onClick={() => setSelectedThreadId(thread.id)} />
           ))}
-          <SectionHeader title="문의 시작" />
+          {roleThreads.length === 0 && <p className="mutedText">아직 열린 문의가 없습니다.</p>}
+          <SectionHeader title={role === "supplier" ? "구매자에게 문의" : "문의 시작"} />
           {availableSuppliers.map((supplier) => (
             <button className="miniRow" type="button" key={supplier.id} onClick={() => startThread(supplier.id)}>
               <span>{supplier.business_name}</span>
-              <strong>문의</strong>
+              <strong>{role === "supplier" ? "조건 확인" : "문의"}</strong>
             </button>
           ))}
         </aside>
         {selectedThread ? (
-          <MessageThreadPanel data={data} setData={setData} thread={selectedThread} currentUserId="buyer-1" currentRole="buyer" />
+          <MessageThreadPanel data={data} setData={setData} thread={selectedThread} currentUserId={currentUserId} currentRole={role} />
         ) : (
-          <EmptyState icon={<Bell />} title="문의할 업체를 선택해주세요." desc="공급업체별로 문의 스레드가 분리됩니다." />
+          <EmptyState icon={<Bell />} title={role === "supplier" ? "조건 확인 문의를 시작할 수 있습니다." : "문의할 업체를 선택해주세요."} desc="견적요청과 연결된 업체별 문의만 표시됩니다." />
         )}
       </section>
     </Page>
   );
 }
 
-function DealMessagesPage({ data, navigate, setData, dealId }: MutatingPageProps & { dealId: string }) {
+function DealMessagesPage({ data, navigate, setData, dealId, role = "buyer" }: MutatingPageProps & { dealId: string; role?: "buyer" | "supplier" | "admin" }) {
   const deal = data.deals.find((entry) => entry.id === dealId);
   if (!deal) return <NotFound navigate={navigate} />;
   const thread = data.message_threads.find((entry) => entry.thread_type === "deal" && entry.related_entity_id === dealId);
+  const currentUserId = role === "supplier" ? supplierUserIdForUi(data, deal.supplier_id) : role === "admin" ? "admin-1" : deal.buyer_id;
 
   function startThread() {
     const result = ensureDealMessageThread(data, dealId);
@@ -4188,7 +4302,7 @@ function DealMessagesPage({ data, navigate, setData, dealId }: MutatingPageProps
 
   return (
     <Page>
-      <BackButton onClick={() => navigate(`/app/deals/${dealId}`)} label="거래 상세" />
+      <BackButton onClick={() => navigate(role === "supplier" ? `/app/supplier/deals/${dealId}` : role === "admin" ? `/app/admin/deals/${dealId}` : `/app/deals/${dealId}`)} label="거래 상세" />
       <PageTitle eyebrow="거래 문의" title={deal.title} desc="납품 시간, 배송 위치, 증빙자료 같은 거래 전후 내용을 안전하게 남깁니다." />
       <section className="detailBand">
         <div className="detailHeader">
@@ -4201,7 +4315,7 @@ function DealMessagesPage({ data, navigate, setData, dealId }: MutatingPageProps
         </div>
       </section>
       {thread ? (
-        <MessageThreadPanel data={data} setData={setData} thread={thread} currentUserId="buyer-1" currentRole="buyer" />
+        <MessageThreadPanel data={data} setData={setData} thread={thread} currentUserId={currentUserId} currentRole={role} />
       ) : (
         <EmptyState icon={<ReceiptText />} title="아직 거래 문의가 없습니다." desc="거래 조율이 필요하면 문의 스레드를 시작하세요." />
       )}
@@ -4210,13 +4324,50 @@ function DealMessagesPage({ data, navigate, setData, dealId }: MutatingPageProps
   );
 }
 
+function chatTemplatesForThread(thread: MessageThread, role: Message["sender_role"]) {
+  if (role === "admin") return chatQuickTemplates.admin;
+  if (thread.thread_type === "deal") return role === "supplier" ? chatQuickTemplates.supplierDeal : chatQuickTemplates.buyerDeal;
+  return role === "supplier" ? chatQuickTemplates.supplierQuote : chatQuickTemplates.buyerQuote;
+}
+
+function threadContextRows(data: AppData, thread: MessageThread) {
+  if (thread.thread_type === "deal") {
+    const deal = data.deals.find((entry) => entry.id === thread.related_entity_id);
+    if (!deal) return [];
+    return [
+      ["거래번호", deal.id],
+      ["상태", dealStatusLabels[deal.status]],
+      ["최종금액", money(deal.final_amount)],
+      ["납품일", deal.confirmed_delivery_date || deal.desired_delivery_date],
+      ["세금계산서", yesNo(deal.tax_invoice_available)],
+      ["카드결제", yesNo(deal.card_payment_available)],
+    ];
+  }
+
+  const request = data.quote_requests.find((entry) => entry.id === thread.related_entity_id);
+  const quote = data.quotes.find((entry) => entry.quote_request_id === thread.related_entity_id && entry.supplier_id === thread.supplier_id);
+  return [
+    ["업체", supplierName(data, thread.supplier_id)],
+    ["카테고리", request?.category_name ?? "견적요청"],
+    ["지역", request?.delivery_region ?? "-"],
+    ["견적금액", quote ? money(quote.final_amount) : "제출 전"],
+    ["납품일", quote?.available_delivery_date ?? request?.desired_delivery_date ?? "-"],
+    ["세금계산서", quote ? yesNo(quote.tax_invoice_available) : request?.need_tax_invoice ? "필요" : "협의"],
+  ];
+}
+
 function MessageThreadPanel({ data, setData, thread, currentUserId, currentRole }: { data: AppData; setData: (data: AppData) => void; thread: MessageThread; currentUserId: string; currentRole: Message["sender_role"] }) {
   const [body, setBody] = useState("");
   const [attachmentName, setAttachmentName] = useState("");
   const [reportTargetId, setReportTargetId] = useState("");
   const [reportReason, setReportReason] = useState("외부 결제 유도");
   const [reportDetail, setReportDetail] = useState("");
+  const [warningDraft, setWarningDraft] = useState<{ body: string; attachmentName: string; reason: string } | null>(null);
   const messages = data.messages.filter((entry) => entry.thread_id === thread.id).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const templates = chatTemplatesForThread(thread, currentRole);
+  const contextRows = threadContextRows(data, thread);
+  const composerDisabled = thread.status === "closed" || thread.status === "blocked" || thread.status === "archived";
+  const flaggedCount = messages.filter((entry) => entry.is_flagged).length;
 
   useEffect(() => {
     const readState = data.message_read_states.find((entry) => entry.thread_id === thread.id && entry.user_id === currentUserId);
@@ -4227,9 +4378,24 @@ function MessageThreadPanel({ data, setData, thread, currentUserId, currentRole 
 
   function submitMessage(event: FormEvent) {
     event.preventDefault();
+    if (warningDraft) return;
+    const suspicious = detectSuspiciousMessage(body);
+    if (suspicious.isSuspicious && !warningDraft) {
+      setWarningDraft({ body, attachmentName, reason: suspicious.reason });
+      return;
+    }
     setData(sendThreadMessage(data, thread.id, currentUserId, currentRole, body, attachmentName));
     setBody("");
     setAttachmentName("");
+    setWarningDraft(null);
+  }
+
+  function sendWarningDraft() {
+    if (!warningDraft) return;
+    setData(sendThreadMessage(data, thread.id, currentUserId, currentRole, warningDraft.body, warningDraft.attachmentName));
+    setBody("");
+    setAttachmentName("");
+    setWarningDraft(null);
   }
 
   function submitReport() {
@@ -4244,16 +4410,30 @@ function MessageThreadPanel({ data, setData, thread, currentUserId, currentRole 
         <div>
           <span className="eyebrow">{messageThreadTypeLabels[thread.thread_type]}</span>
           <h2>{thread.title}</h2>
-          <p>{messageThreadStatusLabels[thread.status]}</p>
+          <p>{messageThreadStatusLabels[thread.status]} · 5~10초 간격 새로고침 또는 화면 이동 시 최신 문의를 확인하는 MVP 방식</p>
         </div>
-        <StatusBadge tone={thread.status === "reported" ? "orange" : thread.status === "closed" ? "gray" : "green"}>{messageThreadStatusLabels[thread.status]}</StatusBadge>
+        <StatusBadge tone={threadStatusTone(thread.status)}>{messageThreadStatusLabels[thread.status]}</StatusBadge>
+      </div>
+      <div className="chatContextCard">
+        {contextRows.map(([label, value]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="chatSafetyNotice">
+        <ShieldCheck size={16} />
+        <span>연락처, 계좌번호, 외부결제 유도는 경고 후 관리자 위험 대화로 표시됩니다. 거래 조건은 싸와 채팅에 남겨주세요.</span>
+        {flaggedCount > 0 && <StatusBadge tone="orange">위험 메시지 {flaggedCount}건</StatusBadge>}
       </div>
       <div className="messageList">
         {messages.map((entry) => (
-          <article className={entry.sender_role === "system" ? "messageBubble system" : entry.sender_id === currentUserId ? "messageBubble mine" : "messageBubble theirs"} key={entry.id}>
+          <article className={`${entry.sender_role === "system" ? "messageBubble system" : entry.sender_id === currentUserId ? "messageBubble mine" : "messageBubble theirs"}${entry.is_flagged ? " flagged" : ""}`} key={entry.id}>
             <strong>{messageSenderLabel(data, entry)}</strong>
             <p>{entry.body}</p>
             {entry.attachment_name && <small>첨부: {entry.attachment_name}</small>}
+            {entry.is_flagged && <small className="dangerText">{entry.flagged_reason || "외부거래/연락처 의심 메시지"}</small>}
             <div className="messageMeta">
               <span>{entry.created_at.slice(0, 16).replace("T", " ")}</span>
               {entry.sender_role !== "system" && entry.sender_id !== currentUserId && <button type="button" onClick={() => setReportTargetId(entry.id)}>신고</button>}
@@ -4261,11 +4441,29 @@ function MessageThreadPanel({ data, setData, thread, currentUserId, currentRole 
           </article>
         ))}
       </div>
+      <div className="quickReplyRail">
+        {templates.map((template) => (
+          <button type="button" key={template} onClick={() => setBody(template)} disabled={composerDisabled}>
+            {template}
+          </button>
+        ))}
+      </div>
       <form className="messageComposer" onSubmit={submitMessage}>
-        <input value={body} onChange={(event) => setBody(event.target.value)} placeholder="문의 내용을 입력하세요." />
-        <input value={attachmentName} onChange={(event) => setAttachmentName(event.target.value)} placeholder="첨부파일명 mock" />
-        <button className="primaryButton compact" type="submit">전송</button>
+        <input value={body} onChange={(event) => setBody(event.target.value)} placeholder={composerDisabled ? "종료되었거나 차단된 문의입니다." : "문의 내용을 입력하세요."} disabled={composerDisabled} />
+        <input value={attachmentName} onChange={(event) => setAttachmentName(event.target.value)} placeholder="첨부파일명 mock" disabled={composerDisabled} />
+        <button className="primaryButton compact" type="submit" disabled={composerDisabled}>전송</button>
       </form>
+      {warningDraft && (
+        <div className="warningInline" role="alert">
+          <strong>외부거래/연락처 정보가 포함된 것 같아요.</strong>
+          <p>싸와 밖에서 진행한 거래는 분쟁 발생 시 확인이 어려울 수 있습니다. 그래도 전송하면 관리자 위험 대화로 표시됩니다.</p>
+          <small>{warningDraft.reason}</small>
+          <div className="toolbar">
+            <button className="primaryButton compact" type="button" onClick={sendWarningDraft}>그래도 전송</button>
+            <button className="ghostButton compact" type="button" onClick={() => setWarningDraft(null)}>다시 수정</button>
+          </div>
+        </div>
+      )}
       {reportTargetId && (
         <div className="reportBox">
           <SectionHeader title="메시지 신고" />
@@ -4283,36 +4481,52 @@ function MessageThreadPanel({ data, setData, thread, currentUserId, currentRole 
   );
 }
 
-function AdminMessagesPage({ data, navigate }: PageProps) {
-  const [filter, setFilter] = useState("전체");
+function AdminMessagesPage({ data, navigate, initialFilter = "전체" }: PageProps & { initialFilter?: string }) {
+  const [filter, setFilter] = useState(initialFilter);
   const threads = data.message_threads.filter((thread) => {
     if (filter === "견적요청 문의") return thread.thread_type === "quote_request";
     if (filter === "거래 문의") return thread.thread_type === "deal";
     if (filter === "신고됨") return thread.status === "reported";
+    if (filter === "외부거래 의심") return data.messages.some((messageEntry) => messageEntry.thread_id === thread.id && messageEntry.is_flagged);
+    if (filter === "미응답 오래됨") return getThreadUnreadCount(data, thread.id) > 0 && thread.last_message_at < "2026-07-04T11:00:00.000Z";
     if (filter === "종료됨") return thread.status === "closed";
+    if (filter === "차단됨") return thread.status === "blocked";
     if (filter === "관리자 확인 필요") return data.message_reports.some((report) => report.thread_id === thread.id && report.status === "pending");
     return true;
   });
+  const suspiciousCount = data.messages.filter((messageEntry) => messageEntry.is_flagged).length;
+  const reportedCount = data.message_threads.filter((thread) => thread.status === "reported").length;
+  const pendingReportCount = data.message_reports.filter((report) => report.status === "pending").length;
 
   return (
     <Page>
       <PageTitle eyebrow="관리자" title="문의/분쟁 메시지 모니터링" desc="견적요청과 거래 문의, 신고된 메시지를 운영자가 확인합니다." />
-      <FilterTabs options={["전체", "견적요청 문의", "거래 문의", "신고됨", "종료됨", "관리자 확인 필요"]} active={filter} onChange={setFilter} />
+      <div className="dashboardGrid">
+        <Metric label="전체 문의" value={`${data.message_threads.length}건`} icon={<Bell />} />
+        <Metric label="신고됨" value={`${reportedCount}건`} icon={<ShieldCheck />} />
+        <Metric label="외부거래 의심" value={`${suspiciousCount}건`} icon={<SearchCheck />} />
+        <Metric label="처리 대기" value={`${pendingReportCount}건`} icon={<ReceiptText />} />
+      </div>
+      <FilterTabs options={["전체", "견적요청 문의", "거래 문의", "신고됨", "외부거래 의심", "미응답 오래됨", "차단됨", "종료됨", "관리자 확인 필요"]} active={filter} onChange={setFilter} />
       <div className="tableWrap">
         <table>
-          <thead><tr><th>스레드</th><th>유형</th><th>구매자</th><th>공급업체</th><th>상태</th><th>미읽음</th><th>마지막 메시지</th></tr></thead>
+          <thead><tr><th>스레드</th><th>유형</th><th>구매자</th><th>공급업체</th><th>상태</th><th>위험</th><th>미읽음</th><th>마지막 메시지</th></tr></thead>
           <tbody>
-            {threads.map((thread) => (
-              <tr key={thread.id} onClick={() => navigate(`/app/admin/messages/${thread.id}`)}>
-                <td>{thread.title}</td>
-                <td>{messageThreadTypeLabels[thread.thread_type]}</td>
-                <td>{buyerNameForUi(data, thread.buyer_id)}</td>
-                <td>{supplierName(data, thread.supplier_id)}</td>
-                <td><StatusBadge tone={thread.status === "reported" ? "orange" : thread.status === "closed" ? "gray" : "green"}>{messageThreadStatusLabels[thread.status]}</StatusBadge></td>
-                <td>{data.message_read_states.filter((entry) => entry.thread_id === thread.id).reduce((sum, entry) => sum + entry.unread_count, 0)}건</td>
-                <td>{thread.last_message_at.slice(0, 16).replace("T", " ")}</td>
-              </tr>
-            ))}
+            {threads.map((thread) => {
+              const flaggedCount = data.messages.filter((entry) => entry.thread_id === thread.id && entry.is_flagged).length;
+              return (
+                <tr key={thread.id} onClick={() => navigate(`/app/admin/chats/${thread.id}`)}>
+                  <td>{thread.title}</td>
+                  <td>{messageThreadTypeLabels[thread.thread_type]}</td>
+                  <td>{buyerNameForUi(data, thread.buyer_id)}</td>
+                  <td>{supplierName(data, thread.supplier_id)}</td>
+                  <td><StatusBadge tone={threadStatusTone(thread.status)}>{messageThreadStatusLabels[thread.status]}</StatusBadge></td>
+                  <td>{flaggedCount > 0 ? <StatusBadge tone="orange">{flaggedCount}건</StatusBadge> : "정상"}</td>
+                  <td>{getThreadUnreadCount(data, thread.id)}건</td>
+                  <td>{thread.last_message_at.slice(0, 16).replace("T", " ")}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -4322,18 +4536,20 @@ function AdminMessagesPage({ data, navigate }: PageProps) {
 
 function AdminMessageDetailPage({ data, navigate, setData, threadId }: MutatingPageProps & { threadId: string }) {
   const thread = data.message_threads.find((entry) => entry.id === threadId);
+  const [adminMemo, setAdminMemo] = useState(thread?.admin_memo ?? "");
   if (!thread) return <NotFound navigate={navigate} />;
   const reports = data.message_reports.filter((entry) => entry.thread_id === thread.id);
+  const flaggedMessages = data.messages.filter((entry) => entry.thread_id === thread.id && entry.is_flagged);
 
   return (
     <Page>
-      <BackButton onClick={() => navigate("/app/admin/messages")} label="메시지 모니터링" />
+      <BackButton onClick={() => navigate("/app/admin/chats")} label="문의/채팅 모니터링" />
       <PageTitle eyebrow="관리자" title={thread.title} desc="참여자, 전체 메시지, 신고 내역과 처리 상태를 확인합니다." />
       <div className="dashboardGrid">
         <Metric label="메시지" value={`${data.messages.filter((entry) => entry.thread_id === thread.id).length}개`} icon={<Bell />} />
         <Metric label="신고" value={`${reports.length}건`} icon={<ShieldCheck />} />
         <Metric label="상태" value={messageThreadStatusLabels[thread.status]} icon={<ReceiptText />} />
-        <Metric label="유형" value={messageThreadTypeLabels[thread.thread_type]} icon={<ClipboardList />} />
+        <Metric label="위험 메시지" value={`${flaggedMessages.length}건`} icon={<SearchCheck />} />
       </div>
       <MessageThreadPanel data={data} setData={setData} thread={thread} currentUserId="admin-1" currentRole="admin" />
       <section className="toolPanel">
@@ -4353,7 +4569,29 @@ function AdminMessageDetailPage({ data, navigate, setData, threadId }: MutatingP
           ))}
           {reports.length === 0 && <p className="mutedText">신고 내역이 없습니다.</p>}
         </div>
-        <button className="ghostButton compact" type="button" onClick={() => setData(closeMessageThread(data, thread.id))}>스레드 종료</button>
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="관리자 조치" />
+        {flaggedMessages.length > 0 && (
+          <div className="reportList">
+            {flaggedMessages.map((entry) => (
+              <article className="reportCard" key={entry.id}>
+                <strong>{entry.flagged_reason}</strong>
+                <p>{entry.body}</p>
+                <small>{entry.created_at.slice(0, 16).replace("T", " ")}</small>
+              </article>
+            ))}
+          </div>
+        )}
+        <label className="field">
+          관리자 메모
+          <textarea value={adminMemo} onChange={(event) => setAdminMemo(event.target.value)} placeholder="신고 확인, 경고 발송, 차단 사유를 남겨주세요." />
+        </label>
+        <div className="toolbar">
+          <button className="secondaryButton compact" type="button" onClick={() => setData(updateMessageThreadAdminMemo(data, thread.id, adminMemo))}>메모 저장</button>
+          <button className="ghostButton compact" type="button" onClick={() => setData(closeMessageThread(data, thread.id))}>스레드 종료</button>
+          <button className="ghostButton compact dangerButton" type="button" onClick={() => setData(blockMessageThread(data, thread.id, adminMemo || "외부거래/분쟁 리스크로 관리자 차단"))}>대화 차단</button>
+        </div>
       </section>
     </Page>
   );
@@ -5029,12 +5267,13 @@ function UnreadBadge({ count }: { count: number }) {
   return <span className="unreadBadge">{count > 99 ? "99+" : count}</span>;
 }
 
-function ThreadListButton({ data, thread, active, onClick }: { data: AppData; thread: MessageThread; active: boolean; onClick: () => void }) {
-  const unread = data.message_read_states.filter((entry) => entry.thread_id === thread.id).reduce((sum, entry) => sum + entry.unread_count, 0);
+function ThreadListButton({ data, thread, active, onClick, userId }: { data: AppData; thread: MessageThread; active: boolean; onClick: () => void; userId?: string }) {
+  const unread = getThreadUnreadCount(data, thread.id, userId);
+  const flaggedCount = data.messages.filter((entry) => entry.thread_id === thread.id && entry.is_flagged).length;
   return (
     <button className={active ? "threadListButton active" : "threadListButton"} type="button" onClick={onClick}>
       <span>{thread.title}</span>
-      <small>{supplierName(data, thread.supplier_id)} · {thread.last_message_at.slice(5, 16).replace("T", " ")}</small>
+      <small>{supplierName(data, thread.supplier_id)} · {thread.last_message_at.slice(5, 16).replace("T", " ")}{flaggedCount > 0 ? " · 위험 표시" : ""}</small>
       {unread > 0 && <UnreadBadge count={unread} />}
     </button>
   );
@@ -5533,6 +5772,9 @@ function SupplierDashboard({ data, navigate }: PageProps) {
   const selectedQuotes = myQuotes.filter((quoteEntry) => quoteEntry.status === "selected").length;
   const pendingQuoteRequests = matchingRequests.filter((request) => !myQuotes.some((quote) => quote.quote_request_id === request.id));
   const todayRequests = matchingRequests.filter((request) => request.created_at.slice(0, 10) === today || request.status === "open").length;
+  const supplierThreadUserId = supplierUserIdForUi(data, supplier.id);
+  const supplierThreads = getThreadsForRole(data, "supplier");
+  const unansweredThreads = supplierThreads.filter((thread) => getThreadUnreadCount(data, thread.id, supplierThreadUserId) > 0);
 
   return (
     <Page>
@@ -5553,6 +5795,7 @@ function SupplierDashboard({ data, navigate }: PageProps) {
         <Metric label="견적 제출 대기" value={`${pendingQuoteRequests.length}건`} icon={<SearchCheck />} desc="아직 견적을 보내지 않은 요청입니다." actionLabel="견적 보내기" onClick={() => navigate("/app/supplier/requests")} />
         <Metric label="제출한 견적" value={`${myQuotes.length}건`} icon={<ReceiptText />} desc="선택 여부와 문의를 확인합니다." actionLabel="견적관리" onClick={() => navigate("/app/supplier/quotes")} />
         <Metric label="선택된 견적" value={`${selectedQuotes}건`} icon={<PackageCheck />} desc="납품과 거래 상태를 관리합니다." actionLabel="거래관리" onClick={() => navigate("/app/supplier/deals")} />
+        <Metric label="미응답 문의" value={`${unansweredThreads.length}건`} icon={<Bell />} desc="구매자 문의와 거래 문의를 확인합니다." actionLabel="문의함" onClick={() => navigate("/app/supplier/chats")} />
         <Metric label="이번 달 예상 거래액" value={money(stats.total_deal_amount)} icon={<ReceiptText />} desc="완료/진행 거래 기준 금액입니다." actionLabel="정산 보기" onClick={() => navigate("/app/supplier/settlements")} />
         <Metric label="견적 응답률" value={`${stats.response_rate}%`} icon={<BadgeCheck />} desc="응답 품질과 신뢰도에 반영됩니다." actionLabel="신뢰도 보기" onClick={() => navigate("/app/supplier/reputation")} />
         <Metric label="평균 응답 시간" value={stats.average_response_minutes ? `${stats.average_response_minutes}분` : "신규"} icon={<RefreshCcw />} />
@@ -5571,6 +5814,7 @@ function SupplierDashboard({ data, navigate }: PageProps) {
         <ActionTile title="응답 개선 가이드" desc="선택되는 견적 작성 기준과 응답률 개선 방법을 봅니다." icon={<BadgeCheck />} onClick={() => navigate("/app/supplier/response-guide")} />
         <ActionTile title="제출한 견적" desc="내가 제출한 견적과 선택 여부를 확인합니다." icon={<ReceiptText />} onClick={() => navigate("/app/supplier/quotes")} />
         <ActionTile title="거래관리" desc="선택된 거래의 납품 상태를 관리합니다." icon={<PackageCheck />} onClick={() => navigate("/app/supplier/deals")} />
+        <ActionTile title="구매자 문의" desc="견적/거래와 연결된 문의에 빠르게 답변합니다." icon={<Bell />} onClick={() => navigate("/app/supplier/chats")} />
         <ActionTile title="신뢰도/후기" desc="내 업체 신뢰도, 후기, 운영 가이드를 봅니다." icon={<ShieldCheck />} onClick={() => navigate("/app/supplier/reputation")} />
         <ActionTile title="요금제/이용현황" desc="견적 참여 한도와 업그레이드 안내를 봅니다." icon={<BadgeCheck />} onClick={() => navigate("/app/supplier/billing")} />
         <ActionTile title="정산 예정 내역" desc="거래 완료 후 플랫폼 수수료를 확인합니다." icon={<Landmark />} onClick={() => navigate("/app/supplier/settlements")} />
@@ -5666,6 +5910,12 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
   const qualityScore = currentRequest.request_quality_score ?? calculateRequestQuality(currentRequest, items, attachments);
   const quickBaseAmount = currentRequest.budget_max || currentRequest.previous_amount || Math.max(120000, items.reduce((sum, entry) => sum + entry.quantity * 1200, 0));
 
+  function startBuyerInquiry() {
+    const result = ensureRequestMessageThread(data, currentRequest.id, supplier.id);
+    setData(result.data);
+    navigate(`/app/supplier/requests/${currentRequest.id}/messages`);
+  }
+
   function applyQuickQuote(mode: "standard" | "lowest" | "fast") {
     const discount = mode === "lowest" ? 0.92 : mode === "fast" ? 1.04 : 1;
     setDraft((current) => ({
@@ -5699,6 +5949,12 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
     <Page>
       <BackButton onClick={() => navigate("/app/supplier/requests")} label="견적 가능 요청" />
       <RequestSummary data={data} request={currentRequest} items={items} />
+      <div className="toolbar messageShortcut">
+        <button className="secondaryButton compact" type="button" onClick={startBuyerInquiry}>
+          <Bell size={16} />
+          구매자에게 문의
+        </button>
+      </div>
       <SupplierStatusNotice supplier={supplier} navigate={navigate} />
       <SupplierRequestInsight request={currentRequest} qualityScore={qualityScore} attachmentsCount={attachments.length} />
       <SupplierQuoteFitPanel supplier={supplier} request={currentRequest} />
@@ -8585,7 +8841,7 @@ function QuoteItemComparisonTable({ data, quotes, items }: { data: AppData; quot
   );
 }
 
-function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFastest, isSelected, isRejected, onSelect, onOpenSupplier }: {
+function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFastest, isSelected, isRejected, onSelect, onOpenSupplier, onAskSupplier }: {
   data: AppData;
   quote: Quote;
   requestItems: QuoteRequestItem[];
@@ -8596,6 +8852,7 @@ function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFas
   isRejected: boolean;
   onSelect: () => void;
   onOpenSupplier: () => void;
+  onAskSupplier: () => void;
 }) {
   const supplier = data.supplier_profiles.find((entry) => entry.id === quote.supplier_id);
   const stats = supplier ? supplierStatsFor(data, supplier.id) : null;
@@ -8660,9 +8917,9 @@ function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFas
           <Store size={17} />
           업체 상세보기
         </button>
-        <button className="ghostButton full" type="button">
+        <button className="ghostButton full" type="button" onClick={onAskSupplier}>
           <ReceiptText size={17} />
-          문의하기
+          업체에 문의하기
         </button>
       </div>
       <button className={isSelected ? "selectedButton" : "primaryButton full"} type="button" onClick={onSelect} disabled={isSelected}>

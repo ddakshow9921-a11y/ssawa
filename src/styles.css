@@ -2162,6 +2162,50 @@ code {
   color: var(--muted);
 }
 
+.chatContextCard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.chatContextCard div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.chatContextCard span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.chatContextCard strong {
+  color: var(--navy);
+  overflow-wrap: anywhere;
+}
+
+.chatSafetyNotice,
+.warningInline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--orange-line);
+  background: var(--orange-soft);
+  color: var(--charcoal);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chatSafetyNotice span {
+  flex: 1;
+  min-width: 0;
+}
+
 .messageList {
   min-height: 360px;
   max-height: 560px;
@@ -2187,6 +2231,11 @@ code {
   justify-self: end;
   border-color: var(--orange-line);
   background: var(--orange-soft);
+}
+
+.messageBubble.flagged {
+  border-color: #f59e0b;
+  box-shadow: inset 3px 0 0 #f59e0b;
 }
 
 .messageBubble.system {
@@ -2223,6 +2272,31 @@ code {
   font-weight: 900;
 }
 
+.quickReplyRail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.quickReplyRail button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fbfcfd;
+  color: var(--charcoal);
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.quickReplyRail button:disabled {
+  opacity: 0.45;
+}
+
 .messageComposer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(180px, 0.35fr) auto;
@@ -2247,6 +2321,27 @@ code {
   padding: 14px;
   border-top: 1px solid var(--line);
   background: #fffaf7;
+}
+
+.warningInline {
+  display: grid;
+  align-items: start;
+  gap: 8px;
+  border-top: 1px solid var(--orange-line);
+}
+
+.warningInline p,
+.warningInline small {
+  margin: 0;
+}
+
+.warningInline small {
+  color: #9a3412;
+}
+
+.dangerButton {
+  color: #b42318;
+  border-color: #f4b5ad;
 }
 
 .reportBox textarea {
@@ -4403,6 +4498,7 @@ tr.selectedRow {
   }
 
   .notificationCard,
+  .chatContextCard,
   .messageComposer {
     grid-template-columns: 1fr;
   }
