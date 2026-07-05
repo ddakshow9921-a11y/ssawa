@@ -97,4 +97,4 @@ GEMINI_MODEL=gemini-3.5-flash
 NTS_BUSINESS_SERVICE_KEY=국세청 사업자등록정보 진위확인/상태조회 서비스키
 ```
 
-Google OAuth 클라이언트 ID/Secret은 로그인 동의 화면용 자격증명이며, Gemini 이미지 분석용 API 키가 아닙니다. `GOCSPX-`로 시작하는 client secret, `.apps.googleusercontent.com` client ID, `AQ.`로 시작하는 액세스 토큰을 `GEMINI_API_KEY`에 넣으면 `/api/analyze-receipt`가 명확한 오류를 반환합니다. Gemini API 키는 Google AI Studio에서 발급한 `AIza`로 시작하는 서버 전용 키여야 합니다.
+Google OAuth 클라이언트 ID/Secret은 로그인 동의 화면용 자격증명이며, Gemini 이미지 분석용 API 키가 아닙니다. `GOCSPX-`로 시작하는 client secret이나 `.apps.googleusercontent.com` client ID를 `GEMINI_API_KEY`에 넣으면 `/api/analyze-receipt`가 명확한 오류를 반환합니다. Gemini API 키는 Google AI Studio에서 발급한 서버 전용 키를 사용하며, 최신 Auth API Key는 `AQ.`로 시작할 수 있고 기존 Standard API Key는 `AIza`로 시작할 수 있습니다.

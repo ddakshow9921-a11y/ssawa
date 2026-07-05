@@ -16,6 +16,7 @@ function statusPayload(request) {
     liveDataEnabled: readBoolean(process.env.VITE_USE_LIVE_DATA || process.env.NEXT_PUBLIC_USE_LIVE_DATA, false),
     geminiApiKeyConfigured: Boolean(geminiApiKey),
     geminiApiKeyLooksValid: looksLikeGeminiApiKey(geminiApiKey),
+    geminiApiKeyType: geminiApiKeyType(geminiApiKey),
     geminiModel: process.env.GEMINI_MODEL || "",
     ntsBusinessServiceKeyConfigured: Boolean(process.env.NTS_BUSINESS_SERVICE_KEY),
     vercelEnv: process.env.VERCEL_ENV || "",
@@ -72,5 +73,13 @@ function readFirstEnv(keys) {
 }
 
 function looksLikeGeminiApiKey(value) {
-  return String(value || "").startsWith("AIza");
+  const text = String(value || "").trim();
+  return text.startsWith("AIza") || text.startsWith("AQ.");
+}
+
+function geminiApiKeyType(value) {
+  const text = String(value || "").trim();
+  if (text.startsWith("AQ.")) return "auth";
+  if (text.startsWith("AIza")) return "standard";
+  return "";
 }
