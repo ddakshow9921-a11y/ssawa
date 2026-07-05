@@ -239,7 +239,7 @@ const mobileNavItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "홈", path: "/app", icon: Home },
     { label: "견적", path: "/app/requests", icon: ClipboardList },
     { label: "거래", path: "/app/deals", icon: ReceiptText },
-    { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
+    { label: "구매장부", path: "/app/accounting", icon: Landmark },
     { label: "알림", path: "/app/notifications", icon: Bell },
   ],
   supplier: [
@@ -332,7 +332,7 @@ function getProfilePath(role: UserRole) {
 
 function getPrimaryAction(role: UserRole) {
   if (role === "supplier") return { label: "요청찾기", path: "/app/supplier/requests", icon: SearchCheck };
-  if (role === "admin") return { label: "관리자 설정", path: "/app/admin/supabase", icon: ShieldCheck };
+  if (role === "admin") return { label: "환경 점검", path: "/app/admin/supabase", icon: ShieldCheck };
   return { label: "새 견적요청", path: "/app/requests/new", icon: Plus };
 }
 
@@ -575,7 +575,8 @@ export default function App() {
     navigate("/login");
   }
 
-  const shellRole = getShellRole(path, authSession);
+  const routeRole = getRouteRole(path);
+  const shellRole = authSession && routeRole && routeRole !== authSession.role ? authSession.role : getShellRole(path, authSession);
   const navItems = navItemsByRole[shellRole];
   const mobileNavItems = mobileNavItemsByRole[shellRole];
   const notificationPath = getNotificationPath(shellRole);
@@ -703,6 +704,10 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/beta-notice") return <BetaNoticePage navigate={navigate} appMode={false} />;
   if (path === "/partners" || path === "/supplier/apply") return <PartnersPage navigate={navigate} />;
   if (path.startsWith("/app") && !authSession) return <LoginPage data={data} navigate={navigate} onAuthChange={onAuthChange} />;
+  const restrictedRole = getRouteRole(path);
+  if (isProtectedAppPath(path) && authSession && restrictedRole && restrictedRole !== authSession.role) {
+    return <RoleAccessDenied role={authSession.role} attemptedRole={restrictedRole} navigate={navigate} />;
+  }
   if (path === "/app" || path === "/") {
     if (shellRole === "admin") return <AdminDashboard data={data} navigate={navigate} />;
     if (shellRole === "supplier") return <SupplierDashboard data={data} navigate={navigate} />;
@@ -804,6 +809,21 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/admin/suppliers") return <AdminSuppliersPage data={data} setData={setData} />;
   if (path === "/app/admin/categories") return <AdminCategoriesPage data={data} />;
   return <NotFound navigate={navigate} />;
+}
+
+function RoleAccessDenied({ role, attemptedRole, navigate }: { role: UserRole; attemptedRole: UserRole; navigate: Navigate }) {
+  return (
+    <Page>
+      <EmptyState
+        icon={<ShieldCheck />}
+        title="현재 계정 권한으로는 볼 수 없는 화면입니다."
+        desc={`${getRoleLabel(attemptedRole)} 전용 화면입니다. ${getRoleLabel(role)} 업무 공간으로 돌아가 필요한 작업을 이어가세요.`}
+        actionLabel={`${getRoleLabel(role)} 홈으로 이동`}
+        onAction={() => navigate(getRoleHomePath(role))}
+        variant="warning"
+      />
+    </Page>
+  );
 }
 
 function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: Navigate; onAuthChange: (session: AppAuthSession | null) => void }) {
@@ -1798,17 +1818,19 @@ function QaChecklistCard({ data, item, setData }: { data: AppData; item: AppData
 function HomePage({ data, navigate }: PageProps) {
   const activeRequests = data.quote_requests.filter((request) => request.status === "open" || request.status === "quoted").length;
   const submittedQuotes = data.quotes.length;
-  const approvedSuppliers = data.supplier_profiles.filter((supplier) => supplier.approval_status === "approved").length;
   const purchaseSummary = calculatePurchaseSummary(data.purchase_records.filter((record) => record.buyer_id === "buyer-1"));
   const focusSetting = getActiveFocusSetting(data);
+  const requestsWithQuotes = data.quote_requests.filter((request) => data.quotes.some((quote) => quote.quote_request_id === request.id) && !request.selected_quote_id).length;
+  const activeDeals = data.deals.filter((deal) => deal.buyer_id === "buyer-1" && !["completed", "cancelled_by_buyer", "cancelled_by_supplier"].includes(deal.status)).length;
+  const repeatablePurchases = data.purchase_records.filter((record) => record.buyer_id === "buyer-1").length;
 
   return (
     <Page>
       <section className="heroBand">
         <div className="heroCopy">
           <img src="/로고.png" alt="싸와!" className="heroLogo" />
-          <h1 className="heroLead">필요한 자재를 올리면, 업체들이 견적합니다.</h1>
-          <p className="heroSub">영수증, 거래명세서, 자필 메모를 올리거나 직접 입력하면 품목을 정리하고 여러 업체 견적을 비교할 수 있어요.</p>
+          <h1 className="heroLead">필요한 자재를 쉽게 견적받으세요.</h1>
+          <p className="heroSub">거래명세서나 사진만 올려도 견적요청을 만들 수 있어요. 정확히 몰라도 업체가 확인 후 견적할 수 있습니다.</p>
           <div className="heroActions">
             <button className="primaryButton" type="button" onClick={() => navigate("/app/analyze")}>
               <Upload size={18} />
@@ -1825,10 +1847,10 @@ function HomePage({ data, navigate }: PageProps) {
           </div>
         </div>
         <div className="heroPanel" aria-label="싸와 핵심 지표">
-          <Metric label="열린 요청" value={`${activeRequests}건`} icon={<ClipboardList />} desc="업체 견적을 기다리는 요청입니다." actionLabel="요청 보기" onClick={() => navigate("/app/requests")} />
-          <Metric label="도착 견적" value={`${submittedQuotes}건`} icon={<ReceiptText />} desc="가격, 납품일, 결제 조건을 비교합니다." actionLabel="비교하기" onClick={() => navigate("/app/requests")} />
-          <Metric label="승인 업체" value={`${approvedSuppliers}곳`} icon={<BadgeCheck />} desc="검토된 파트너 정보를 확인합니다." actionLabel="파트너 보기" onClick={() => navigate("/partners")} />
-          <Metric label="장부 대기" value={`${purchaseSummary.pendingCount}건`} icon={<Landmark />} desc="구매내역에서 장부 반영할 항목입니다." actionLabel="장부 보기" onClick={() => navigate("/app/accounting")} />
+          <Metric label="도착한 견적" value={`${requestsWithQuotes}건`} icon={<ReceiptText />} desc="비교할 견적이 도착했어요." actionLabel="견적 비교하기" onClick={() => navigate("/app/requests")} />
+          <Metric label="진행 중인 요청" value={`${activeRequests}건`} icon={<ClipboardList />} desc="업체들이 견적을 확인 중입니다." actionLabel="요청 확인하기" onClick={() => navigate("/app/requests")} />
+          <Metric label="거래 진행" value={`${activeDeals}건`} icon={<PackageCheck />} desc="확인 필요한 거래가 있어요." actionLabel="거래 확인하기" onClick={() => navigate("/app/deals")} />
+          <Metric label="구매장부 대기" value={`${purchaseSummary.pendingCount}건`} icon={<Landmark />} desc="장부에 정리할 구매내역이 있어요." actionLabel="구매내역 확인" onClick={() => navigate("/app/accounting")} />
         </div>
       </section>
 
@@ -1846,14 +1868,11 @@ function HomePage({ data, navigate }: PageProps) {
       )}
 
       <section className="quickGrid" aria-label="주요 작업">
-        <ActionTile title="명세서·영수증 올리기" desc="사진, 이미지, PDF를 품목 후보로 정리해 검토합니다." icon={<Upload />} onClick={() => navigate("/app/analyze")} />
-        <ActionTile title="직접 견적요청" desc="품목, 수량, 납품 조건을 직접 입력해 요청합니다." icon={<FilePlus2 />} onClick={() => navigate("/app/requests/new")} />
-        <ActionTile title="지난 구매 다시 견적" desc="이전 구매 품목을 불러와 수량과 납품일만 바꿉니다." icon={<RefreshCcw />} onClick={() => navigate("/app/quick-reorder")} />
-        <ActionTile title="견적 비교" desc="가격, 납기, 세금계산서, 카드결제 조건을 한 화면에서 봅니다." icon={<ReceiptText />} onClick={() => navigate("/app/requests")} />
-        <ActionTile title="자주 쓰는 품목" desc="반복 구매하는 포장재와 소모품 묶음을 저장합니다." icon={<Boxes />} onClick={() => navigate("/app/favorites/items")} />
-        <ActionTile title="구매내역" desc="완료 거래와 수동 등록 매입을 증빙 기준으로 모읍니다." icon={<PackageCheck />} onClick={() => navigate("/app/purchases")} />
-        <ActionTile title="구매장부" desc="오늘장사 반영 대기 건과 매입 리포트를 확인합니다." icon={<Landmark />} onClick={() => navigate("/app/accounting")} />
-        <ActionTile title="알림 확인" desc="견적 도착, 문의 답변, 거래 상태 변경을 놓치지 않습니다." icon={<Bell />} onClick={() => navigate("/app/notifications")} />
+        <ActionTile title="거래명세서 올리기" desc="영수증, 거래명세서, 자필 메모를 자동으로 읽어 품목 후보를 만듭니다." icon={<Upload />} onClick={() => navigate("/app/analyze")} />
+        <ActionTile title="견적 비교하기" desc={`도착한 견적 ${submittedQuotes}건의 금액, 납기, 결제 조건을 비교합니다.`} icon={<ReceiptText />} onClick={() => navigate("/app/requests")} />
+        <ActionTile title="거래 확인하기" desc="선택한 업체와 납품 상태, 문의, 증빙 자료를 확인합니다." icon={<PackageCheck />} onClick={() => navigate("/app/deals")} />
+        <ActionTile title="구매장부 보기" desc="거래 완료 후 정리된 구매내역과 장부 반영 대기 건을 봅니다." icon={<Landmark />} onClick={() => navigate("/app/accounting")} />
+        <ActionTile title="지난 구매 다시 견적" desc={`반복 구매 가능한 내역 ${repeatablePurchases}건을 다시 요청합니다.`} icon={<RefreshCcw />} onClick={() => navigate("/app/quick-reorder")} />
       </section>
 
       <section className="landingSection">
@@ -2156,7 +2175,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/requests")} label="요청 목록" />
-      <PageTitle eyebrow="구매자" title="필요한 자재를 편하게 알려주세요." desc="사진, 거래명세서, 문장, 템플릿, 이전 요청 중 편한 방식으로 시작하고 마지막에 품목과 납품 조건만 확인합니다." />
+      <PageTitle eyebrow="구매자" title="필요한 자재를 편하게 알려주세요." desc="거래명세서, 사진, 문장, 지난 구매 중 편한 방식으로 시작하고 마지막에 품목과 납품 조건만 확인합니다." />
       <form className="wizardShell" onSubmit={submit}>
         <div className="wizardSteps" aria-label="견적요청 작성 단계">
           {wizardSteps.map((label, index) => (
@@ -2169,14 +2188,15 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
         {error && <div className="alert">{error}</div>}
         {step === 0 && (
           <section className="wizardPanel">
-            <SectionHeader title="어떤 방식으로 시작할까요?" />
+            <SectionHeader title="어떤 방식으로 견적요청할까요?" />
+            <p className="mutedText summaryLine">정확히 몰라도 괜찮아요. 규격을 모르시면 사진이나 메모를 남겨주세요.</p>
             <div className="methodGrid">
-              <MethodCard icon={<FilePlus2 />} title="직접 입력" desc="품목을 하나씩 입력합니다." active={draft.input_method === "manual"} onClick={() => selectMethod("manual")} />
-              <MethodCard icon={<Upload />} title="사진 업로드" desc="구매영수증이나 자필 메모 사진을 올리면 Gemini AI가 품목을 자동 입력합니다." active={draft.input_method === "photo"} onClick={() => selectMethod("photo")} />
-              <MethodCard icon={<ReceiptText />} title="거래명세서" desc="기존 명세서를 기준으로 재견적합니다." active={draft.input_method === "invoice"} onClick={() => selectMethod("invoice")} />
-              <MethodCard icon={<ClipboardList />} title="문장으로 입력" desc="한 문장을 품목 목록으로 나눕니다." active={draft.input_method === "text"} onClick={() => selectMethod("text")} />
+              <MethodCard icon={<ReceiptText />} title="거래명세서/견적서 올리기" desc="기존 명세서나 영수증을 읽어 재견적 품목을 만듭니다." active={draft.input_method === "invoice"} onClick={() => selectMethod("invoice")} />
+              <MethodCard icon={<Upload />} title="사진으로 올리기" desc="구매영수증이나 자필 메모 사진을 올리면 Gemini AI가 품목을 자동 입력합니다." active={draft.input_method === "photo"} onClick={() => selectMethod("photo")} />
+              <MethodCard icon={<FilePlus2 />} title="직접 입력하기" desc="품목명, 수량, 납품 조건을 직접 입력합니다." active={draft.input_method === "manual"} onClick={() => selectMethod("manual")} />
+              <MethodCard icon={<RefreshCcw />} title="지난 구매 다시 요청하기" desc="지난 요청을 복사해 수량과 납품일만 바꿉니다." active={draft.input_method === "repeat"} onClick={() => selectMethod("repeat")} />
+              <MethodCard icon={<ClipboardList />} title="문장으로 요청하기" desc="한 문장을 품목 목록으로 나눕니다." active={draft.input_method === "text"} onClick={() => selectMethod("text")} />
               <MethodCard icon={<Boxes />} title="템플릿" desc="업종별 자주 쓰는 세트를 불러옵니다." active={draft.input_method === "template"} onClick={() => selectMethod("template")} />
-              <MethodCard icon={<RefreshCcw />} title="이전 요청 반복" desc="지난 요청을 복사해 다시 견적합니다." active={draft.input_method === "repeat"} onClick={() => selectMethod("repeat")} />
             </div>
           </section>
         )}
@@ -2357,6 +2377,11 @@ function RequestDetailPage({ data, navigate, setData, requestId }: MutatingPageP
   const selectedQuote = quotes.find((entry) => entry.id === currentRequest.selected_quote_id || entry.id === deal?.selected_quote_id);
   const cheapest = quotes.reduce<Quote | null>((winner, current) => (!winner || current.final_amount < winner.final_amount ? current : winner), null);
   const fastest = quotes.reduce<Quote | null>((winner, current) => (!winner || current.available_delivery_date < winner.available_delivery_date ? current : winner), null);
+  const recommended = quotes.reduce<Quote | null>((winner, current) => {
+    const currentScore = quoteRecommendationScore(data, current, cheapest?.id === current.id, fastest?.id === current.id, items);
+    const winnerScore = winner ? quoteRecommendationScore(data, winner, cheapest?.id === winner.id, fastest?.id === winner.id, items) : -1;
+    return currentScore > winnerScore ? current : winner;
+  }, null);
 
   function confirmQuoteSelection() {
     if (!quoteToConfirm) return;
@@ -2383,21 +2408,26 @@ function RequestDetailPage({ data, navigate, setData, requestId }: MutatingPageP
       {quotes.length === 0 ? (
         <EmptyState icon={<SearchCheck />} title="아직 도착한 견적이 없습니다." desc="공급업체 화면에서 샘플 견적을 제출해 흐름을 확인할 수 있습니다." />
       ) : (
-        <div className="quoteCompareGrid">
-          {quotes.map((quoteEntry) => (
-            <QuoteCard
-              key={quoteEntry.id}
-              data={data}
-              quote={quoteEntry}
-              isCheapest={cheapest?.id === quoteEntry.id}
-              isFastest={fastest?.id === quoteEntry.id}
-              isSelected={selectedQuote?.id === quoteEntry.id}
-              isRejected={quoteEntry.status === "rejected"}
-              onSelect={() => setQuoteToConfirm(quoteEntry)}
-              onOpenSupplier={() => navigate(`/app/suppliers/${quoteEntry.supplier_id}`)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="quoteCompareGrid">
+            {quotes.map((quoteEntry) => (
+              <QuoteCard
+                key={quoteEntry.id}
+                data={data}
+                quote={quoteEntry}
+                requestItems={items}
+                isRecommended={recommended?.id === quoteEntry.id}
+                isCheapest={cheapest?.id === quoteEntry.id}
+                isFastest={fastest?.id === quoteEntry.id}
+                isSelected={selectedQuote?.id === quoteEntry.id}
+                isRejected={quoteEntry.status === "rejected"}
+                onSelect={() => setQuoteToConfirm(quoteEntry)}
+                onOpenSupplier={() => navigate(`/app/suppliers/${quoteEntry.supplier_id}`)}
+              />
+            ))}
+          </div>
+          <QuoteItemComparisonTable data={data} quotes={quotes} items={items} />
+        </>
       )}
       {quoteToConfirm && (
         <QuoteConfirmModal
@@ -5938,19 +5968,34 @@ function AdminDashboard({ data, navigate }: PageProps) {
   const attachmentRequestCount = data.quote_requests.filter((request) => data.quote_attachments.some((attachment) => attachment.quote_request_id === request.id) || request.attachment_note).length;
   const categoryCounts = countBy(data.quote_requests, (request) => request.category_name);
   const regionCounts = countBy(data.quote_requests, (request) => request.delivery_region.split(" ")[0] || "미입력");
+  const pendingSupplierApprovals = data.supplier_profiles.filter((supplier) => supplier.approval_status === "pending" || supplier.approval_status === "needs_revision").length;
+  const manualBusinessReviews = data.business_verifications.filter((verification) => verification.verification_status === "manual_review_required" || verification.verification_status === "failed").length;
+  const openReports = data.reports.filter((report) => !["resolved", "dismissed", "cancelled"].includes(report.status)).length;
+  const openFeedback = data.feedbacks.filter((feedback) => feedback.status !== "resolved" && feedback.status !== "dismissed").length;
+  const todayDeals = data.deals.filter((deal) => deal.created_at.slice(0, 10) === today).length;
+  const todayQuotes = data.quotes.filter((quote) => quote.created_at.slice(0, 10) === today).length;
+  const environmentReady = isLiveModeReady() && !appConfig.enableDemoData;
 
   return (
     <Page>
       <PageTitle eyebrow="관리자 홈" title="운영 상태와 문제 구간을 바로 확인합니다." desc="견적요청, 공급업체, 거래, 분석, 신고/분쟁, 수익 지표를 관리자 업무 단위로 정리합니다." />
       <div className="dashboardGrid">
-        <Metric label="전체 요청" value={`${data.quote_requests.length}건`} icon={<ClipboardList />} desc="상태와 견적 수를 모니터링합니다." actionLabel="요청 관리" onClick={() => navigate("/app/admin/requests")} />
-        <Metric label="전체 견적" value={`${data.quotes.length}건`} icon={<ReceiptText />} desc="거래 전환 흐름을 확인합니다." actionLabel="거래 관리" onClick={() => navigate("/app/admin/deals")} />
-        <Metric label="공급업체" value={`${data.supplier_profiles.length}곳`} icon={<Building2 />} desc="승인 상태와 카테고리를 봅니다." actionLabel="업체 관리" onClick={() => navigate("/app/admin/suppliers")} />
-        <Metric label="선택 완료" value={`${selected}건`} icon={<PackageCheck />} desc="구매자가 선택한 견적입니다." actionLabel="거래 보기" onClick={() => navigate("/app/admin/deals")} />
-        <Metric label="평균 요청 품질" value={`${averageQuality}점`} icon={<BadgeCheck />} desc="품목/조건 완성도를 점검합니다." actionLabel="품질 개선" onClick={() => navigate("/app/admin/improvement-priorities")} />
-        <Metric label="첨부 요청" value={`${attachmentRequestCount}건`} icon={<Upload />} desc="자료분석과 검토가 필요한 요청입니다." actionLabel="분석 관리" onClick={() => navigate("/app/admin/analysis")} />
-        <Metric label="템플릿/반복" value={`${templateOrRepeat}건`} icon={<RefreshCcw />} desc="반복구매 가능성을 확인합니다." actionLabel="반복 분석" onClick={() => navigate("/app/admin/repeat-insights")} />
-        <Metric label="무견적 요청" value={`${noQuoteCount}건`} icon={<SearchCheck />} desc="수동 매칭이 필요한 요청입니다." actionLabel="매칭 보조" onClick={() => navigate("/app/admin/matching-assist")} />
+        <Metric label="공급업체 승인 대기" value={`${pendingSupplierApprovals}건`} icon={<Building2 />} desc="승인/보완 요청이 필요한 업체입니다." actionLabel="승인하기" onClick={() => navigate("/app/admin/suppliers")} />
+        <Metric label="견적 미도착 요청" value={`${noQuoteCount}건`} icon={<SearchCheck />} desc="이탈 위험이 높은 요청입니다." actionLabel="매칭 처리" onClick={() => navigate("/app/admin/matching-assist")} />
+        <Metric label="사업자 인증 수동검토" value={`${manualBusinessReviews}건`} icon={<ShieldCheck />} desc="API 오류나 진위 불일치 건입니다." actionLabel="수동검토" onClick={() => navigate("/app/admin/manual-reviews")} />
+        <Metric label="신고/피드백" value={`${openReports + openFeedback}건`} icon={<Bell />} desc="운영자가 먼저 확인해야 할 항목입니다." actionLabel="확인하기" onClick={() => navigate("/app/admin/feedback")} />
+        <Metric label="오늘 거래 수" value={`${todayDeals}건`} icon={<PackageCheck />} desc="오늘 생성된 거래입니다." actionLabel="거래 보기" onClick={() => navigate("/app/admin/deals")} />
+        <Metric label="오늘 견적 수" value={`${todayQuotes}건`} icon={<ReceiptText />} desc="오늘 제출된 견적입니다." actionLabel="견적 모니터링" onClick={() => navigate("/app/admin/requests")} />
+        <Metric label="환경 상태" value={environmentReady ? "Live 준비" : "점검 필요"} icon={<ShieldCheck />} desc="Supabase, 실데이터, 데모 모드 상태를 확인합니다." actionLabel="환경 점검" onClick={() => navigate("/app/admin/supabase")} />
+        <Metric label="데모 데이터 상태" value={data.is_demo ? "사용 중" : "실데이터"} icon={<RefreshCcw />} desc="초기화 기능은 관리자에게만 보입니다." actionLabel="데모 관리" onClick={() => navigate("/app/admin/mvp-cleanup")} />
+      </div>
+      <div className="dashboardGrid compactStats">
+        <Metric label="전체 요청" value={`${data.quote_requests.length}건`} icon={<ClipboardList />} />
+        <Metric label="전체 견적" value={`${data.quotes.length}건`} icon={<ReceiptText />} />
+        <Metric label="선택 완료" value={`${selected}건`} icon={<PackageCheck />} />
+        <Metric label="평균 요청 품질" value={`${averageQuality}점`} icon={<BadgeCheck />} />
+        <Metric label="첨부 요청" value={`${attachmentRequestCount}건`} icon={<Upload />} />
+        <Metric label="템플릿/반복" value={`${templateOrRepeat}건`} icon={<RefreshCcw />} />
       </div>
       <div className="adminInsightGrid">
         <StatList title="카테고리별 요청" items={categoryCounts} />
@@ -6019,6 +6064,7 @@ function AdminSupabasePage({ data, navigate }: PageProps) {
         <Metric label="Storage bucket" value={`${buckets.length}개`} icon={<Upload />} />
         <Metric label="작성 migration" value="7개" icon={<ClipboardList />} />
         <Metric label="현재 앱 데이터" value={data.is_demo ? "demo" : data.environment} icon={<PackageCheck />} />
+        <Metric label="/status" value="JSON 점검" icon={<SearchCheck />} desc="서버 환경변수 존재 여부만 확인합니다." actionLabel="상태 열기" onClick={() => window.open("/status", "_blank", "noopener,noreferrer")} />
       </div>
 
       <div className="twoColumn">
@@ -6092,6 +6138,8 @@ function AdminSupabasePage({ data, navigate }: PageProps) {
           <div className="stackList">
             <div className="stackRow"><strong>Supabase 설정</strong><span>docs/supabase-setup.md</span></div>
             <div className="stackRow"><strong>배포 체크리스트</strong><span>docs/deployment-checklist.md</span></div>
+            <div className="stackRow"><strong>Vercel 환경변수</strong><span>docs/vercel-env-checklist.md</span></div>
+            <div className="stackRow"><strong>배포 문제 해결</strong><span>docs/deployment-troubleshooting.md</span></div>
             <div className="stackRow"><strong>RLS 테스트</strong><span>docs/rls-test-scenarios.md</span></div>
             <div className="stackRow"><strong>보안 점검표</strong><span>docs/security-checklist.md</span></div>
           </div>
@@ -8436,9 +8484,42 @@ function PlanCard({ plan, active, onChange }: { plan: SupplierPlan; active: bool
   );
 }
 
-function QuoteCard({ data, quote, isCheapest, isFastest, isSelected, isRejected, onSelect, onOpenSupplier }: {
+function QuoteItemComparisonTable({ data, quotes, items }: { data: AppData; quotes: Quote[]; items: QuoteRequestItem[] }) {
+  if (!quotes.length || !items.length) return null;
+
+  return (
+    <section className="toolPanel">
+      <SectionHeader title="품목별 비교" />
+      <p className="mutedText summaryLine">품목별 단가가 비어 있으면 총액만으로 비교하지 않도록 확인 필요로 표시합니다.</p>
+      <div className="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>품목</th>
+              {quotes.map((quote) => <th key={quote.id}>{supplierName(data, quote.supplier_id)}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id}>
+                <td>{item.item_name}</td>
+                {quotes.map((quote) => (
+                  <td key={`${item.id}-${quote.id}`}>{quoteItemComparisonText(quote)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFastest, isSelected, isRejected, onSelect, onOpenSupplier }: {
   data: AppData;
   quote: Quote;
+  requestItems: QuoteRequestItem[];
+  isRecommended: boolean;
   isCheapest: boolean;
   isFastest: boolean;
   isSelected: boolean;
@@ -8449,6 +8530,7 @@ function QuoteCard({ data, quote, isCheapest, isFastest, isSelected, isRejected,
   const supplier = data.supplier_profiles.find((entry) => entry.id === quote.supplier_id);
   const stats = supplier ? supplierStatsFor(data, supplier.id) : null;
   const documents = supplier ? data.supplier_documents.filter((document) => document.supplier_id === supplier.id) : [];
+  const missingItemCount = quoteMissingItemCount(quote, requestItems);
   return (
     <article className={isSelected ? "quoteCard selected" : "quoteCard"}>
       <div className="quoteHeader">
@@ -8456,7 +8538,11 @@ function QuoteCard({ data, quote, isCheapest, isFastest, isSelected, isRejected,
           <span className="eyebrow">공급업체</span>
           <h3>{supplierName(data, quote.supplier_id)}</h3>
         </div>
+        {isRecommended && <StatusBadge tone="blue">추천견적</StatusBadge>}
         {isCheapest && <StatusBadge tone="green">최저가</StatusBadge>}
+        {isFastest && <StatusBadge tone="blue">빠른납품</StatusBadge>}
+        {quote.tax_invoice_available && <StatusBadge tone="green">세금계산서 가능</StatusBadge>}
+        {missingItemCount > 0 && <StatusBadge tone="orange">품목 확인 필요</StatusBadge>}
         {isSelected && <StatusBadge tone="green">선택된 견적</StatusBadge>}
         {isRejected && <StatusBadge tone="gray">미선택 처리됨</StatusBadge>}
       </div>
@@ -8464,6 +8550,7 @@ function QuoteCard({ data, quote, isCheapest, isFastest, isSelected, isRejected,
         <div className="supplierTrustLine">
           <span>승인된 공급업체의 견적입니다.</span>
           <span>평점 {stats?.rating ? stats.rating.toFixed(1) : "신규"}</span>
+          <span>후기 {stats?.review_count ?? 0}개</span>
           <span>응답 {stats?.average_response_minutes ? `${stats.average_response_minutes}분` : "신규"}</span>
           <span>거래 {stats?.selected_quotes_count ?? 0}건</span>
           {supplier.tax_invoice_available && <span>세금계산서 가능</span>}
@@ -8480,6 +8567,7 @@ function QuoteCard({ data, quote, isCheapest, isFastest, isSelected, isRejected,
         <span className={isFastest ? "fact strong" : "fact"}>납품 {quote.available_delivery_date}</span>
         <span className="fact">세금계산서 {yesNo(quote.tax_invoice_available)}</span>
         <span className="fact">카드결제 {yesNo(quote.card_payment_available)}</span>
+        <span className={missingItemCount > 0 ? "fact strong" : "fact"}>품목 {missingItemCount > 0 ? `${missingItemCount}개 확인 필요` : "확인됨"}</span>
         {quote.alternative_proposal && <span className="fact strong">대체품 제안 있음</span>}
       </div>
       <dl className="quoteDetails">
@@ -9248,6 +9336,38 @@ function supplierStatsFor(data: AppData, supplierId: string) {
     review_count: 0,
     updated_at: today,
   };
+}
+
+function quoteRecommendationScore(data: AppData, quote: Quote, isCheapest: boolean, isFastest: boolean, items: QuoteRequestItem[]) {
+  const stats = supplierStatsFor(data, quote.supplier_id);
+  const missingItemCount = quoteMissingItemCount(quote, items);
+  let score = 20;
+  if (isCheapest) score += 35;
+  if (isFastest) score += 20;
+  if (quote.tax_invoice_available) score += 10;
+  if (quote.card_payment_available) score += 8;
+  if (quote.alternative_proposal) score += 4;
+  if (quote.item_price_memo.trim()) score += 8;
+  score += Math.min(15, Math.round((stats.rating || 0) * 3));
+  score += Math.min(10, stats.review_count || 0);
+  score += Math.min(8, stats.selected_quotes_count || 0);
+  score -= missingItemCount * 12;
+  return score;
+}
+
+function quoteMissingItemCount(quote: Quote, items: QuoteRequestItem[]) {
+  if (!items.length) return 0;
+  const detailText = `${quote.item_price_memo} ${quote.memo} ${quote.alternative_proposal}`.trim();
+  if (!detailText) return items.length;
+  if (/누락|미견적|불가|제외/.test(detailText)) return Math.max(1, Math.min(items.length, 1));
+  return 0;
+}
+
+function quoteItemComparisonText(quote: Quote) {
+  const memo = quote.item_price_memo.trim();
+  if (!memo) return "확인 필요";
+  if (/누락|미견적|불가|제외/.test(memo)) return "일부 미견적";
+  return memo.length > 34 ? `${memo.slice(0, 34)}...` : memo;
 }
 
 function defaultBillingAccount(supplier: SupplierProfile): BillingAccount {

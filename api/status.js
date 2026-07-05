@@ -1,24 +1,66 @@
-const APP_NAME = "싸와!";
+const APP_ID = "ssawa";
+const APP_NAME = "SSAWA";
+const VERSION = "0.1.0";
 const GEMINI_API_KEY_ENV_KEYS = ["GEMINI_API_KEY", "GOOGLE_AI_API_KEY", "GOOGLE_GENAI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"];
 
 function statusPayload(request) {
   const url = readUrl(request);
   const geminiApiKey = readFirstEnv(GEMINI_API_KEY_ENV_KEYS);
-  return {
-    ok: true,
-    status: "OK",
-    app: APP_NAME,
-    environment: process.env.VITE_APP_ENV || process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV || "unknown",
+  const environment = process.env.VITE_APP_ENV || process.env.NEXT_PUBLIC_APP_ENV || process.env.VERCEL_ENV || process.env.NODE_ENV || "unknown";
+  const checks = {
     appUrlConfigured: Boolean(process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL),
     apiBaseUrlConfigured: Boolean(process.env.VITE_API_BASE_URL),
     supabaseUrlConfigured: Boolean(process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
-    supabasePublishableKeyConfigured: Boolean(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    supabaseAnonKeyConfigured: Boolean(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    supabaseServiceRoleConfigured: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY),
     liveDataEnabled: readBoolean(process.env.VITE_USE_LIVE_DATA || process.env.NEXT_PUBLIC_USE_LIVE_DATA, false),
+    ntsBusinessServiceKeyConfigured: Boolean(process.env.NTS_BUSINESS_SERVICE_KEY),
+    demoDataEnabled: readBoolean(process.env.VITE_ENABLE_DEMO_DATA || process.env.NEXT_PUBLIC_ENABLE_DEMO_DATA, false),
+    betaBadgeEnabled: readBoolean(process.env.VITE_ENABLE_BETA_BADGE || process.env.NEXT_PUBLIC_ENABLE_BETA_BADGE, false),
+    mockAiEnabled: readBoolean(process.env.VITE_ENABLE_MOCK_AI || process.env.NEXT_PUBLIC_ENABLE_MOCK_AI, true),
+    mockPaymentEnabled: readBoolean(process.env.VITE_ENABLE_MOCK_PAYMENT || process.env.NEXT_PUBLIC_ENABLE_MOCK_PAYMENT, true),
+    mockSettlementEnabled: readBoolean(process.env.VITE_ENABLE_MOCK_SETTLEMENT || process.env.NEXT_PUBLIC_ENABLE_MOCK_SETTLEMENT, true),
     geminiApiKeyConfigured: Boolean(geminiApiKey),
     geminiApiKeyLooksValid: looksLikeGeminiApiKey(geminiApiKey),
+  };
+  const requiredChecks = [
+    "appUrlConfigured",
+    "supabaseUrlConfigured",
+    "supabaseAnonKeyConfigured",
+    "supabaseServiceRoleConfigured",
+    "ntsBusinessServiceKeyConfigured",
+  ];
+  const missingRequired = requiredChecks.filter((key) => !checks[key]);
+  const status = missingRequired.length ? "warning" : "ok";
+
+  return {
+    ok: status !== "error",
+    status,
+    app: APP_ID,
+    displayName: APP_NAME,
+    env: environment,
+    environment,
+    version: process.env.npm_package_version || VERSION,
+    time: new Date().toISOString(),
+    checks,
+    missingRequired,
+    appUrlConfigured: checks.appUrlConfigured,
+    apiBaseUrlConfigured: checks.apiBaseUrlConfigured,
+    supabaseUrlConfigured: checks.supabaseUrlConfigured,
+    supabasePublishableKeyConfigured: checks.supabaseAnonKeyConfigured,
+    supabaseAnonKeyConfigured: checks.supabaseAnonKeyConfigured,
+    supabaseServiceRoleConfigured: checks.supabaseServiceRoleConfigured,
+    liveDataEnabled: checks.liveDataEnabled,
+    ntsBusinessServiceKeyConfigured: checks.ntsBusinessServiceKeyConfigured,
+    demoDataEnabled: checks.demoDataEnabled,
+    betaBadgeEnabled: checks.betaBadgeEnabled,
+    mockAiEnabled: checks.mockAiEnabled,
+    mockPaymentEnabled: checks.mockPaymentEnabled,
+    mockSettlementEnabled: checks.mockSettlementEnabled,
+    geminiApiKeyConfigured: checks.geminiApiKeyConfigured,
+    geminiApiKeyLooksValid: checks.geminiApiKeyLooksValid,
     geminiApiKeyType: geminiApiKeyType(geminiApiKey),
     geminiModel: process.env.GEMINI_MODEL || "",
-    ntsBusinessServiceKeyConfigured: Boolean(process.env.NTS_BUSINESS_SERVICE_KEY),
     vercelEnv: process.env.VERCEL_ENV || "",
     commitSha: process.env.VERCEL_GIT_COMMIT_SHA || "",
     deploymentUrl: process.env.VERCEL_URL || "",
