@@ -265,9 +265,26 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
 };
 
 const mobileNavItemsByRole: Record<UserRole, NavItem[]> = {
-  buyer: navItemsByRole.buyer.slice(0, 3),
-  supplier: navItemsByRole.supplier.slice(0, 3),
-  admin: navItemsByRole.admin.slice(0, 3),
+  buyer: [
+    navItemsByRole.buyer[0],
+    navItemsByRole.buyer[1],
+    navItemsByRole.buyer[2],
+    navItemsByRole.buyer[3],
+    { label: "알림", path: "/app/notifications", icon: Bell, key: "buyer-mobile-notifications" },
+  ],
+  supplier: [
+    navItemsByRole.supplier[0],
+    navItemsByRole.supplier[1],
+    navItemsByRole.supplier[2],
+    navItemsByRole.supplier[5],
+    navItemsByRole.supplier[3],
+  ],
+  admin: [
+    navItemsByRole.admin[0],
+    navItemsByRole.admin[1],
+    navItemsByRole.admin[2],
+    navItemsByRole.admin[3],
+  ],
 };
 
 const emptyItem = {
@@ -792,6 +809,7 @@ export default function App() {
   const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole, handleSignOut);
   const showChatShortcut = Boolean(authSession && isProtectedAppPath(path) && !isNavItemActive(path, chatPath));
   const showMobileNav = Boolean(authSession && isProtectedAppPath(path));
+  const showMobileMore = Boolean(showMobileNav && shellRole === "admin" && mobileMoreItems.length > 0);
   const mobileMoreActive = mobileMoreItems.some((item) => isNavItemActive(path, item.path));
 
   function navBadgeCount(itemPath: string) {
@@ -899,7 +917,7 @@ export default function App() {
         {page}
       </main>
 
-      {showMobileNav && mobileMoreOpen && (
+      {showMobileMore && mobileMoreOpen && (
         <>
           <button className="mobileMoreBackdrop" type="button" aria-label="더보기 닫기" onClick={() => setMobileMoreOpen(false)} />
           <section className="mobileMorePanel" id="mobile-more-menu" aria-label="더보기 메뉴">
@@ -943,10 +961,12 @@ export default function App() {
               </button>
             );
           })}
-          <button className={mobileMoreOpen || mobileMoreActive ? "bottomNavButton active" : "bottomNavButton"} type="button" onClick={() => setMobileMoreOpen((open) => !open)} aria-expanded={mobileMoreOpen} aria-controls="mobile-more-menu">
-            <MoreHorizontal size={18} />
-            <span>더보기</span>
-          </button>
+          {showMobileMore && (
+            <button className={mobileMoreOpen || mobileMoreActive ? "bottomNavButton active" : "bottomNavButton"} type="button" onClick={() => setMobileMoreOpen((open) => !open)} aria-expanded={mobileMoreOpen} aria-controls="mobile-more-menu">
+              <MoreHorizontal size={18} />
+              <span>더보기</span>
+            </button>
+          )}
         </nav>
       )}
       {showChatShortcut && (
@@ -2242,12 +2262,11 @@ function QaChecklistCard({ data, item, setData }: { data: AppData; item: AppData
 }
 
 function HomePage({ data, navigate }: PageProps) {
-  const activeRequests = data.quote_requests.filter((request) => request.status === "open" || request.status === "quoted").length;
   const purchaseSummary = calculatePurchaseSummary(data.purchase_records.filter((record) => record.buyer_id === "buyer-1"));
   const requestsWithQuotes = data.quote_requests.filter((request) => data.quotes.some((quote) => quote.quote_request_id === request.id) && !request.selected_quote_id).length;
   const activeDeals = data.deals.filter((deal) => deal.buyer_id === "buyer-1" && !["completed", "cancelled_by_buyer", "cancelled_by_supplier"].includes(deal.status)).length;
   const repeatablePurchases = data.purchase_records.filter((record) => record.buyer_id === "buyer-1").length;
-  const buyerUnreadChats = getThreadsForRole(data, "buyer").filter((thread) => getThreadUnreadCount(data, thread.id, "buyer-1") > 0).length;
+  const favoriteProducts = data.product_favorites.filter((entry) => entry.buyer_id === "buyer-1").length;
 
   return (
     <Page>
@@ -2289,10 +2308,9 @@ function HomePage({ data, navigate }: PageProps) {
 
       <section className="roleFocusGrid" aria-label="오늘 확인할 일">
         <FocusCard label="도착한 견적" value={`${requestsWithQuotes}건`} desc="비교하고 업체를 선택하세요." icon={<ReceiptText />} onClick={() => navigate("/app/requests")} />
-        <FocusCard label="진행 요청" value={`${activeRequests}건`} desc="업체가 견적을 확인 중입니다." icon={<ClipboardList />} onClick={() => navigate("/app/requests")} />
-        <FocusCard label="거래" value={`${activeDeals}건`} desc="납품과 증빙 상태를 확인하세요." icon={<PackageCheck />} onClick={() => navigate("/app/deals")} />
-        <FocusCard label="알림" value={`${buyerUnreadChats}건`} desc="업체 답변과 새 소식을 봅니다." icon={<Bell />} onClick={() => navigate("/app/notifications")} />
-        <FocusCard label="구매내역" value={`${purchaseSummary.pendingCount}건`} desc="장부 반영 대기 항목입니다." icon={<Landmark />} onClick={() => navigate("/app/purchases")} />
+        <FocusCard label="진행 중 거래" value={`${activeDeals}건`} desc="납품 상태를 확인하세요." icon={<PackageCheck />} onClick={() => navigate("/app/deals")} />
+        <FocusCard label="구매내역" value={`${purchaseSummary.pendingCount}건`} desc="영수증과 세금계산서를 정리하세요." icon={<Landmark />} onClick={() => navigate("/app/purchases")} />
+        <FocusCard label="자주 사는 상품" value={`${favoriteProducts}개`} desc="바로 견적에 담아보세요." icon={<Boxes />} onClick={() => navigate("/app/products")} />
       </section>
 
       <SectionHeader title="최근 견적요청" action="전체 보기" onAction={() => navigate("/app/requests")} />
@@ -2616,7 +2634,7 @@ function ProductActionPanel({ data, product, navigate, setData }: MutatingPagePr
       </Field>
       <div className="productActionButtons">
         <button className="secondaryButton" type="button" onClick={() => submitInquiry("question")}>문의하기</button>
-        <button className="primaryButton" type="button" onClick={requestQuote}>견적담기</button>
+        <button className="primaryButton" type="button" onClick={requestQuote}>견적에 담기</button>
         <button className="ghostButton" type="button" onClick={requestOrder}>주문요청</button>
       </div>
       {doneMessage && <p className="successText">{doneMessage}</p>}
@@ -3435,6 +3453,7 @@ function RequestDetailPage({ data, navigate, setData, requestId }: MutatingPageP
         <EmptyState icon={<SearchCheck />} title="아직 도착한 견적이 없습니다." desc="공급업체 화면에서 샘플 견적을 제출해 흐름을 확인할 수 있습니다." />
       ) : (
         <>
+          <QuoteComparisonSummary data={data} quotes={quotes} items={items} recommended={recommended} cheapest={cheapest} fastest={fastest} />
           <div className="quoteCompareGrid">
             {quotes.map((quoteEntry) => (
               <QuoteCard
@@ -6728,7 +6747,6 @@ function SupplierDashboard({ data, navigate }: PageProps) {
   const focusSetting = getActiveFocusSetting(data);
   const matchingRequests = getVisibleRequestsForSupplier(supplier, data.quote_requests, data);
   const myQuotes = data.quotes.filter((quoteEntry) => quoteEntry.supplier_id === supplier.id);
-  const selectedQuotes = myQuotes.filter((quoteEntry) => quoteEntry.status === "selected").length;
   const pendingQuoteRequests = matchingRequests.filter((request) => !myQuotes.some((quote) => quote.quote_request_id === request.id));
   const todayRequests = matchingRequests.filter((request) => request.created_at.slice(0, 10) === today || request.status === "open").length;
   const supplierThreadUserId = supplierUserIdForUi(data, supplier.id);
@@ -6747,11 +6765,11 @@ function SupplierDashboard({ data, navigate }: PageProps) {
             <h2>{focusSetting.supplier_home_message}</h2>
             <p>응답 가능한 요청을 먼저 확인하고 빠른 견적으로 신규 거래처를 확보하세요.</p>
           </div>
-          <button className="primaryButton mobileDuplicateAction" type="button" onClick={() => navigate("/app/supplier/requests")}>빠른 견적 제출</button>
+          <button className="primaryButton" type="button" onClick={() => navigate("/app/supplier/requests")}>빠른 견적 제출</button>
         </section>
       )}
 
-      <section className="primaryActionGrid compact mobileDuplicateActionGrid" aria-label="공급업체 주요 작업">
+      <section className="primaryActionGrid compact" aria-label="공급업체 주요 작업">
         <QuickStartCard
           primary
           title="새 요청 보기"
@@ -6766,13 +6784,13 @@ function SupplierDashboard({ data, navigate }: PageProps) {
           onClick={() => navigate("/app/supplier/requests")}
         />
         <QuickStartCard
-          title="선택된 견적"
-          desc={`${selectedQuotes}건의 납품을 준비합니다.`}
-          icon={<PackageCheck />}
-          onClick={() => navigate("/app/supplier/deals")}
+          title="문의 답변"
+          desc={`${unansweredThreads.length}건을 확인하세요.`}
+          icon={<MessageCircle />}
+          onClick={() => navigate("/app/supplier/chats")}
         />
         <QuickStartCard
-          title="거래관리"
+          title="거래 관리"
           desc="납품 상태와 증빙을 관리합니다."
           icon={<ReceiptText />}
           onClick={() => navigate("/app/supplier/deals")}
@@ -9792,6 +9810,62 @@ function QuoteItemComparisonTable({ data, quotes, items }: { data: AppData; quot
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+function QuoteComparisonSummary({ data, quotes, items, recommended, cheapest, fastest }: {
+  data: AppData;
+  quotes: Quote[];
+  items: QuoteRequestItem[];
+  recommended: Quote | null;
+  cheapest: Quote | null;
+  fastest: Quote | null;
+}) {
+  const taxReady = quotes.find((quote) => quote.tax_invoice_available);
+  const cardReady = quotes.find((quote) => quote.card_payment_available);
+  const summaryItems = [
+    {
+      label: "추천 견적",
+      value: recommended ? supplierName(data, recommended.supplier_id) : "대기",
+      desc: recommended ? `${money(recommended.final_amount)} · 품목 ${quoteMissingItemCount(recommended, items) > 0 ? "확인 필요" : "확인됨"}` : "견적 도착 후 표시",
+      tone: "blue",
+    },
+    {
+      label: "최저가",
+      value: cheapest ? money(cheapest.final_amount) : "대기",
+      desc: cheapest ? supplierName(data, cheapest.supplier_id) : "가격 비교 전",
+      tone: "green",
+    },
+    {
+      label: "빠른 납품",
+      value: fastest ? fastest.available_delivery_date : "대기",
+      desc: fastest ? supplierName(data, fastest.supplier_id) : "납품일 비교 전",
+      tone: "orange",
+    },
+    {
+      label: "세금계산서",
+      value: taxReady ? "가능" : "확인 필요",
+      desc: taxReady ? supplierName(data, taxReady.supplier_id) : "업체 문의 필요",
+      tone: "green",
+    },
+    {
+      label: "카드결제",
+      value: cardReady ? "가능" : "확인 필요",
+      desc: cardReady ? supplierName(data, cardReady.supplier_id) : "업체 문의 필요",
+      tone: "blue",
+    },
+  ];
+
+  return (
+    <section className="quoteSummaryStrip" aria-label="견적 비교 요약">
+      {summaryItems.map((item) => (
+        <article className={`quoteSummaryCard ${item.tone}`} key={item.label}>
+          <span>{item.label}</span>
+          <strong>{item.value}</strong>
+          <small>{item.desc}</small>
+        </article>
+      ))}
     </section>
   );
 }

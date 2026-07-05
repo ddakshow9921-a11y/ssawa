@@ -38,16 +38,18 @@ function statusPayload(request) {
   };
   const requiredChecks = [
     "appUrlConfigured",
+    "apiBaseUrlConfigured",
     "supabaseUrlConfigured",
     "supabaseAnonKeyConfigured",
     "supabaseServiceRoleConfigured",
+    "liveDataEnabled",
     "ntsBusinessServiceKeyConfigured",
   ];
   const missingRequired = requiredChecks.filter((key) => !checks[key]);
-  const status = missingRequired.length ? "warning" : "ok";
+  const status = missingRequired.length ? "warning" : "OK";
 
   return {
-    ok: status === "ok",
+    ok: status === "OK",
     status,
     app: APP_ID,
     displayName: APP_NAME,
