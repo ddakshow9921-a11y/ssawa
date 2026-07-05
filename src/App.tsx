@@ -755,15 +755,16 @@ export default function App() {
   const mobileNavItems = mobileNavItemsByRole[shellRole];
   const notificationPath = getNotificationPath(shellRole);
   const notificationUserId = getNotificationUserId(shellRole);
-  const unreadNotifications = getUnreadNotificationCount(data, notificationUserId);
+  const unreadNotifications = authSession ? getUnreadNotificationCount(data, notificationUserId) : 0;
   const chatPath = getChatPath(shellRole);
-  const unreadChats = getChatUnreadCountForRole(data, shellRole);
+  const unreadChats = authSession ? getChatUnreadCountForRole(data, shellRole) : 0;
   const primaryAction = getPrimaryAction(shellRole);
   const PrimaryActionIcon = primaryAction.icon;
   const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole);
   const showChatShortcut = Boolean(authSession && isProtectedAppPath(path) && !isNavItemActive(path, chatPath));
 
   function navBadgeCount(itemPath: string) {
+    if (!authSession) return 0;
     if (itemPath === notificationPath) return unreadNotifications;
     if (itemPath === chatPath) return unreadChats;
     return 0;
@@ -840,28 +841,32 @@ export default function App() {
                 로그아웃
               </button>
             )}
-            {isDemoMode(data) && shellRole === "admin" && <span className="demoBadge">{environmentLabels[data.environment]} 데이터</span>}
-            {shellRole === "admin" && (
+            {authSession && isDemoMode(data) && shellRole === "admin" && <span className="demoBadge">{environmentLabels[data.environment]} 데이터</span>}
+            {authSession && shellRole === "admin" && (
               <button className="ghostButton" type="button" onClick={() => replaceData(resetDemoData())}>
                 <RefreshCcw size={16} />
                 데모 초기화
               </button>
             )}
-            <button className="ghostButton compact notificationTopButton" type="button" onClick={() => navigate(notificationPath)}>
-              <Bell size={16} />
-              알림
-              {unreadNotifications > 0 && <UnreadBadge count={unreadNotifications} />}
-            </button>
-            {shellRole !== "admin" && (
+            {authSession && (
+              <button className="ghostButton compact notificationTopButton" type="button" onClick={() => navigate(notificationPath)}>
+                <Bell size={16} />
+                알림
+                {unreadNotifications > 0 && <UnreadBadge count={unreadNotifications} />}
+              </button>
+            )}
+            {authSession && shellRole !== "admin" && (
               <button className="ghostButton compact" type="button" onClick={() => navigate(getProfilePath(shellRole))}>
                 <ShieldCheck size={16} />
                 내 정보
               </button>
             )}
-            <button className="primaryButton compact" type="button" onClick={() => navigate(primaryAction.path)}>
-              <PrimaryActionIcon size={16} />
-              <span>{primaryAction.label}</span>
-            </button>
+            {authSession && (
+              <button className="primaryButton compact" type="button" onClick={() => navigate(primaryAction.path)}>
+                <PrimaryActionIcon size={16} />
+                <span>{primaryAction.label}</span>
+              </button>
+            )}
           </div>
         </header>
         {page}
