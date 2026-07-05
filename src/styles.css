@@ -305,6 +305,7 @@ button:disabled {
 
 .requestListToolbar {
   justify-content: flex-end;
+  margin: 6px 0 18px;
 }
 
 .heroPanel {
