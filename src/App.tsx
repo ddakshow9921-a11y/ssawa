@@ -204,7 +204,6 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "거래내역", path: "/app/deals", icon: ReceiptText },
     { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
     { label: "구매장부", path: "/app/accounting", icon: Landmark },
-    { label: "알림", path: "/app/notifications", icon: Bell },
     { label: "내 정보", path: "/app/buyer/onboarding", icon: ShieldCheck },
   ],
   supplier: [
@@ -212,7 +211,6 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "요청찾기", path: "/app/supplier/requests", icon: SearchCheck },
     { label: "견적관리", path: "/app/supplier/quotes", icon: ClipboardList },
     { label: "거래관리", path: "/app/supplier/deals", icon: PackageCheck },
-    { label: "문의/알림", path: "/app/supplier/notifications", icon: Bell },
     { label: "후기/신뢰도", path: "/app/supplier/reputation", icon: BadgeCheck },
     { label: "정산/요금제", path: "/app/supplier/billing", icon: Landmark },
     { label: "업체 정보", path: "/app/supplier/profile", icon: Building2 },
