@@ -1,16 +1,26 @@
 const APP_ID = "ssawa";
 const APP_NAME = "SSAWA";
 const VERSION = "0.1.0";
+const DEFAULT_SUPABASE_URL = "https://dewlendyeycxfmblecog.supabase.co";
 const GEMINI_API_KEY_ENV_KEYS = ["GEMINI_API_KEY", "GOOGLE_AI_API_KEY", "GOOGLE_GENAI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"];
 
 function statusPayload(request) {
   const url = readUrl(request);
   const geminiApiKey = readFirstEnv(GEMINI_API_KEY_ENV_KEYS);
   const environment = process.env.VITE_APP_ENV || process.env.NEXT_PUBLIC_APP_ENV || process.env.VERCEL_ENV || process.env.NODE_ENV || "unknown";
+  const effectiveAppUrl = process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || vercelDeploymentUrl();
+  const effectiveSupabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const sources = {
+    appUrl: process.env.VITE_APP_URL ? "VITE_APP_URL" : process.env.NEXT_PUBLIC_APP_URL ? "NEXT_PUBLIC_APP_URL" : process.env.VERCEL_URL ? "VERCEL_URL" : "missing",
+    supabaseUrl: process.env.VITE_SUPABASE_URL ? "VITE_SUPABASE_URL" : process.env.NEXT_PUBLIC_SUPABASE_URL ? "NEXT_PUBLIC_SUPABASE_URL" : "project-default",
+    supabaseAnonKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY ? "VITE_SUPABASE_PUBLISHABLE_KEY" : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "NEXT_PUBLIC_SUPABASE_ANON_KEY" : "missing",
+    supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE_KEY ? "SUPABASE_SERVICE_ROLE_KEY" : process.env.SUPABASE_SECRET_KEY ? "SUPABASE_SECRET_KEY" : "missing",
+    ntsBusinessServiceKey: process.env.NTS_BUSINESS_SERVICE_KEY ? "NTS_BUSINESS_SERVICE_KEY" : "missing",
+  };
   const checks = {
-    appUrlConfigured: Boolean(process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL),
+    appUrlConfigured: Boolean(effectiveAppUrl),
     apiBaseUrlConfigured: Boolean(process.env.VITE_API_BASE_URL),
-    supabaseUrlConfigured: Boolean(process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
+    supabaseUrlConfigured: Boolean(effectiveSupabaseUrl),
     supabaseAnonKeyConfigured: Boolean(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     supabaseServiceRoleConfigured: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY),
     liveDataEnabled: readBoolean(process.env.VITE_USE_LIVE_DATA || process.env.NEXT_PUBLIC_USE_LIVE_DATA, false),
@@ -43,6 +53,7 @@ function statusPayload(request) {
     version: process.env.npm_package_version || VERSION,
     time: new Date().toISOString(),
     checks,
+    sources,
     missingRequired,
     appUrlConfigured: checks.appUrlConfigured,
     apiBaseUrlConfigured: checks.apiBaseUrlConfigured,
@@ -104,6 +115,12 @@ function readUrl(request) {
 function readBoolean(value, fallback) {
   if (value == null || value === "") return fallback;
   return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
+}
+
+function vercelDeploymentUrl() {
+  const value = String(process.env.VERCEL_URL || "").trim();
+  if (!value) return "";
+  return value.startsWith("http") ? value : `https://${value}`;
 }
 
 function readFirstEnv(keys) {
