@@ -7128,7 +7128,7 @@ function normalizeData(data: Partial<AppData>): AppData {
     onboarding_completed_at: data.onboarding_completed_at ?? initialData.onboarding_completed_at,
     profiles: mergeRequiredRecords(data.profiles ?? initialData.profiles, testProfiles),
     categories: data.categories ?? initialData.categories,
-    quote_requests: data.quote_requests ?? initialData.quote_requests,
+    quote_requests: normalizeQuoteRequests(data.quote_requests ?? initialData.quote_requests, data.categories ?? initialData.categories),
     quote_request_items: data.quote_request_items ?? initialData.quote_request_items,
     supplier_profiles: mergeRequiredRecords(data.supplier_profiles ?? initialData.supplier_profiles, testSupplierProfiles),
     supplier_documents: data.supplier_documents ?? initialData.supplier_documents,
@@ -7206,6 +7206,16 @@ function mergeRequiredRecords<T extends { id: string }>(records: T[], requiredRe
     ...requiredRecords.filter((record) => !recordIds.has(record.id)),
     ...records,
   ];
+}
+
+function normalizeQuoteRequests(records: QuoteRequest[], categoryRecords: Category[]): QuoteRequest[] {
+  const categoryNameById = new Map(categoryRecords.map((category) => [category.id, category.name]));
+  return records.map((record) => {
+    const categoryName = record.category_id ? categoryNameById.get(record.category_id) : "";
+    if (categoryName && record.category_name !== categoryName) return { ...record, category_name: categoryName };
+    if (!record.category_name?.trim()) return { ...record, category_name: "기타" };
+    return record;
+  });
 }
 
 function normalizePurchaseRecord(record: PurchaseRecord): PurchaseRecord {
