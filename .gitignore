@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .vite/
+mobile-build/
 *.tsbuildinfo
 .env
 .env.*

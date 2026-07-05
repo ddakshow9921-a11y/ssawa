@@ -1629,14 +1629,14 @@ const sampleQaChecklists: QaChecklistItem[] = [
   qaChecklist("qa-4", "공급업체 기능", "견적 제출 가능", "요금제 한도, 필수 금액, 유효기간 검증", "unchecked", ""),
   qaChecklist("qa-5", "관리자 기능", "공급업체 승인 가능", "승인/보완/반려/제한 상태 변경", "unchecked", ""),
   qaChecklist("qa-6", "견적/거래 흐름", "거래 상태 변경 가능", "수락, 납품 준비, 배송, 완료, 신고 흐름", "passed", "거래 상세 버튼 확인"),
-  qaChecklist("qa-7", "자료분석 흐름", "분석 mock 변환 가능", "분석 결과를 견적요청과 구매내역으로 전환", "unchecked", ""),
+  qaChecklist("qa-7", "자료분석 흐름", "샘플 분석 변환 가능", "분석 결과를 견적요청과 구매내역으로 전환", "unchecked", ""),
   qaChecklist("qa-8", "알림/메시지", "알림 읽음/문의 전송 가능", "구매자/공급업체/관리자 알림과 메시지 스레드 확인", "unchecked", ""),
   qaChecklist("qa-9", "신고/후기/신뢰도", "신고 처리와 후기 관리 가능", "신고 상태 변경, 제재, 후기 숨김/공개 확인", "passed", "9단계 라우트 검증 완료"),
-  qaChecklist("qa-10", "수익화/정산 mock", "수수료와 정산 상태 확인", "정산 상태 변경과 수수료 면제 처리", "unchecked", ""),
+  qaChecklist("qa-10", "수익화/정산 샘플", "수수료와 정산 상태 확인", "정산 상태 변경과 수수료 면제 처리", "unchecked", ""),
   qaChecklist("qa-11", "모바일 반응형", "하단 탭과 주요 화면 깨짐 없음", "360px~768px에서 홈, 견적, 거래, 관리자 테이블 확인", "failed", "정산/관리자 테이블 모바일 추가 확인 필요"),
   qaChecklist("qa-12", "정책/약관", "베타 정책 화면 접근 가능", "약관, 개인정보, 운영정책, 안전거래, 베타 안내 링크 확인", "unchecked", ""),
   qaChecklist("qa-13", "보안/권한", "권한 없음 화면 확인", "역할별 화면 접근 제한 안내 확인", "skipped", "실제 auth 도입 후 재점검"),
-  qaChecklist("qa-14", "배포/환경변수", "빌드와 환경 구분 확인", "mock/demo와 beta/production 데이터 경계 표시", "unchecked", ""),
+  qaChecklist("qa-14", "배포/환경변수", "빌드와 환경 구분 확인", "샘플/demo와 beta/production 데이터 경계 표시", "unchecked", ""),
 ];
 
 const sampleBetaTargets: BetaTarget[] = [
@@ -1752,9 +1752,9 @@ const sampleFocusSettings: FocusSetting[] = [
 ];
 
 const sampleFeatureFlags: FeatureFlag[] = [
-  featureFlag("flag-1", "enable_analysis", "자료 자동분석", "OCR/AI 분석 mock 메뉴", true, true, false),
+  featureFlag("flag-1", "enable_analysis", "자료 자동분석", "OCR/AI 분석 샘플 메뉴", true, true, false),
   featureFlag("flag-2", "enable_accounting_sync", "오늘장사 장부 연동", "구매내역 장부 반영 준비", true, true, false),
-  featureFlag("flag-3", "enable_supplier_billing", "공급업체 요금제", "요금제/이용현황 mock", true, true, false),
+  featureFlag("flag-3", "enable_supplier_billing", "공급업체 요금제", "요금제/이용현황 샘플", true, true, false),
   featureFlag("flag-4", "enable_settlements", "정산 관리", "정산 예정 내역과 수수료 관리", true, true, true),
   featureFlag("flag-5", "enable_reviews", "후기/평점", "거래 후기와 공급업체 신뢰도", true, false, false),
   featureFlag("flag-6", "enable_reports", "신고/분쟁", "안전거래 신고와 운영 처리", true, false, false),
@@ -2973,7 +2973,7 @@ export function updatePurchaseAccountingStatus(data: AppData, purchaseId: string
             ...entry,
             sync_status: status === "synced" ? "synced" : status === "excluded" ? "excluded" : status === "failed" ? "failed" : "pending",
             synced_at: status === "synced" ? updatedAt : entry.synced_at,
-            failure_reason: status === "failed" ? memo || "장부 반영 실패 mock" : entry.failure_reason,
+            failure_reason: status === "failed" ? memo || "장부 반영 실패 샘플" : entry.failure_reason,
             updated_at: updatedAt,
           }
         : entry,
@@ -7274,7 +7274,7 @@ function createAccountingEntryFromPurchaseRecord(record: PurchaseRecord, created
     sync_status: record.accounting_status === "synced" ? "synced" : record.accounting_status === "excluded" ? "excluded" : record.accounting_status === "failed" ? "failed" : "pending",
     sync_target: record.sync_target,
     synced_at: record.accounting_status === "synced" ? createdAt : undefined,
-    failure_reason: record.accounting_status === "failed" ? "장부 반영 실패 mock" : undefined,
+    failure_reason: record.accounting_status === "failed" ? "장부 반영 실패 샘플" : undefined,
     created_at: createdAt,
     updated_at: record.updated_at || createdAt,
   };

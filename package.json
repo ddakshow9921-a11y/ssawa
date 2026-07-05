@@ -14,6 +14,7 @@
     "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
     "preview": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/preview.ps1",
     "start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/preview.ps1",
+    "mobile:android:debug": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1",
     "check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1"
   },
   "dependencies": {

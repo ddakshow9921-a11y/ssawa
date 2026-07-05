@@ -1766,7 +1766,7 @@ function PolicyPage({ type, navigate }: { type: "terms" | "privacy" | "operation
       <PageTitle eyebrow="베타 정책 초안" title={content.title} desc="본 문서는 베타 테스트 안내용 초안이며, 정식 약관 확정 전 전문가 검토가 필요합니다." />
       <section className="policyNotice">
         <ShieldCheck />
-        <p>TODO: 정식 출시 전 법률 전문가 검토, 회사 정보, 문의처, 보관 기간, 수수료 정책 확정본을 반영해야 합니다.</p>
+        <p>정식 출시 전 법률 전문가 검토와 회사 정보, 문의처, 보관 기간, 수수료 정책 확정본 반영이 필요합니다.</p>
       </section>
       <div className="policyList">
         {content.sections.map((section) => (
@@ -1782,8 +1782,8 @@ function PolicyPage({ type, navigate }: { type: "terms" | "privacy" | "operation
 }
 
 function BetaNoticePage({ navigate, appMode }: { navigate: Navigate; appMode: boolean }) {
-  const available = ["견적요청 등록", "공급업체 견적 제출", "견적 비교", "거래 상태 관리", "자료 업로드/분석 mock", "구매내역 정리 mock", "알림/문의", "후기/신고"];
-  const limited = ["실제 카드결제", "실제 에스크로", "세금계산서 자동 발행", "홈택스 연동", "카카오/문자 알림", "실제 AI/OCR API는 환경에 따라 mock"];
+  const available = ["견적요청 등록", "공급업체 견적 제출", "견적 비교", "거래 상태 관리", "자료 업로드/분석 샘플", "구매내역 정리 샘플", "알림/문의", "후기/신고"];
+  const limited = ["실제 카드결제", "실제 에스크로", "세금계산서 자동 발행", "홈택스 연동", "카카오/문자 알림", "실제 AI/OCR API는 환경 설정 후 운영"];
   return (
     <Page>
       {appMode && <BackButton onClick={() => navigate("/app")} label="앱 홈" />}
@@ -1890,7 +1890,7 @@ function FeedbackPage({ data, navigate, setData }: MutatingPageProps) {
         <Field label="현재 페이지 URL">
           <input value={pageUrl} onChange={(event) => setPageUrl(event.target.value)} />
         </Field>
-        <Field label="첨부 파일명 또는 스크린샷 URL mock">
+        <Field label="첨부 파일명 또는 스크린샷 URL">
           <input value={screenshotUrl} onChange={(event) => setScreenshotUrl(event.target.value)} placeholder="예: mobile-settlement.png" />
         </Field>
         <button className="primaryButton full" type="submit">피드백 접수</button>
@@ -1976,7 +1976,7 @@ function AdminQaPage({ data, navigate, setData }: MutatingPageProps) {
       <section className="statusNotice">
         <div>
           <h2>데모/베타 데이터 구분</h2>
-          <p>{environmentLabels[data.environment]} 환경 · {data.demo_label} · 실제 사용자 데이터와 분리하기 위한 mock 표시입니다.</p>
+          <p>{environmentLabels[data.environment]} 환경 · {data.demo_label} · 실제 사용자 데이터와 분리하기 위한 샘플 표시입니다.</p>
         </div>
         <button className="secondaryButton" type="button" onClick={() => setData(resetDemoData())}>데모 데이터 복구</button>
       </section>
@@ -2707,8 +2707,8 @@ function SupplierDealsPage({ data, navigate }: PageProps) {
         <Metric label="이번 달 거래액" value={money(amount)} icon={<ReceiptText />} />
       </div>
       <div className="dashboardGrid compactStats">
-        <Metric label="완료율 mock" value="82%" icon={<BadgeCheck />} />
-        <Metric label="취소율 mock" value="6%" icon={<ShieldCheck />} />
+        <Metric label="완료율 샘플" value="82%" icon={<BadgeCheck />} />
+        <Metric label="취소율 샘플" value="6%" icon={<ShieldCheck />} />
       </div>
       <FilterTabs options={["전체", "거래 확인 대기", "거래 확정", "납품 준비 중", "배송/납품 중", "납품 완료", "거래 완료", "취소", "문제 발생"]} active={filter} onChange={setFilter} />
       <DealTable data={data} deals={visibleDeals} navigate={navigate} basePath="/app/supplier/deals" role="supplier" />
@@ -3017,7 +3017,7 @@ function NewReportPage({ data, navigate, setData }: MutatingPageProps) {
         <Field label="희망 해결 방식">
           <textarea value={desiredResolution} onChange={(event) => setDesiredResolution(event.target.value)} />
         </Field>
-        <Field label="첨부 파일명 mock">
+        <Field label="첨부 파일명">
           <input value={attachmentName} onChange={(event) => setAttachmentName(event.target.value)} placeholder="예: 납품사진.jpg" />
         </Field>
         <div className="formActions">
@@ -3664,7 +3664,7 @@ function AdminOperationsPage({ data, navigate }: PageProps) {
         <Metric label="신규 신고" value={`${summary.newReports}건`} icon={<Bell />} />
         <Metric label="미해결 신고" value={`${summary.openReports}건`} icon={<RefreshCcw />} />
         <Metric label="긴급 신고" value={`${summary.urgentReports}건`} icon={<ShieldCheck />} />
-        <Metric label="평균 처리 mock" value={`${summary.averageHandleHours}시간`} icon={<CalendarDays />} />
+        <Metric label="평균 처리 샘플" value={`${summary.averageHandleHours}시간`} icon={<CalendarDays />} />
         <Metric label="분쟁률" value={`${summary.disputeRate}%`} icon={<ClipboardList />} />
         <Metric label="거래 완료율" value={`${summary.completionRate}%`} icon={<PackageCheck />} />
         <Metric label="평균 후기" value={`${summary.averageRating.toFixed(1)}점`} icon={<BadgeCheck />} />
@@ -3732,7 +3732,7 @@ function AnalyzePage({ data, navigate, setData }: MutatingPageProps) {
 
   return (
     <Page>
-      <PageTitle eyebrow="OCR/AI 분석 mock" title="거래명세서나 견적서를 올려보세요." desc="품목을 자동으로 정리해서 견적요청이나 장부 입력으로 바꿔드립니다." />
+      <PageTitle eyebrow="OCR/AI 분석" title="거래명세서나 견적서를 올려보세요." desc="품목을 자동으로 정리해서 견적요청이나 장부 입력으로 바꿔드립니다." />
       <BetaLimitationsNotice navigate={navigate} context="analysis" />
       <section className="securityNotice">
         <ShieldCheck size={20} />
@@ -3762,7 +3762,7 @@ function AnalyzePage({ data, navigate, setData }: MutatingPageProps) {
           </label>
         </div>
         <label className="field">
-          카톡/문자/파일 추출 텍스트 mock
+          카톡/문자/파일 추출 텍스트
           <textarea value={textInput} onChange={(event) => setTextInput(event.target.value)} />
         </label>
         <div className="analysisSteps">
@@ -3855,7 +3855,7 @@ function AnalysisDetailPage({ data, navigate, setData, analysisId }: MutatingPag
         <SectionHeader title="추출된 품목 리스트" />
         <div className="analysisItemList">
           {items.map((itemEntry) => <AnalysisItemCard key={itemEntry.id} item={itemEntry} data={data} setData={setData} />)}
-          {items.length === 0 && <EmptyState icon={<SearchCheck />} title="분석 결과를 준비하고 있습니다." desc="잠시 후 mock 분석 결과가 표시됩니다." />}
+          {items.length === 0 && <EmptyState icon={<SearchCheck />} title="분석 결과를 준비하고 있습니다." desc="잠시 후 샘플 분석 결과가 표시됩니다." />}
         </div>
       </section>
 
@@ -4536,7 +4536,7 @@ function MessageThreadPanel({ data, setData, thread, currentUserId, currentRole 
       </div>
       <form className="messageComposer" onSubmit={submitMessage}>
         <input value={body} onChange={(event) => setBody(event.target.value)} placeholder={composerDisabled ? "종료되었거나 차단된 문의입니다." : "문의 내용을 입력하세요."} disabled={composerDisabled} />
-        <input value={attachmentName} onChange={(event) => setAttachmentName(event.target.value)} placeholder="첨부파일명 mock" disabled={composerDisabled} />
+        <input value={attachmentName} onChange={(event) => setAttachmentName(event.target.value)} placeholder="첨부파일명" disabled={composerDisabled} />
         <button className="primaryButton compact" type="submit" disabled={composerDisabled}>전송</button>
       </form>
       {warningDraft && (
@@ -4996,7 +4996,7 @@ function AccountingDashboardPage({ data, navigate, setData }: MutatingPageProps)
 
   return (
     <Page>
-      <PageTitle eyebrow="오늘장사 연동 mock" title="장부 반영 대시보드" desc="구매내역을 매입비 전표로 정리하고 오늘장사 장부 반영 상태를 관리합니다." />
+      <PageTitle eyebrow="오늘장사 연동 준비" title="장부 반영 대시보드" desc="구매내역을 매입비 전표로 정리하고 오늘장사 장부 반영 상태를 관리합니다." />
       <BetaLimitationsNotice navigate={navigate} context="accounting" />
       <div className="dashboardGrid">
         <Metric label="이번 달 매입" value={money(summary.totalAmount)} icon={<ReceiptText />} />
@@ -5007,7 +5007,7 @@ function AccountingDashboardPage({ data, navigate, setData }: MutatingPageProps)
       <section className="ledgerPanel">
         <div>
           <h2>오늘장사 장부 반영 대기</h2>
-          <p className="mutedText">실제 API 없이 mock 상태만 변경합니다.</p>
+          <p className="mutedText">실제 API 연동 전까지 샘플 상태로 반영 흐름을 검증합니다.</p>
         </div>
         <div className="toolbar">
           <button className="secondaryButton" type="button" onClick={() => navigate("/app/accounting/pending")}>대기 목록</button>
@@ -5038,7 +5038,7 @@ function AccountingPendingPage({ data, navigate, setData }: MutatingPageProps) {
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/accounting")} label="장부 대시보드" />
-      <PageTitle eyebrow="오늘장사 연동 mock" title="장부 반영 대기" desc="증빙과 계정 분류를 확인한 뒤 오늘장사 장부 반영 상태로 전환합니다." />
+      <PageTitle eyebrow="오늘장사 연동 준비" title="장부 반영 대기" desc="증빙과 계정 분류를 확인한 뒤 오늘장사 장부 반영 상태로 전환합니다." />
       <div className="purchaseList">
         {records.map((record) => (
           <article className="purchaseCard" key={record.id}>
@@ -5157,7 +5157,7 @@ function AdminAccountingPage({ data, navigate, setData }: MutatingPageProps) {
 
   return (
     <Page>
-      <PageTitle eyebrow="관리자" title="오늘장사 장부 연동 관리" desc="전표 생성 상태와 mock 동기화 결과를 전체 관점에서 확인합니다." />
+      <PageTitle eyebrow="관리자" title="오늘장사 장부 연동 관리" desc="전표 생성 상태와 샘플 동기화 결과를 전체 관점에서 확인합니다." />
       <div className="dashboardGrid">
         <Metric label="전표" value={`${entries.length}건`} icon={<ReceiptText />} />
         <Metric label="대기" value={`${pending}건`} icon={<Landmark />} />
@@ -5957,7 +5957,7 @@ function SupplierRequestsPage({ data, navigate }: PageProps) {
               {supplier.service_regions.map((region) => <option key={region}>{region}</option>)}
             </select>
             <select value={sort} onChange={(event) => setSort(event.target.value)}>
-              {["최신순", "마감 임박순", "희망 납품일 빠른순", "요청 완성도 높은순", "예상 금액 높은순", "지역 가까운순 mock"].map((option) => <option key={option}>{option}</option>)}
+              {["최신순", "마감 임박순", "희망 납품일 빠른순", "요청 완성도 높은순", "예상 금액 높은순", "지역 가까운순 샘플"].map((option) => <option key={option}>{option}</option>)}
             </select>
             <Toggle checked={taxOnly} label="세금계산서 필요" onChange={setTaxOnly} />
             <Toggle checked={cardOnly} label="카드결제 필요" onChange={setCardOnly} />
@@ -6189,7 +6189,7 @@ function SupplierBillingPage({ data, navigate, setData }: MutatingPageProps) {
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/supplier")} label="공급업체 홈" />
-      <PageTitle eyebrow="요금제/이용현황" title="이번 달 견적 참여와 수수료를 확인하세요." desc="실제 결제는 아직 연결하지 않고, 요금제와 청구 기준만 mock으로 관리합니다." />
+      <PageTitle eyebrow="요금제/이용현황" title="이번 달 견적 참여와 수수료를 확인하세요." desc="실제 결제 연동 전까지 요금제와 청구 기준을 샘플로 관리합니다." />
       <BetaLimitationsNotice navigate={navigate} context="payment" />
       <section className="billingHero">
         <div>
@@ -6214,7 +6214,7 @@ function SupplierBillingPage({ data, navigate, setData }: MutatingPageProps) {
         <Metric label="다음 갱신일" value={subscription.current_period_end} icon={<RefreshCcw />} />
       </div>
       <UsageLimitNotice data={data} supplierId={supplier.id} navigate={navigate} />
-      <SectionHeader title="요금제 변경 mock" />
+      <SectionHeader title="요금제 변경" />
       <div className="planGrid">
         {data.supplier_plans.filter((entry) => entry.is_active).sort((a, b) => a.sort_order - b.sort_order).map((entry) => (
           <PlanCard key={entry.id} plan={entry} active={entry.id === plan.id} onChange={() => changePlan(entry.id)} />
@@ -6271,7 +6271,7 @@ function SupplierUsagePage({ data, navigate }: PageProps) {
         <Metric label="매칭 조회" value={`${summary.usage.matched_requests_viewed_count}건`} icon={<SearchCheck />} />
         <Metric label="메시지" value={`${summary.usage.messages_sent_count}건`} icon={<Bell />} />
       </div>
-      <SectionHeader title="견적 참여권 mock" />
+      <SectionHeader title="견적 참여권" />
       <div className="tableWrap">
         <table>
           <thead>
@@ -6318,7 +6318,7 @@ function SupplierSettlementsPage({ data, navigate, setData }: MutatingPageProps)
         <Metric label="미납/대기 수수료" value={money(pendingFees.reduce((sum, fee) => sum + fee.fee_amount, 0))} icon={<Bell />} />
         <Metric label="완료 거래 수" value={`${fees.length}건`} icon={<PackageCheck />} />
         <Metric label="면제 거래 수" value={`${fees.filter((fee) => fee.is_waived).length}건`} icon={<BadgeCheck />} />
-        <Metric label="VAT mock" value={money(settlements.reduce((sum, entry) => sum + entry.total_vat_amount, 0))} icon={<ReceiptText />} />
+        <Metric label="VAT 샘플" value={money(settlements.reduce((sum, entry) => sum + entry.total_vat_amount, 0))} icon={<ReceiptText />} />
       </div>
       <FilterTabs options={["전체", "정산 대기", "확정", "납부 완료", "취소"]} active={filter} onChange={setFilter} />
       <div className="settlementLayout">
@@ -6329,7 +6329,7 @@ function SupplierSettlementsPage({ data, navigate, setData }: MutatingPageProps)
                 <th>정산 기간</th>
                 <th>거래금액</th>
                 <th>수수료</th>
-                <th>VAT mock</th>
+                <th>VAT 샘플</th>
                 <th>정산 기준 금액</th>
                 <th>상태</th>
                 <th>예정일</th>
@@ -6364,7 +6364,7 @@ function SupplierSettlementsPage({ data, navigate, setData }: MutatingPageProps)
               </div>
             );
           })}
-          <button className="ghostButton" type="button" onClick={() => setData(data)}>정산 확인 mock</button>
+          <button className="ghostButton" type="button" onClick={() => setData(data)}>정산 확인</button>
         </section>
       </div>
     </Page>
@@ -6460,9 +6460,9 @@ function AdminSupabasePage({ data, navigate }: PageProps) {
     { label: "Publishable key", value: configured ? "설정됨" : "미입력", status: configured ? "준비" : "필요" },
     { label: "Live data", value: appConfig.useLiveData ? "ON" : "OFF", status: liveReady ? "활성" : "대기" },
     { label: "Demo data", value: appConfig.enableDemoData ? "ON" : "OFF", status: appConfig.enableDemoData ? "허용" : "차단" },
-    { label: "Mock AI", value: appConfig.enableMockAi ? "ON" : "OFF", status: appConfig.enableMockAi ? "mock" : "live" },
-    { label: "Mock payment", value: appConfig.enableMockPayment ? "ON" : "OFF", status: appConfig.enableMockPayment ? "mock" : "live" },
-    { label: "Mock settlement", value: appConfig.enableMockSettlement ? "ON" : "OFF", status: appConfig.enableMockSettlement ? "mock" : "live" },
+    { label: "샘플 AI", value: appConfig.enableMockAi ? "ON" : "OFF", status: appConfig.enableMockAi ? "mock" : "live" },
+    { label: "샘플 결제", value: appConfig.enableMockPayment ? "ON" : "OFF", status: appConfig.enableMockPayment ? "mock" : "live" },
+    { label: "샘플 정산", value: appConfig.enableMockSettlement ? "ON" : "OFF", status: appConfig.enableMockSettlement ? "mock" : "live" },
   ];
 
   return (
@@ -6701,8 +6701,8 @@ function AdminMatchingAssistPage({ data, navigate }: PageProps) {
                 </div>
                 <div className="chipLine">{candidate.reasons.map((reason) => <span className="chip" key={reason}>{reason}</span>)}</div>
                 <div className="formActions">
-                  <button className="ghostButton compact" type="button">수동 알림 mock</button>
-                  <button className="secondaryButton compact" type="button">연락 태스크 mock</button>
+                  <button className="ghostButton compact" type="button">수동 알림</button>
+                  <button className="secondaryButton compact" type="button">연락 태스크</button>
                 </div>
               </article>
             ))}
@@ -7169,14 +7169,14 @@ function AdminRevenuePage({ data, navigate }: PageProps) {
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
-      <PageTitle eyebrow="매출 대시보드" title="플랫폼 거래액과 예상 수익을 한눈에 확인하세요." desc="실제 결제 연동 전까지는 수수료와 구독 예상 매출을 mock 기준으로 계산합니다." />
+      <PageTitle eyebrow="매출 대시보드" title="플랫폼 거래액과 예상 수익을 한눈에 확인하세요." desc="실제 결제 연동 전까지는 수수료와 구독 예상 매출을 샘플 기준으로 계산합니다." />
       <div className="dashboardGrid">
         <Metric label="총 거래액" value={money(summary.totalDealAmount)} icon={<ReceiptText />} />
         <Metric label="완료/수수료 대상 거래액" value={money(summary.completedDealAmount)} icon={<PackageCheck />} />
         <Metric label="예상 플랫폼 수수료" value={money(summary.expectedPlatformFees)} icon={<Landmark />} />
         <Metric label="확정 수수료" value={money(summary.confirmedPlatformFees)} icon={<BadgeCheck />} />
-        <Metric label="납부 완료액 mock" value={money(summary.paidPlatformFees)} icon={<Check />} />
-        <Metric label="미납/대기액 mock" value={money(summary.pendingPlatformFees)} icon={<Bell />} />
+        <Metric label="납부 완료액 샘플" value={money(summary.paidPlatformFees)} icon={<Check />} />
+        <Metric label="미납/대기액 샘플" value={money(summary.pendingPlatformFees)} icon={<Bell />} />
         <Metric label="유료 공급업체 수" value={`${summary.paidSupplierCount}곳`} icon={<Store />} />
         <Metric label="월 구독 예상 매출" value={money(summary.monthlySubscriptionRevenue)} icon={<RefreshCcw />} />
         <Metric label="총 예상 매출" value={money(summary.totalExpectedRevenue)} icon={<Landmark />} />
@@ -7239,7 +7239,7 @@ function AdminCommissionsPage({ data, setData }: { data: AppData; setData: (data
         </div>
         {draft && (
           <aside className="adminSupplierDetail">
-            <span className="eyebrow">정책 수정 mock</span>
+            <span className="eyebrow">정책 수정</span>
             <h2>{draft.category_name}</h2>
             <Field label="수수료율 %">
               <input type="number" step="0.1" value={Number((draft.commission_rate * 100).toFixed(2))} onChange={(event) => setDraft({ ...draft, commission_rate: Number(event.target.value) / 100 })} />
@@ -7263,7 +7263,7 @@ function AdminCommissionsPage({ data, setData }: { data: AppData; setData: (data
               <span>수수료 방식: {commissionFeeTypeLabels[draft.fee_type]}</span>
               <span>500,000원 예시: {money(calculateCommissionAmount(500000, draft.commission_rate, draft.min_fee_amount, draft.max_fee_amount, draft.fixed_fee_amount))}</span>
             </div>
-            <button className="primaryButton" type="button" onClick={savePolicy}>정책 저장 mock</button>
+            <button className="primaryButton" type="button" onClick={savePolicy}>정책 저장</button>
           </aside>
         )}
       </div>
@@ -7289,7 +7289,7 @@ function AdminPlansPage({ data, setData }: { data: AppData; setData: (data: AppD
 
   return (
     <Page>
-      <PageTitle eyebrow="요금제 관리" title="공급업체 플랜과 견적 참여 한도를 관리하세요." desc="실제 구독 결제 없이 관리자 수동 변경과 mock 요금제만 제공합니다." />
+      <PageTitle eyebrow="요금제 관리" title="공급업체 플랜과 견적 참여 한도를 관리하세요." desc="실제 구독 결제 연동 전까지 관리자 수동 변경과 샘플 요금제를 제공합니다." />
       <div className="planGrid">
         {data.supplier_plans.sort((a, b) => a.sort_order - b.sort_order).map((plan) => {
           const count = data.supplier_subscriptions.filter((subscription) => subscription.plan_id === plan.id).length;
@@ -7307,7 +7307,7 @@ function AdminPlansPage({ data, setData }: { data: AppData; setData: (data: AppD
       {draft && (
         <section className="billingAccountPanel">
           <div>
-            <span className="eyebrow">요금제 수정 mock</span>
+            <span className="eyebrow">요금제 수정</span>
             <h2>{draft.name}</h2>
             <p>상위노출, 통계 제공, 파트너 배지를 기능 플래그로 관리합니다.</p>
           </div>
@@ -7325,7 +7325,7 @@ function AdminPlansPage({ data, setData }: { data: AppData; setData: (data: AppD
             <Toggle checked={draft.badge_enabled} label="배지 제공" onChange={(checked) => setDraft({ ...draft, badge_enabled: checked })} />
             <Toggle checked={draft.is_active} label="요금제 활성화" onChange={(checked) => setDraft({ ...draft, is_active: checked })} />
           </div>
-          <button className="primaryButton" type="button" onClick={savePlan}>요금제 저장 mock</button>
+          <button className="primaryButton" type="button" onClick={savePlan}>요금제 저장</button>
         </section>
       )}
       <section className="billingAccountPanel">
@@ -7345,7 +7345,7 @@ function AdminPlansPage({ data, setData }: { data: AppData; setData: (data: AppD
             </select>
           </Field>
         </div>
-        <button className="secondaryButton" type="button" onClick={() => setData(updateSupplierSubscriptionPlan(data, supplierId, targetPlanId))}>플랜 변경 mock</button>
+        <button className="secondaryButton" type="button" onClick={() => setData(updateSupplierSubscriptionPlan(data, supplierId, targetPlanId))}>플랜 변경</button>
       </section>
     </Page>
   );
@@ -7359,7 +7359,7 @@ function AdminSettlementsPage({ data, setData }: { data: AppData; setData: (data
 
   return (
     <Page>
-      <PageTitle eyebrow="정산 관리" title="전체 정산 예정/완료 내역을 관리하세요." desc="실제 지급, 청구, 송금은 아직 수행하지 않고 상태와 면제 처리만 mock으로 제공합니다." />
+      <PageTitle eyebrow="정산 관리" title="전체 정산 예정/완료 내역을 관리하세요." desc="실제 지급, 청구, 송금 연동 전까지 상태와 면제 처리 흐름을 샘플로 제공합니다." />
       <FilterTabs options={["전체", "초안", "정산 대기", "확정", "납부 완료", "취소"]} active={filter} onChange={setFilter} />
       <div className="settlementLayout">
         <div className="tableWrap">
@@ -7370,7 +7370,7 @@ function AdminSettlementsPage({ data, setData }: { data: AppData; setData: (data
                 <th>정산 기간</th>
                 <th>완료 거래액</th>
                 <th>플랫폼 수수료</th>
-                <th>VAT mock</th>
+                <th>VAT 샘플</th>
                 <th>상태</th>
                 <th>예정일</th>
                 <th>액션</th>
@@ -7397,7 +7397,7 @@ function AdminSettlementsPage({ data, setData }: { data: AppData; setData: (data
           </table>
         </div>
         <section className="detailPanel">
-          <span className="eyebrow">수수료 면제 mock</span>
+          <span className="eyebrow">수수료 면제</span>
           <h2>프로모션/운영 조정</h2>
           <Field label="면제 사유">
             <select value={waiverReason} onChange={(event) => setWaiverReason(event.target.value)}>
@@ -8016,7 +8016,7 @@ function AdminBillingPage({ data, navigate, setData }: MutatingPageProps) {
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
-      <PageTitle eyebrow="청구/수수료 통합" title="PG, 구독, 정산 연동 준비 데이터를 확인하세요." desc="외부 결제 provider ID는 mock 또는 빈 값으로 유지합니다." />
+      <PageTitle eyebrow="청구/수수료 통합" title="PG, 구독, 정산 연동 준비 데이터를 확인하세요." desc="외부 결제 provider ID는 연동 전 샘플 또는 빈 값으로 유지합니다." />
       <div className="dashboardGrid">
         <Metric label="청구 계정" value={`${data.billing_accounts.length}곳`} icon={<Store />} />
         <Metric label="과금 이벤트" value={`${data.billing_events.length}건`} icon={<Bell />} />
@@ -8045,7 +8045,7 @@ function AdminBillingPage({ data, navigate, setData }: MutatingPageProps) {
           ))}
         </section>
       </div>
-      <SectionHeader title="수수료 상태 변경 mock" />
+      <SectionHeader title="수수료 상태 변경" />
       <section className="filterPanel">
         <select value={feeStatus} onChange={(event) => setFeeStatus(event.target.value as PlatformFeeStatus)}>
           {Object.entries(platformFeeStatusLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
@@ -8362,7 +8362,7 @@ function BetaLimitationsNotice({ navigate, context }: { navigate: Navigate; cont
       body: "베타 기간의 OCR/AI 결과는 검토용이며 실제 품목, 금액, 세금 정보는 직접 확인해야 합니다.",
     },
     accounting: {
-      title: "장부 연동은 mock 상태입니다.",
+      title: "장부 연동은 준비 상태입니다.",
       body: "베타 기간의 오늘장사 전표 반영과 세금 관련 정보는 참고용이며 실제 신고 전 별도 확인이 필요합니다.",
     },
     payment: {
@@ -8391,7 +8391,7 @@ function PublicDeploymentStatusPage({ navigate }: { navigate: Navigate }) {
     { label: "Build status", value: "OK", icon: <Check />, desc: "Vite bundle loaded" },
     { label: "Environment", value: environmentLabel(appConfig.appEnv), icon: <ShieldCheck />, desc: appConfig.appEnv },
     { label: "Supabase URL", value: appConfig.supabaseUrl ? "yes" : "no", icon: <Landmark />, desc: "value hidden" },
-    { label: "Live data", value: isLiveModeReady() ? "ready" : "off", icon: <SearchCheck />, desc: appConfig.useLiveData ? "key required" : "mock/local mode" },
+    { label: "Live data", value: isLiveModeReady() ? "ready" : "off", icon: <SearchCheck />, desc: appConfig.useLiveData ? "key required" : "sample/local mode" },
   ];
   const visibilityChecks = [
     "이 페이지가 Vercel 로그인 화면 없이 보이면 공개 접근은 열려 있습니다.",
@@ -8855,7 +8855,7 @@ function UsageLimitNotice({ data, supplierId, navigate }: { data: AppData; suppl
         <div>
           <span className="eyebrow">견적 참여 한도</span>
           <h2>현재 {gate.plan.name} 플랜은 견적 참여가 무제한입니다.</h2>
-          <p>상위노출과 통계 제공 상태는 요금제 설정에 따라 mock으로 표시됩니다.</p>
+          <p>상위노출과 통계 제공 상태는 요금제 설정에 따라 샘플로 표시됩니다.</p>
         </div>
       </section>
     );
@@ -9262,7 +9262,7 @@ function ReasonModal({
         {mode === "dispute" && (
           <div className="uploadBox">
             <Upload size={20} />
-            <input placeholder="사진 첨부 UI: 파일명만 입력" />
+            <input placeholder="첨부 사진 파일명" />
           </div>
         )}
         <div className="formActions">
@@ -9515,17 +9515,17 @@ function policyContent(type: "terms" | "privacy" | "operation" | "safety") {
         ["회원 역할", "구매자는 견적요청과 거래 관리를, 공급업체는 견적 제출과 납품 상태 관리를, 관리자는 운영 품질과 신고 처리를 담당합니다."],
         ["거래 당사자 책임", "초기 MVP에서 실제 결제와 세금계산서 발행은 당사자 간 협의로 진행되며, 플랫폼은 견적 비교와 이력 관리 도구를 제공합니다."],
         ["금지 행위와 제재", "허위 견적, 외부 결제 강요, 부적절한 메시지, 후기 조작, 반복 분쟁은 신고와 제재 대상이 될 수 있습니다."],
-        ["수수료/요금제", "베타 기간의 요금제와 수수료는 mock 또는 안내용이며, 정식 과금 전 별도 고지를 전제로 합니다."],
+        ["수수료/요금제", "베타 기간의 요금제와 수수료는 샘플 또는 안내용이며, 정식 과금 전 별도 고지를 전제로 합니다."],
       ],
     },
     privacy: {
       title: "개인정보처리방침 초안",
       sections: [
-        ["수집 항목", "이름, 연락처, 사업자 정보, 견적요청, 거래 상태, 메시지, 신고/후기, 업로드 파일명과 분석 결과 mock을 수집할 수 있습니다."],
+        ["수집 항목", "이름, 연락처, 사업자 정보, 견적요청, 거래 상태, 메시지, 신고/후기, 업로드 파일명과 분석 결과 샘플을 수집할 수 있습니다."],
         ["이용 목적", "견적 매칭, 거래 관리, 알림, 분쟁 처리, 서비스 품질 개선, 베타 피드백 확인을 위해 사용합니다."],
-        ["보관 기간", "베타 기간에는 테스트 목적의 localStorage/mock 데이터로 보관하며, 정식 DB 전환 시 보관 기간과 파기 기준을 별도 확정해야 합니다."],
+        ["보관 기간", "베타 기간에는 테스트 목적의 localStorage/샘플 데이터로 보관하며, 정식 DB 전환 시 보관 기간과 파기 기준을 별도 확정해야 합니다."],
         ["제3자 제공", "현재 MVP는 외부 결제, 문자, 세금계산서 자동 발행 연동을 수행하지 않습니다. 추후 연동 시 별도 동의와 고지가 필요합니다."],
-        ["업로드 자료 처리", "거래명세서, 견적서, 사진 등 파일은 품목 분석 mock과 거래 증빙 확인 용도로만 표시됩니다."],
+        ["업로드 자료 처리", "거래명세서, 견적서, 사진 등 파일은 품목 분석 샘플과 거래 증빙 확인 용도로만 표시됩니다."],
       ],
     },
     operation: {
@@ -9715,7 +9715,7 @@ function liveFeatureTone(status: (typeof liveFeatureMatrix)[number]["status"]): 
 
 function liveFeatureLabel(status: (typeof liveFeatureMatrix)[number]["status"]) {
   if (status === "ready") return "라이브 준비";
-  if (status === "mock") return "mock 유지";
+  if (status === "mock") return "샘플 유지";
   return "준비됨";
 }
 
@@ -9826,7 +9826,7 @@ function sortSupplierRequests(a: QuoteRequest, b: QuoteRequest, sort: string, su
   if (sort === "최신순") return b.created_at.localeCompare(a.created_at);
   if (sort === "마감 임박순" || sort === "희망 납품일 빠른순") return a.desired_delivery_date.localeCompare(b.desired_delivery_date);
   if (sort === "예상 금액 높은순") return (b.budget_max ?? b.previous_amount ?? 0) - (a.budget_max ?? a.previous_amount ?? 0);
-  if (sort === "지역 가까운순 mock") return calculateSupplierMatchScore(supplier, b) - calculateSupplierMatchScore(supplier, a);
+  if (sort === "지역 가까운순 샘플") return calculateSupplierMatchScore(supplier, b) - calculateSupplierMatchScore(supplier, a);
   return (b.request_quality_score ?? 0) - (a.request_quality_score ?? 0);
 }
 
