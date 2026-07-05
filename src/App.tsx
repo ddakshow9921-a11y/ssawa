@@ -2305,7 +2305,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
     try {
       if (receiptImageFile) {
         const result = await analyzeReceiptImageWithGemini(receiptImageFile, receiptFileName || receiptImageFile.name, sourceType);
-        applyReceiptAnalysis(result, "gemini", "Gemini AI가 업로드 이미지를 읽어 품목 후보를 자동 입력했습니다.");
+        applyReceiptAnalysis(result, "gemini", "AI가 업로드 이미지를 읽어 품목 후보를 자동 입력했습니다.");
         return;
       }
 
@@ -8687,7 +8687,7 @@ function UploadMockPanel({
   isAnalyzing: boolean;
 }) {
   return (
-    <div className="uploadMockPanel">
+    <div className={isAnalyzing ? "uploadMockPanel analyzing" : "uploadMockPanel"} aria-busy={isAnalyzing}>
       <div className="receiptUploadGrid">
         <Field label="구매영수증/자필 메모 이미지">
           <input
@@ -8702,20 +8702,32 @@ function UploadMockPanel({
         <div className="receiptUploadActions">
           <button className="primaryButton compact" type="button" onClick={onAnalyze} disabled={isAnalyzing}>
             <SearchCheck size={16} />
-            {isAnalyzing ? "Gemini 분석 중" : "Gemini AI로 자동 입력"}
+            {isAnalyzing ? "AI가 분석 중입니다." : "AI로 자동 입력"}
           </button>
-          <button className="secondaryButton compact" type="button" onClick={onAdd}>
+          <button className="secondaryButton compact" type="button" onClick={onAdd} disabled={isAnalyzing}>
             <Upload size={16} />
             샘플 첨부 보기
           </button>
         </div>
       </div>
+      {isAnalyzing && (
+        <div className="receiptAnalysisLoading" role="status" aria-live="assertive">
+          <div className="spinner large" aria-hidden="true" />
+          <strong>AI가 분석 중입니다.</strong>
+          <p>업로드한 이미지에서 품목명, 규격, 수량을 읽고 있습니다. 잠시만 기다려 주세요.</p>
+          <div className="analysisLoadingSteps" aria-hidden="true">
+            <span>이미지 확인</span>
+            <span>품목 추출</span>
+            <span>자동 입력 준비</span>
+          </div>
+        </div>
+      )}
       <p className="mutedText">기존 구매영수증, 거래명세서 캡처, 자필 주문 메모 사진을 올리면 품목명/규격/수량을 자동으로 채웁니다.</p>
       {analysisNotice && <p className="receiptAnalysisNotice">{analysisNotice}</p>}
       {analysisPreview && (
         <div className="receiptAnalysisResult">
           <div>
-            <span className="eyebrow">{analysisSource === "gemini" ? "Gemini AI 분석 완료" : "샘플 AI 분석 완료"}</span>
+            <span className="eyebrow">{analysisSource === "gemini" ? "AI 분석 완료" : "샘플 AI 분석 완료"}</span>
             <strong>{analysisPreview.supplierName} · {analysisPreview.categoryName}</strong>
             <p>업로드 이미지에서 {analysisPreview.items.length}개 품목을 자동 입력했습니다. 품목 검토 단계에서 수량과 규격을 수정할 수 있습니다.</p>
           </div>
