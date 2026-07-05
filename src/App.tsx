@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   addDealAttachment,
   addPurchaseDocument,
@@ -183,6 +183,7 @@ import { storageBuckets, uploadAppFile } from "./lib/supabase/storage";
 import { liveFeatureMatrix } from "./services/liveDataService";
 
 const today = "2026-07-04";
+const NOTIFICATION_SOUND_SRC = "/sounds/ssawa_quote_arrived_notification.wav";
 
 function apiEndpoint(path: string) {
   if (/^https?:\/\//i.test(path) || !appConfig.apiBaseUrl) return path;
@@ -320,6 +321,27 @@ function getNotificationPath(role: UserRole) {
   if (role === "supplier") return "/app/supplier/notifications";
   if (role === "admin") return "/app/admin/notifications";
   return "/app/notifications";
+}
+
+function getNotificationAudio(ref: { current: HTMLAudioElement | null }) {
+  if (!ref.current) {
+    const audio = new Audio(NOTIFICATION_SOUND_SRC);
+    audio.preload = "auto";
+    audio.volume = 0.85;
+    ref.current = audio;
+  }
+  return ref.current;
+}
+
+async function playNotificationSound(ref: { current: HTMLAudioElement | null }) {
+  const audio = getNotificationAudio(ref);
+  audio.pause();
+  audio.currentTime = 0;
+  await audio.play().catch(() => undefined);
+}
+
+async function playOneShotNotificationSound() {
+  await playNotificationSound({ current: null });
 }
 
 function getProfilePath(role: UserRole) {
@@ -491,6 +513,8 @@ export default function App() {
   const [data, setData] = useState<AppData>(() => loadData());
   const [authSession, setAuthSession] = useState<AppAuthSession | null>(() => loadStoredAuthSession());
   const [authReady, setAuthReady] = useState(false);
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const previousUnreadByUserRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (window.location.pathname === "/") {
@@ -506,6 +530,30 @@ export default function App() {
     window.history.replaceState({}, "", "/login");
     setPath("/login");
   }, [authReady, authSession, path]);
+
+  useEffect(() => {
+    const warmUpAudio = () => {
+      const audio = getNotificationAudio(notificationAudioRef);
+      const originalVolume = audio.volume;
+      audio.volume = 0;
+      void audio.play()
+        .then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = originalVolume;
+        })
+        .catch(() => {
+          audio.volume = originalVolume;
+        });
+    };
+
+    window.addEventListener("pointerdown", warmUpAudio, { once: true });
+    window.addEventListener("keydown", warmUpAudio, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", warmUpAudio);
+      window.removeEventListener("keydown", warmUpAudio);
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -582,10 +630,20 @@ export default function App() {
   const navItems = navItemsByRole[shellRole];
   const mobileNavItems = mobileNavItemsByRole[shellRole];
   const notificationPath = getNotificationPath(shellRole);
-  const unreadNotifications = getUnreadNotificationCount(data, getNotificationUserId(shellRole));
+  const notificationUserId = getNotificationUserId(shellRole);
+  const unreadNotifications = getUnreadNotificationCount(data, notificationUserId);
   const primaryAction = getPrimaryAction(shellRole);
   const PrimaryActionIcon = primaryAction.icon;
   const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole);
+
+  useEffect(() => {
+    if (!authSession) return;
+    const previousUnread = previousUnreadByUserRef.current[notificationUserId];
+    if (previousUnread !== undefined && unreadNotifications > previousUnread) {
+      void playNotificationSound(notificationAudioRef);
+    }
+    previousUnreadByUserRef.current[notificationUserId] = unreadNotifications;
+  }, [authSession, notificationUserId, unreadNotifications]);
 
   return (
     <div className="appShell">
@@ -4046,7 +4104,13 @@ function NotificationSettingsPage({ data, setData, userId, navigate }: { data: A
           <Toggle label="카카오 알림톡 받기" checked={settings.kakao_enabled} onChange={(value) => patch("kakao_enabled", value)} />
           <Toggle label="푸시 알림 받기" checked={settings.push_enabled} onChange={(value) => patch("push_enabled", value)} />
         </div>
-        <p className="mutedText">문자, 카카오 알림톡, 이메일 알림은 다음 단계에서 연동 예정입니다.</p>
+        <div className="toolbar">
+          <button className="secondaryButton compact" type="button" onClick={() => void playOneShotNotificationSound()}>
+            <Bell size={16} />
+            알림음 테스트
+          </button>
+        </div>
+        <p className="mutedText">문자, 카카오 알림톡, 이메일 알림은 다음 단계에서 연동 예정입니다. 알림음은 브라우저 정책상 사용자가 한 번 클릭한 뒤부터 재생됩니다.</p>
         <SectionHeader title="알림 종류" />
         <div className="toggleGrid">
           <Toggle label="견적 알림" checked={settings.quote_notifications_enabled} onChange={(value) => patch("quote_notifications_enabled", value)} />
