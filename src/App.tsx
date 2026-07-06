@@ -5415,7 +5415,10 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
     try {
       const result = await callBusinessApi("/api/business/status", { businessNumber });
       setBusinessCheck(result);
-      showStatus(result.message, result.ok ? "success" : result.manualReviewRequired ? "info" : "error");
+      const statusMessage = result.ok
+        ? `사업자 상태 확인이 완료되었습니다. ${result.message} 이어서 '진위 확인'을 눌러 대표자명과 개업일자를 확인해 주세요.`
+        : result.message;
+      showStatus(statusMessage, result.ok ? "success" : result.manualReviewRequired ? "info" : "error");
     } catch (error) {
       const fallback: BusinessCheckResult = {
         ok: false,
@@ -5771,6 +5774,12 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
               </StatusBadge>
               <span>{businessCheck.message}</span>
               {businessCheck.taxType && <small>{businessCheck.taxType}</small>}
+              {businessCheck.ok && businessCheck.valid !== true && !businessCheck.manualReviewRequired && (
+                <small className="businessCheckNextStep">상태 확인이 완료되었습니다. 이제 진위 확인을 눌러 대표자명과 개업일자를 확인해 주세요.</small>
+              )}
+              {businessCheck.valid === true && (
+                <small className="businessCheckNextStep success">진위 확인까지 완료되었습니다. 아래 동의 항목을 확인하고 가입을 진행해 주세요.</small>
+              )}
             </div>
           )}
         </div>

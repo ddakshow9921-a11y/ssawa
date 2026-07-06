@@ -6200,6 +6200,22 @@ button.riskRow {
   font-weight: 800;
 }
 
+.businessCheckResult .businessCheckNextStep {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  background: var(--blue-soft);
+  color: #1d4ed8;
+  line-height: 1.45;
+}
+
+.businessCheckResult .businessCheckNextStep.success {
+  border-color: rgba(18, 128, 92, 0.18);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
 .formStatus {
   margin: 0;
   padding: 12px 14px;
