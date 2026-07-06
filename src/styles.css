@@ -5012,9 +5012,32 @@ tbody tr:hover {
   box-shadow: 0 16px 36px rgba(255, 107, 26, 0.12);
 }
 
+.receiptUploadHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.receiptUploadHeader strong {
+  display: block;
+  color: var(--navy);
+  font-size: 16px;
+}
+
+.receiptUploadHeader p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .receiptUploadGrid {
   display: grid;
-  grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1fr) auto;
+  grid-template-columns: minmax(210px, 0.95fr) minmax(240px, 1fr) auto;
   align-items: end;
   gap: 10px;
 }
@@ -5025,6 +5048,36 @@ tbody tr:hover {
   gap: 8px;
   justify-content: flex-end;
   padding-bottom: 2px;
+}
+
+.receiptUploadStatus {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.receiptUploadStatus strong {
+  color: var(--navy);
+  font-size: 14px;
+}
+
+.receiptUploadStatus span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.receiptUploadStatus.ready {
+  border-style: solid;
+  border-color: rgba(18, 128, 92, 0.18);
+  background: var(--green-soft);
+}
+
+.receiptUploadStatus.ready strong,
+.receiptUploadStatus.ready span {
+  color: var(--green);
 }
 
 .receiptAnalysisResult {
@@ -7255,6 +7308,10 @@ tr.selectedRow {
 
   .receiptUploadActions {
     justify-content: flex-start;
+  }
+
+  .receiptUploadActions > button {
+    width: 100%;
   }
 
   .itemReviewFields input:first-child,

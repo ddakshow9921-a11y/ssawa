@@ -7350,7 +7350,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
   const todayDraftCategory = todayDraft ? data.categories.find((category) => category.name === todayDraft.category || todayDraft.category.includes(category.name) || category.name.includes(todayDraft.category)) : undefined;
   const [step, setStep] = useState(0);
   const [textInput, setTextInput] = useState(todayRecommendation?.textInput ?? todayDraft?.description ?? "치킨박스 1000개, 소스컵 2000개, 배달봉투 대형 1000장 필요해요.");
-  const [receiptFileName, setReceiptFileName] = useState("치킨집_포장재_영수증.jpg");
+  const [receiptFileName, setReceiptFileName] = useState("");
   const [receiptImageFile, setReceiptImageFile] = useState<File | null>(null);
   const [receiptAnalysisPreview, setReceiptAnalysisPreview] = useState<ReceiptAnalysisPreview | null>(null);
   const [receiptAnalysisSource, setReceiptAnalysisSource] = useState<ReceiptAnalysisSource>("");
@@ -7502,20 +7502,19 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
 
   async function analyzeReceiptPhoto() {
     const sourceType = draft.input_method === "invoice" ? "invoice" : "photo";
+    if (!receiptImageFile) {
+      setReceiptAnalysisNotice("분석할 이미지를 먼저 선택해 주세요. 구매영수증, 거래명세서 캡처, 자필 메모 사진을 사용할 수 있습니다.");
+      return;
+    }
     setReceiptAnalysisLoading(true);
     setError("");
     try {
-      if (receiptImageFile) {
-        const result = await analyzeReceiptImageWithGemini(receiptImageFile, receiptFileName || receiptImageFile.name, sourceType);
-        applyReceiptAnalysis(result, "gemini", "AI가 업로드 이미지를 읽어 품목 후보를 자동 입력했습니다.");
-        return;
-      }
-
-      const result = analyzeReceiptPhotoForQuoteRequest(receiptFileName, sourceType);
-      applyReceiptAnalysis(result, "mock", "이미지 파일이 선택되지 않아 샘플 분석 결과로 자동 입력했습니다.");
+      const result = await analyzeReceiptImageWithGemini(receiptImageFile, receiptFileName || receiptImageFile.name, sourceType);
+      applyReceiptAnalysis(result, "gemini", "AI가 업로드 이미지를 읽어 품목 후보를 자동 입력했습니다.");
     } catch (analysisError) {
-      const fallback = analyzeReceiptPhotoForQuoteRequest(receiptFileName || receiptImageFile?.name || "", sourceType);
-      applyReceiptAnalysis(fallback, "mock", `${formatGeminiAnalysisError(analysisError)} 샘플 분석 결과로 자동 입력했습니다.`);
+      setReceiptAnalysisPreview(null);
+      setReceiptAnalysisSource("");
+      setReceiptAnalysisNotice(formatGeminiAnalysisError(analysisError));
     } finally {
       setReceiptAnalysisLoading(false);
     }
@@ -7527,26 +7526,6 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
     if (file) {
       setReceiptFileName(file.name);
     }
-  }
-
-  function addMockAttachment(status: AttachmentAnalysisStatus = "analyzed") {
-    const defaults: Record<QuoteRequestInputMethod, string> = {
-      manual: "요청_참고자료.pdf",
-      photo: "자재_사진.jpg",
-      invoice: "기존_거래명세서.pdf",
-      text: "문장입력_메모.txt",
-      template: "템플릿_참고자료.xlsx",
-      repeat: "이전요청_자료.pdf",
-    };
-    const fileName = defaults[draft.input_method];
-    const attachment: QuoteAttachmentDraft = {
-      file_name: fileName,
-      file_type: fileName.split(".").pop() ?? "file",
-      analysis_status: status,
-      extracted_text: status === "analyzed" ? "첨부파일에서 품목명, 규격, 수량 후보를 추출한 목업 결과입니다." : "",
-      extracted_items_json: status === "analyzed" ? JSON.stringify({ items: cleanItems.map((entry) => entry.item_name) }) : "",
-    };
-    setDraft((current) => ({ ...current, attachment_note: current.attachment_note || fileName, attachments: [...current.attachments, attachment] }));
   }
 
   function goNext() {
@@ -7647,7 +7626,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
                     onFileNameChange={setReceiptFileName}
                     onImageFileChange={updateReceiptImageFile}
                     onAnalyze={analyzeReceiptPhoto}
-                    onAdd={() => addMockAttachment("analyzed")}
+                    hasSelectedFile={Boolean(receiptImageFile)}
                     analysisPreview={receiptAnalysisPreview}
                     analysisSource={receiptAnalysisSource}
                     analysisNotice={receiptAnalysisNotice}
@@ -15222,7 +15201,7 @@ function UploadMockPanel({
   onFileNameChange,
   onImageFileChange,
   onAnalyze,
-  onAdd,
+  hasSelectedFile,
   analysisPreview,
   analysisSource,
   analysisNotice,
@@ -15233,7 +15212,7 @@ function UploadMockPanel({
   onFileNameChange: (value: string) => void;
   onImageFileChange: (file: File | null) => void;
   onAnalyze: () => void;
-  onAdd: () => void;
+  hasSelectedFile: boolean;
   analysisPreview: ReceiptAnalysisPreview | null;
   analysisSource: ReceiptAnalysisSource;
   analysisNotice: string;
@@ -15241,27 +15220,34 @@ function UploadMockPanel({
 }) {
   return (
     <div className={isAnalyzing ? "uploadMockPanel analyzing" : "uploadMockPanel"} aria-busy={isAnalyzing}>
+      <div className="receiptUploadHeader">
+        <span className="tileIcon"><ReceiptText size={20} /></span>
+        <div>
+          <strong>영수증·메모 이미지로 품목 자동 입력</strong>
+          <p>기존 구매영수증, 거래명세서 캡처, 자필 주문 메모를 올리면 AI가 품목명, 규격, 수량을 채웁니다.</p>
+        </div>
+      </div>
       <div className="receiptUploadGrid">
-        <Field label="구매영수증/자필 메모 이미지">
+        <Field label="이미지 파일">
           <input
             type="file"
             accept="image/*"
             onChange={(event) => onImageFileChange(event.target.files?.[0] ?? null)}
           />
         </Field>
-        <Field label="파일명 또는 메모">
-          <input value={fileName} onChange={(event) => onFileNameChange(event.target.value)} placeholder="예: 치킨집_포장재_영수증.jpg" />
+        <Field label="메모 또는 파일명">
+          <input value={fileName} onChange={(event) => onFileNameChange(event.target.value)} placeholder="예: 7월 포장재 구매영수증" />
         </Field>
         <div className="receiptUploadActions">
-          <button className="primaryButton compact" type="button" onClick={onAnalyze} disabled={isAnalyzing}>
+          <button className="primaryButton compact" type="button" onClick={onAnalyze} disabled={isAnalyzing || !hasSelectedFile}>
             <SearchCheck size={16} />
             {isAnalyzing ? "AI가 분석 중입니다." : "AI로 자동 입력"}
           </button>
-          <button className="secondaryButton compact" type="button" onClick={onAdd} disabled={isAnalyzing}>
-            <Upload size={16} />
-            샘플 첨부 보기
-          </button>
         </div>
+      </div>
+      <div className={hasSelectedFile ? "receiptUploadStatus ready" : "receiptUploadStatus"}>
+        <strong>{hasSelectedFile ? "이미지 선택 완료" : "이미지를 선택해 주세요"}</strong>
+        <span>{hasSelectedFile ? `${fileName || "선택한 이미지"}를 분석할 준비가 되었습니다.` : "실제 영수증이나 자필 메모 이미지를 선택하면 AI 자동 입력 버튼이 활성화됩니다."}</span>
       </div>
       {isAnalyzing && (
         <div className="receiptAnalysisLoading" role="status" aria-live="assertive">
@@ -15275,12 +15261,11 @@ function UploadMockPanel({
           </div>
         </div>
       )}
-      <p className="mutedText">기존 구매영수증, 거래명세서 캡처, 자필 주문 메모 사진을 올리면 품목명/규격/수량을 자동으로 채웁니다.</p>
       {analysisNotice && <p className="receiptAnalysisNotice">{analysisNotice}</p>}
       {analysisPreview && (
         <div className="receiptAnalysisResult">
           <div>
-            <span className="eyebrow">{analysisSource === "gemini" ? "AI 분석 완료" : "샘플 AI 분석 완료"}</span>
+            <span className="eyebrow">{analysisSource === "gemini" ? "AI 분석 완료" : "자동 분석 완료"}</span>
             <strong>{analysisPreview.supplierName} · {analysisPreview.categoryName}</strong>
             <p>업로드 이미지에서 {analysisPreview.items.length}개 품목을 자동 입력했습니다. 품목 검토 단계에서 수량과 규격을 수정할 수 있습니다.</p>
           </div>
@@ -15296,7 +15281,7 @@ function UploadMockPanel({
           </div>
         </div>
       )}
-      <AttachmentStatusList attachments={attachments} />
+      {attachments.length > 0 && <AttachmentStatusList attachments={attachments} />}
     </div>
   );
 }
