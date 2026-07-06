@@ -7604,7 +7604,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
             <p className="mutedText summaryLine">정확히 몰라도 괜찮아요. 규격을 모르시면 사진이나 메모를 남겨주세요.</p>
             <div className="methodGrid">
               <MethodCard icon={<ReceiptText />} title="거래명세서/견적서 올리기" desc="기존 명세서나 영수증을 읽어 재견적 품목을 만듭니다." active={draft.input_method === "invoice"} onClick={() => selectMethod("invoice")} />
-              <MethodCard icon={<Upload />} title="사진으로 올리기" desc="구매영수증이나 자필 메모 사진을 올리면 Gemini AI가 품목을 자동 입력합니다." active={draft.input_method === "photo"} onClick={() => selectMethod("photo")} />
+              <MethodCard icon={<Upload />} title="사진으로 올리기" desc="구매영수증이나 자필 메모 사진을 올리면 AI가 품목을 자동 입력합니다." active={draft.input_method === "photo"} onClick={() => selectMethod("photo")} />
               <MethodCard icon={<FilePlus2 />} title="직접 입력하기" desc="품목명, 수량, 납품 조건을 직접 입력합니다." active={draft.input_method === "manual"} onClick={() => selectMethod("manual")} />
               <MethodCard icon={<RefreshCcw />} title="지난 구매 다시 요청하기" desc="지난 요청을 복사해 수량과 납품일만 바꿉니다." active={draft.input_method === "repeat"} onClick={() => selectMethod("repeat")} />
             </div>
@@ -16721,10 +16721,10 @@ async function analyzeReceiptImageWithGemini(file: File, fileName: string, sourc
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(typeof payload.error === "string" ? payload.error : "Gemini 분석 API 응답이 올바르지 않습니다.");
+    throw new Error(typeof payload.error === "string" ? payload.error : "AI 분석 API 응답이 올바르지 않습니다.");
   }
   if (!payload || typeof payload !== "object" || !Array.isArray((payload as Record<string, unknown>).items)) {
-    throw new Error("Gemini 분석 API 응답이 JSON 품목 형식이 아닙니다.");
+    throw new Error("AI 분석 API 응답이 품목 형식이 아닙니다.");
   }
   return normalizeGeminiReceiptPayload(payload, fileName || file.name, sourceType, file.type || "image/jpeg");
 }
@@ -16759,7 +16759,7 @@ function normalizeGeminiReceiptPayload(payload: Record<string, unknown>, fileNam
       allow_alternative: true,
       confidence_score: confidence,
       needs_review: Boolean(item.needsReview) || confidence < 75,
-      review_reason: stringValue(item.reviewReason) || (confidence < 75 ? "Gemini AI 인식 신뢰도가 낮아 확인이 필요합니다." : ""),
+      review_reason: stringValue(item.reviewReason) || (confidence < 75 ? "AI 인식 신뢰도가 낮아 확인이 필요합니다." : ""),
     };
   });
   const normalizedItems = items.length ? items : [{ ...emptyItem, item_name: "품목명 확인 필요", confidence_score: 55, needs_review: true, review_reason: "이미지에서 품목을 충분히 인식하지 못했습니다." }];
@@ -16780,7 +16780,7 @@ function normalizeGeminiReceiptPayload(payload: Record<string, unknown>, fileNam
       file_name: fileName,
       file_type: fileName.split(".").pop() || mimeType.split("/").pop() || "jpg",
       analysis_status: "analyzed",
-      extracted_text: `Gemini AI가 ${normalizedItems.length}개 품목을 추출했습니다.`,
+      extracted_text: `AI가 ${normalizedItems.length}개 품목을 추출했습니다.`,
       extracted_items_json: JSON.stringify({ source: "gemini", ...payload, normalizedItems }),
     },
     items: normalizedItems,
@@ -16805,14 +16805,24 @@ function errorMessage(error: unknown) {
 }
 
 function formatGeminiAnalysisError(error: unknown) {
-  const message = errorMessage(error);
-  if (message.includes("GEMINI_API_KEY") || message.includes("OAuth") || message.includes("API 키")) {
-    return `Gemini AI 설정 필요: ${message}`;
+  const rawMessage = errorMessage(error);
+  const message = neutralizeAiProviderMessage(rawMessage);
+  if (rawMessage.includes("GEMINI_API_KEY") || rawMessage.includes("OAuth") || rawMessage.includes("API 키")) {
+    return `AI 분석 설정 필요: ${message}`;
   }
-  if (isTemporaryGeminiDemandError(message)) {
+  if (isTemporaryGeminiDemandError(rawMessage)) {
     return "AI 분석 요청이 잠시 몰려 분석이 지연되고 있습니다. 1~2분 뒤 다시 'AI로 자동 입력'을 눌러 주세요. 급하면 아래 품목을 직접 입력해 견적요청을 계속 진행할 수 있습니다.";
   }
-  return `Gemini AI 연결 실패: ${message}`;
+  return `AI 분석 연결 실패: ${message}`;
+}
+
+function neutralizeAiProviderMessage(message: string) {
+  return message
+    .replace(/Gemini AI/gi, "AI 분석 서비스")
+    .replace(/Gemini API/gi, "AI 분석 API")
+    .replace(/Gemini/gi, "AI 분석 서비스")
+    .replace(/Google AI Studio/gi, "AI 키 발급 페이지")
+    .replace(/GEMINI_API_KEY/g, "이미지 AI 분석용 서버 키");
 }
 
 function isTemporaryGeminiDemandError(message: string) {

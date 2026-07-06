@@ -75,13 +75,13 @@ async function handleAnalyzeBody(input) {
 
     const text = extractGeminiText(geminiPayload);
     if (!text) {
-      return json({ error: "Gemini 응답에서 분석 결과를 찾지 못했습니다." }, 502);
+      return json({ error: "AI 분석 응답에서 결과를 찾지 못했습니다." }, 502);
     }
 
     try {
       return json({ ...normalizeResult(JSON.parse(stripJsonFence(text))), source: "gemini", model });
     } catch {
-      return json({ error: "Gemini 분석 결과 JSON을 해석하지 못했습니다.", rawText: text }, 502);
+      return json({ error: "AI 분석 결과를 해석하지 못했습니다.", rawText: text }, 502);
     }
 }
 
@@ -205,9 +205,9 @@ function stripJsonFence(text) {
 }
 
 function geminiErrorMessage(payload, status = 0) {
-  const message = payload?.error?.message || "Gemini API 분석 요청이 실패했습니다.";
+  const message = payload?.error?.message || "AI 분석 요청이 실패했습니다.";
   if (isTemporaryGeminiDemandError(message, status)) return temporaryGeminiDemandMessage();
-  return message;
+  return neutralizeAiProviderMessage(message);
 }
 
 function isTemporaryGeminiDemandError(message, status = 0) {
@@ -223,7 +223,16 @@ function isTemporaryGeminiDemandError(message, status = 0) {
 }
 
 function temporaryGeminiDemandMessage() {
-  return "Gemini AI 사용량이 잠시 많아 분석이 지연되고 있습니다. 1~2분 후 다시 'AI로 자동 입력'을 눌러 주세요. 급한 경우 품목을 직접 입력해 견적요청을 계속 진행할 수 있습니다.";
+  return "AI 분석 요청이 잠시 많아 분석이 지연되고 있습니다. 1~2분 후 다시 'AI로 자동 입력'을 눌러 주세요. 급한 경우 품목을 직접 입력해 견적요청을 계속 진행할 수 있습니다.";
+}
+
+function neutralizeAiProviderMessage(message) {
+  return cleanString(message)
+    .replace(/Gemini AI/gi, "AI 분석 서비스")
+    .replace(/Gemini API/gi, "AI 분석 API")
+    .replace(/Gemini/gi, "AI 분석 서비스")
+    .replace(/Google AI Studio/gi, "AI 키 발급 페이지")
+    .replace(/GEMINI_API_KEY/g, "이미지 AI 분석용 서버 키");
 }
 
 function waitForRetry(attempt) {
@@ -248,13 +257,13 @@ function getGeminiApiKey() {
 }
 
 function googleOAuthCredentialMessage() {
-  return "Google OAuth 클라이언트 ID/Secret은 Gemini API 키가 아닙니다. 영수증 AI 분석은 Google AI Studio에서 발급한 Gemini API 키를 서버 환경변수 GEMINI_API_KEY로 설정해야 합니다.";
+  return "현재 입력된 로그인용 OAuth 자격증명은 이미지 분석 API 키가 아닙니다. 이미지 AI 분석용 서버 키를 환경변수에 설정해야 합니다.";
 }
 
 function missingGeminiKeyMessage() {
   if (hasGoogleOAuthCredentials()) return googleOAuthCredentialMessage();
-  if (process.env.VERCEL) return "GEMINI_API_KEY가 Vercel 서버 환경변수에 설정되지 않았습니다. Google AI Studio에서 발급한 Gemini API 키를 Vercel Environment Variables에 서버 전용 값으로 추가해 주세요.";
-  return "GEMINI_API_KEY가 로컬 서버 환경변수에 설정되지 않았습니다. Google AI Studio에서 발급한 Gemini API 키를 .env.local에 GEMINI_API_KEY=... 형식으로 추가한 뒤 로컬 서버를 재시작해 주세요.";
+  if (process.env.VERCEL) return "이미지 AI 분석용 서버 키가 Vercel 서버 환경변수에 설정되지 않았습니다. Vercel Environment Variables에 서버 전용 값으로 추가해 주세요.";
+  return "이미지 AI 분석용 서버 키가 로컬 서버 환경변수에 설정되지 않았습니다. .env.local에 서버 키를 추가한 뒤 로컬 서버를 재시작해 주세요.";
 }
 
 function json(payload, status = 200) {
