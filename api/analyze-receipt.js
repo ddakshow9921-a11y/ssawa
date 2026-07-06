@@ -3,6 +3,7 @@ import { jsonResult, runJsonPost } from "./_http.js";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_MODEL = "gemini-3.5-flash";
 const MAX_BASE64_LENGTH = 14 * 1024 * 1024;
+const MAX_GEMINI_ATTEMPTS = 3;
 const CATEGORY_NAMES = ["식자재", "포장재", "소모품", "주방용품", "설비/닥트/환기자재", "건축자재", "공구/산업자재", "기타"];
 const GEMINI_API_KEY_ENV_KEYS = ["GEMINI_API_KEY", "GOOGLE_AI_API_KEY", "GOOGLE_GENAI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"];
 const OAUTH_CREDENTIAL_ENV_KEYS = ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"];
@@ -30,37 +31,46 @@ async function handleAnalyzeBody(input) {
     }
 
     const model = cleanModelName(process.env.GEMINI_MODEL || DEFAULT_MODEL);
-    const geminiResponse = await globalThis.fetch(`${GEMINI_API_BASE}/${model}:generateContent`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: buildPrompt(fileName) },
-              {
-                inline_data: {
-                  mime_type: mimeType,
-                  data: imageBase64,
-                },
+    const geminiRequestBody = JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: buildPrompt(fileName) },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: imageBase64,
               },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          response_mime_type: "application/json",
-          response_schema: receiptSchema(),
+            },
+          ],
         },
-      }),
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        response_mime_type: "application/json",
+        response_schema: receiptSchema(),
+      },
     });
+    let geminiResponse;
+    let geminiPayload = {};
+    for (let attempt = 1; attempt <= MAX_GEMINI_ATTEMPTS; attempt += 1) {
+      geminiResponse = await globalThis.fetch(`${GEMINI_API_BASE}/${model}:generateContent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: geminiRequestBody,
+      });
+      geminiPayload = await geminiResponse.json().catch(() => ({}));
+      if (geminiResponse.ok || !isTemporaryGeminiDemandError(geminiErrorMessage(geminiPayload), geminiResponse.status) || attempt === MAX_GEMINI_ATTEMPTS) {
+        break;
+      }
+      await waitForRetry(attempt);
+    }
 
-    const geminiPayload = await geminiResponse.json().catch(() => ({}));
     if (!geminiResponse.ok) {
-      return json({ error: geminiErrorMessage(geminiPayload) }, geminiResponse.status);
+      return json({ error: geminiErrorMessage(geminiPayload, geminiResponse.status) }, geminiResponse.status);
     }
 
     const text = extractGeminiText(geminiPayload);
@@ -194,8 +204,30 @@ function stripJsonFence(text) {
   return text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
 }
 
-function geminiErrorMessage(payload) {
-  return payload?.error?.message || "Gemini API 분석 요청이 실패했습니다.";
+function geminiErrorMessage(payload, status = 0) {
+  const message = payload?.error?.message || "Gemini API 분석 요청이 실패했습니다.";
+  if (isTemporaryGeminiDemandError(message, status)) return temporaryGeminiDemandMessage();
+  return message;
+}
+
+function isTemporaryGeminiDemandError(message, status = 0) {
+  const text = cleanString(message).toLowerCase();
+  return status === 429
+    || status === 503
+    || text.includes("high demand")
+    || text.includes("try again later")
+    || text.includes("temporarily unavailable")
+    || text.includes("overloaded")
+    || text.includes("resource exhausted")
+    || text.includes("rate limit");
+}
+
+function temporaryGeminiDemandMessage() {
+  return "Gemini AI 사용량이 잠시 많아 분석이 지연되고 있습니다. 1~2분 후 다시 'AI로 자동 입력'을 눌러 주세요. 급한 경우 품목을 직접 입력해 견적요청을 계속 진행할 수 있습니다.";
+}
+
+function waitForRetry(attempt) {
+  return new Promise((resolve) => setTimeout(resolve, 600 * attempt));
 }
 
 function looksLikeGoogleOAuthCredential(value) {

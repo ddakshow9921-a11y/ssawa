@@ -16756,7 +16756,22 @@ function formatGeminiAnalysisError(error: unknown) {
   if (message.includes("GEMINI_API_KEY") || message.includes("OAuth") || message.includes("API 키")) {
     return `Gemini AI 설정 필요: ${message}`;
   }
+  if (isTemporaryGeminiDemandError(message)) {
+    return "AI 분석 요청이 잠시 몰려 분석이 지연되고 있습니다. 1~2분 뒤 다시 'AI로 자동 입력'을 눌러 주세요. 급하면 아래 품목을 직접 입력해 견적요청을 계속 진행할 수 있습니다.";
+  }
   return `Gemini AI 연결 실패: ${message}`;
+}
+
+function isTemporaryGeminiDemandError(message: string) {
+  const text = message.toLowerCase();
+  return text.includes("high demand")
+    || text.includes("try again later")
+    || text.includes("temporarily unavailable")
+    || text.includes("overloaded")
+    || text.includes("resource exhausted")
+    || text.includes("rate limit")
+    || text.includes("사용량이 잠시 많아")
+    || text.includes("분석이 지연");
 }
 
 function money(value: number) {
