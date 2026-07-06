@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, ReactNode, SyntheticEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, ReactNode, SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -542,6 +542,7 @@ type BusinessSignupDraft = {
   openingDate: string;
   region: string;
   businessAddress: string;
+  businessDetailAddress: string;
   categories: string[];
   serviceRegions: string[];
   documentFile: File | null;
@@ -563,6 +564,49 @@ type BusinessCheckResult = {
   rawStatusCode?: string;
 };
 
+type KakaoPostcodeData = {
+  address: string;
+  roadAddress: string;
+  jibunAddress: string;
+  userSelectedType: "R" | "J";
+  zonecode: string;
+  sido: string;
+  sigungu: string;
+  bname: string;
+  buildingName: string;
+  apartment: "Y" | "N";
+};
+
+type KakaoPostcodeResult = {
+  address: string;
+  zonecode: string;
+  region: string;
+};
+
+type KakaoPostcodeWidget = {
+  open: () => void;
+  embed: (element: HTMLElement) => void;
+};
+
+type KakaoPostcodeConstructor = new (options: {
+  oncomplete: (data: KakaoPostcodeData) => void;
+  onresize?: (size: { width: number; height: number }) => void;
+  width?: string;
+  height?: string;
+  maxSuggestItems?: number;
+}) => KakaoPostcodeWidget;
+
+declare global {
+  interface Window {
+    kakao?: {
+      Postcode?: KakaoPostcodeConstructor;
+    };
+    daum?: {
+      Postcode?: KakaoPostcodeConstructor;
+    };
+  }
+}
+
 const AUTH_STORAGE_KEY = "ssawa-auth-session-v2";
 const LAUNCH_SCREEN_MIN_MS = 700;
 const EXIT_CONFIRM_MESSAGE = "싸와! 앱을 종료하시겠습니까?";
@@ -580,6 +624,7 @@ const defaultSignupDraft: BusinessSignupDraft = {
   openingDate: "",
   region: "",
   businessAddress: "",
+  businessDetailAddress: "",
   categories: [],
   serviceRegions: [],
   documentFile: null,
@@ -605,6 +650,115 @@ function formatBusinessNumber(value: string) {
   if (digits.length <= 3) return digits;
   if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
   return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+}
+
+function formatKoreanPhoneNumber(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.startsWith("02")) {
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 5) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5)}`;
+    return `${digits.slice(0, 2)}-${digits.slice(2, 6)}-${digits.slice(6, 10)}`;
+  }
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
+
+function composeBusinessAddress(address: string, detailAddress: string) {
+  return [address.trim(), detailAddress.trim()].filter(Boolean).join(" ");
+}
+
+function normalizeKoreaRegionName(value: string) {
+  return value
+    .replace("서울특별시", "서울")
+    .replace("부산광역시", "부산")
+    .replace("대구광역시", "대구")
+    .replace("인천광역시", "인천")
+    .replace("광주광역시", "광주")
+    .replace("대전광역시", "대전")
+    .replace("울산광역시", "울산")
+    .replace("세종특별자치시", "세종")
+    .replace("경기도", "경기")
+    .replace("강원특별자치도", "강원")
+    .replace("강원도", "강원")
+    .replace("충청북도", "충북")
+    .replace("충청남도", "충남")
+    .replace("전북특별자치도", "전북")
+    .replace("전라북도", "전북")
+    .replace("전라남도", "전남")
+    .replace("경상북도", "경북")
+    .replace("경상남도", "경남")
+    .replace("제주특별자치도", "제주")
+    .trim();
+}
+
+function extractRegionFromAddress(address: string) {
+  const parts = normalizeKoreaRegionName(address).split(/\s+/).filter(Boolean);
+  if (!parts.length) return "";
+  if (parts[0] === "세종") return "세종";
+  return parts.slice(0, 2).join(" ");
+}
+
+function formatKakaoRegion(data: KakaoPostcodeData) {
+  const sido = normalizeKoreaRegionName(data.sido);
+  const sigungu = data.sigungu.trim();
+  return [sido, sigungu].filter(Boolean).join(" ") || extractRegionFromAddress(data.address || data.roadAddress || data.jibunAddress);
+}
+
+const KOREA_REGION_OPTIONS = [
+  "서울 강남구", "서울 강동구", "서울 강북구", "서울 강서구", "서울 관악구", "서울 광진구", "서울 구로구", "서울 금천구", "서울 노원구", "서울 도봉구", "서울 동대문구", "서울 동작구", "서울 마포구", "서울 서대문구", "서울 서초구", "서울 성동구", "서울 성북구", "서울 송파구", "서울 양천구", "서울 영등포구", "서울 용산구", "서울 은평구", "서울 종로구", "서울 중구", "서울 중랑구",
+  "부산 강서구", "부산 금정구", "부산 기장군", "부산 남구", "부산 동구", "부산 동래구", "부산 부산진구", "부산 북구", "부산 사상구", "부산 사하구", "부산 서구", "부산 수영구", "부산 연제구", "부산 영도구", "부산 중구", "부산 해운대구",
+  "대구 군위군", "대구 남구", "대구 달서구", "대구 달성군", "대구 동구", "대구 북구", "대구 서구", "대구 수성구", "대구 중구",
+  "인천 강화군", "인천 계양구", "인천 남동구", "인천 동구", "인천 미추홀구", "인천 부평구", "인천 서구", "인천 연수구", "인천 옹진군", "인천 중구",
+  "광주 광산구", "광주 남구", "광주 동구", "광주 북구", "광주 서구",
+  "대전 대덕구", "대전 동구", "대전 서구", "대전 유성구", "대전 중구",
+  "울산 남구", "울산 동구", "울산 북구", "울산 울주군", "울산 중구",
+  "세종",
+  "경기 가평군", "경기 고양시", "경기 과천시", "경기 광명시", "경기 광주시", "경기 구리시", "경기 군포시", "경기 김포시", "경기 남양주시", "경기 동두천시", "경기 부천시", "경기 성남시", "경기 수원시", "경기 시흥시", "경기 안산시", "경기 안성시", "경기 안양시", "경기 양주시", "경기 양평군", "경기 여주시", "경기 연천군", "경기 오산시", "경기 용인시", "경기 의왕시", "경기 의정부시", "경기 이천시", "경기 파주시", "경기 평택시", "경기 포천시", "경기 하남시", "경기 화성시",
+  "강원 강릉시", "강원 고성군", "강원 동해시", "강원 삼척시", "강원 속초시", "강원 양구군", "강원 양양군", "강원 영월군", "강원 원주시", "강원 인제군", "강원 정선군", "강원 철원군", "강원 춘천시", "강원 태백시", "강원 평창군", "강원 홍천군", "강원 화천군", "강원 횡성군",
+  "충북 괴산군", "충북 단양군", "충북 보은군", "충북 영동군", "충북 옥천군", "충북 음성군", "충북 제천시", "충북 증평군", "충북 진천군", "충북 청주시", "충북 충주시",
+  "충남 계룡시", "충남 공주시", "충남 금산군", "충남 논산시", "충남 당진시", "충남 보령시", "충남 부여군", "충남 서산시", "충남 서천군", "충남 아산시", "충남 예산군", "충남 천안시", "충남 청양군", "충남 태안군", "충남 홍성군",
+  "전북 고창군", "전북 군산시", "전북 김제시", "전북 남원시", "전북 무주군", "전북 부안군", "전북 순창군", "전북 완주군", "전북 익산시", "전북 임실군", "전북 장수군", "전북 전주시", "전북 정읍시", "전북 진안군",
+  "전남 강진군", "전남 고흥군", "전남 곡성군", "전남 광양시", "전남 구례군", "전남 나주시", "전남 담양군", "전남 목포시", "전남 무안군", "전남 보성군", "전남 순천시", "전남 신안군", "전남 여수시", "전남 영광군", "전남 영암군", "전남 완도군", "전남 장성군", "전남 장흥군", "전남 진도군", "전남 함평군", "전남 해남군", "전남 화순군",
+  "경북 경산시", "경북 경주시", "경북 고령군", "경북 구미시", "경북 김천시", "경북 문경시", "경북 봉화군", "경북 상주시", "경북 성주군", "경북 안동시", "경북 영덕군", "경북 영양군", "경북 영주시", "경북 영천시", "경북 예천군", "경북 울릉군", "경북 울진군", "경북 의성군", "경북 청도군", "경북 청송군", "경북 칠곡군", "경북 포항시",
+  "경남 거제시", "경남 거창군", "경남 고성군", "경남 김해시", "경남 남해군", "경남 밀양시", "경남 사천시", "경남 산청군", "경남 양산시", "경남 의령군", "경남 진주시", "경남 창녕군", "경남 창원시", "경남 통영시", "경남 하동군", "경남 함안군", "경남 함양군", "경남 합천군",
+  "제주 서귀포시", "제주 제주시",
+];
+
+const KAKAO_POSTCODE_SCRIPT_SRC = "https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+let kakaoPostcodeScriptPromise: Promise<void> | null = null;
+
+function getKakaoPostcodeConstructor() {
+  return window.kakao?.Postcode ?? window.daum?.Postcode;
+}
+
+function loadKakaoPostcodeScript() {
+  if (typeof window === "undefined") return Promise.reject(new Error("브라우저에서만 주소 검색을 사용할 수 있습니다."));
+  if (getKakaoPostcodeConstructor()) return Promise.resolve();
+  if (!kakaoPostcodeScriptPromise) {
+    kakaoPostcodeScriptPromise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${KAKAO_POSTCODE_SCRIPT_SRC}"]`);
+      if (existingScript) {
+        existingScript.addEventListener("load", () => resolve(), { once: true });
+        existingScript.addEventListener("error", () => reject(new Error("카카오 주소 검색 스크립트를 불러오지 못했습니다.")), { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = KAKAO_POSTCODE_SCRIPT_SRC;
+      script.async = true;
+      script.onload = () => {
+        if (getKakaoPostcodeConstructor()) resolve();
+        else reject(new Error("카카오 주소 검색 서비스를 사용할 수 없습니다."));
+      };
+      script.onerror = () => {
+        kakaoPostcodeScriptPromise = null;
+        reject(new Error("카카오 주소 검색 스크립트를 불러오지 못했습니다."));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return kakaoPostcodeScriptPromise;
 }
 
 function compactDate(value: string) {
@@ -1061,7 +1215,7 @@ function LaunchScreen() {
 function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (data: AppData) => void, authSession: AppAuthSession | null, onAuthChange: (session: AppAuthSession | null) => void, shellRole: UserRole, onSignOut: () => void | Promise<void>) {
   const routePath = path.split("?")[0];
   if (routePath === "/health" || routePath === "/status" || routePath === "/beta-status") return <PublicDeploymentStatusPage navigate={navigate} />;
-  if (path === "/login") return <LoginPage data={data} navigate={navigate} onAuthChange={onAuthChange} />;
+  if (path === "/login") return <LoginPage data={data} navigate={navigate} setData={setData} onAuthChange={onAuthChange} />;
   if (path === "/signup") return <SignupPage data={data} navigate={navigate} setData={setData} onAuthChange={onAuthChange} />;
   if (path === "/signup/manual-review") return <ManualReviewInfoPage data={data} navigate={navigate} authSession={authSession} />;
   if (path === "/signup/pending") return <SignupPendingPage data={data} navigate={navigate} authSession={authSession} />;
@@ -1072,7 +1226,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/beta") return <BetaNoticePage navigate={navigate} appMode={false} />;
   if (path === "/beta-notice") return <BetaNoticePage navigate={navigate} appMode={false} />;
   if (path === "/partners" || path === "/supplier/apply") return <PartnersPage navigate={navigate} />;
-  if (path.startsWith("/app") && !authSession) return <LoginPage data={data} navigate={navigate} onAuthChange={onAuthChange} />;
+  if (path.startsWith("/app") && !authSession) return <LoginPage data={data} navigate={navigate} setData={setData} onAuthChange={onAuthChange} />;
   const restrictedRole = getRouteRole(path);
   if (isProtectedAppPath(path) && authSession && restrictedRole && restrictedRole !== authSession.role) {
     return <RoleAccessDeniedWithSecurityLog data={data} setData={setData} role={authSession.role} attemptedRole={restrictedRole} navigate={navigate} routePath={routePath} userId={authSession.id} />;
@@ -5037,7 +5191,7 @@ function expensePaymentLabel(value: TodayExpenseRecordV4["payment_method"]) {
   return labels[value];
 }
 
-function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: Navigate; onAuthChange: (session: AppAuthSession | null) => void }) {
+function LoginPage({ data, navigate, setData, onAuthChange }: { data: AppData; navigate: Navigate; setData: (data: AppData) => void; onAuthChange: (session: AppAuthSession | null) => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
@@ -5058,6 +5212,10 @@ function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: 
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const localProfile = data.profiles.find((profile) => profile.email.toLowerCase() === normalizedEmail);
+      const localAuthAccount = data.local_auth_accounts.find((account) => account.email.toLowerCase() === normalizedEmail);
+      const localAuthProfile = (localAuthAccount
+        ? data.profiles.find((profile) => profile.id === localAuthAccount.profile_id)
+        : undefined) ?? localProfile;
       const testAccount = testLoginAccounts.find((account) => account.email === normalizedEmail);
       const client = getSupabaseClient();
       if (client) {
@@ -5073,7 +5231,30 @@ function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: 
         }
       }
 
-      if (localProfile && testAccount && password === testAccount.password) {
+      const expectedLocalPassword = localAuthAccount?.password ?? testAccount?.password;
+      if (localAuthProfile && expectedLocalPassword && password === expectedLocalPassword) {
+        await finishLogin(localAuthProfile, "local");
+        return;
+      }
+
+      if (!isLiveModeReady() && localProfile && !localAuthAccount && !testAccount && password.length >= 8) {
+        const repairedAt = new Date().toISOString();
+        const nextData: AppData = {
+          ...data,
+          local_auth_accounts: [
+            {
+              id: makeId("local-auth"),
+              profile_id: localProfile.id,
+              email: normalizedEmail,
+              password,
+              created_at: repairedAt,
+              updated_at: repairedAt,
+            },
+            ...data.local_auth_accounts,
+          ],
+        };
+        saveData(nextData);
+        setData(nextData);
         await finishLogin(localProfile, "local");
         return;
       }
@@ -5147,10 +5328,29 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState("");
   const [statusTone, setStatusTone] = useState<"info" | "error" | "success">("info");
+  const [postcodeOpen, setPostcodeOpen] = useState(false);
+  const detailAddressRef = useRef<HTMLInputElement | null>(null);
 
   const businessNumber = cleanBusinessNumber(draft.businessNumber);
+  const phoneNumber = formatKoreanPhoneNumber(draft.phone);
+  const businessAddressText = composeBusinessAddress(draft.businessAddress, draft.businessDetailAddress);
   const supplierCategories = draft.categories.length ? draft.categories : [data.categories[0]?.name ?? "기타"];
   const supplierRegions = draft.serviceRegions.length ? draft.serviceRegions : [draft.region].filter(Boolean);
+
+  const closePostcode = useCallback(() => {
+    setPostcodeOpen(false);
+  }, []);
+
+  const handlePostcodeSelect = useCallback((result: KakaoPostcodeResult) => {
+    setDraft((current) => ({
+      ...current,
+      businessAddress: result.address,
+      region: result.region || current.region,
+    }));
+    setStatus("주소를 선택했습니다. 상세주소가 있으면 이어서 입력해 주세요.");
+    setStatusTone("success");
+    window.setTimeout(() => detailAddressRef.current?.focus(), 0);
+  }, []);
 
   function update<K extends keyof BusinessSignupDraft>(key: K, value: BusinessSignupDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -5168,6 +5368,8 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
     if (businessNumber.length !== 10) return "사업자등록번호 10자리를 입력해 주세요.";
     if (!draft.businessName.trim() || !draft.representativeName.trim() || !draft.openingDate) return "상호, 대표자명, 개업일자를 입력해 주세요.";
     if (!draft.region.trim() || !draft.phone.trim()) return "지역과 연락처를 입력해 주세요.";
+    if (phoneNumber.replace(/\D/g, "").length < 9) return "연락처를 정확히 입력해 주세요.";
+    if (!draft.businessAddress.trim()) return "사업장 주소를 검색해 선택해 주세요.";
     if (!draft.termsAgreed || !draft.privacyAgreed || !draft.verificationConsent) return "약관, 개인정보 처리, 사업자 인증 조회 동의가 필요합니다.";
     if (draft.role === "supplier" && !draft.documentFile) return "공급사는 사업자등록증 또는 입점 증빙 파일을 첨부해 주세요.";
     if (isBusinessBlocked(data, businessNumber)) return "운영 정책상 가입이 제한된 사업자번호입니다.";
@@ -5338,11 +5540,11 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
         role: draft.role,
         business_name: draft.businessName.trim(),
         business_number: formatBusinessNumber(businessNumber),
-        phone: draft.phone.trim(),
+        phone: phoneNumber,
         region: draft.region.trim(),
         representative_name: draft.representativeName.trim(),
         business_opening_date: draft.openingDate,
-        business_address: draft.businessAddress.trim(),
+        business_address: businessAddressText,
         business_status: businessCheck.status,
         business_tax_type: businessCheck.taxType,
         business_verification_status: verificationStatus,
@@ -5363,10 +5565,10 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
         business_number: profile.business_number,
         representative_name: draft.representativeName.trim(),
         manager_name: draft.name.trim(),
-        manager_phone: draft.phone.trim(),
-        phone: draft.phone.trim(),
+        manager_phone: phoneNumber,
+        phone: phoneNumber,
         email: draft.email.trim(),
-        address: draft.businessAddress.trim() || draft.region.trim(),
+        address: businessAddressText || draft.region.trim(),
         description: `${supplierRegions.join(", ")} 지역 ${supplierCategories.join(", ")} 공급사 입점 신청`,
         service_regions: supplierRegions,
         categories: supplierCategories,
@@ -5399,10 +5601,10 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
         business_number: profile.business_number,
         representative_name: draft.representativeName.trim(),
         opening_date: draft.openingDate,
-        phone: draft.phone.trim(),
+        phone: phoneNumber,
         email: draft.email.trim(),
         region: draft.region.trim(),
-        business_address: draft.businessAddress.trim(),
+        business_address: businessAddressText,
         status_check_status: businessCheck.status,
         status_check_label: businessCheck.label,
         tax_type: businessCheck.taxType,
@@ -5424,7 +5626,7 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
         business_number: profile.business_number,
         representative_name: draft.representativeName.trim(),
         opening_date: draft.openingDate,
-        phone: draft.phone.trim(),
+        phone: phoneNumber,
         email: draft.email.trim(),
         reason: businessCheck.message,
         status: "submitted",
@@ -5433,9 +5635,23 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
         created_at: createdAt,
         updated_at: createdAt,
       };
+      const localAuthAccount = !isLiveModeReady() ? {
+        id: makeId("local-auth"),
+        profile_id: userId,
+        email: draft.email.trim().toLowerCase(),
+        password: draft.password,
+        created_at: createdAt,
+        updated_at: createdAt,
+      } : null;
       const nextData: AppData = {
         ...data,
         profiles: [profile, ...data.profiles],
+        local_auth_accounts: localAuthAccount
+          ? [
+              localAuthAccount,
+              ...data.local_auth_accounts.filter((account) => account.email.toLowerCase() !== localAuthAccount.email),
+            ]
+          : data.local_auth_accounts,
         supplier_profiles: supplier ? [supplier, ...data.supplier_profiles] : data.supplier_profiles,
         supplier_documents: supplier && draft.documentFile ? [{
           id: makeId("doc"),
@@ -5487,14 +5703,29 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
           <Field label="비밀번호"><input type="password" value={draft.password} onChange={(event) => update("password", event.target.value)} required autoComplete="new-password" /></Field>
           <Field label="비밀번호 확인"><input type="password" value={draft.passwordConfirm} onChange={(event) => update("passwordConfirm", event.target.value)} required autoComplete="new-password" /></Field>
           <Field label="담당자명"><input value={draft.name} onChange={(event) => update("name", event.target.value)} required /></Field>
-          <Field label="연락처"><input value={draft.phone} onChange={(event) => update("phone", event.target.value)} required placeholder="010-0000-0000" /></Field>
-          <Field label="지역"><input value={draft.region} onChange={(event) => update("region", event.target.value)} required placeholder="예: 서울 강남구" /></Field>
+          <Field label="연락처">
+            <input value={draft.phone} onChange={(event) => update("phone", formatKoreanPhoneNumber(event.target.value))} required inputMode="tel" maxLength={13} autoComplete="tel" placeholder="010-0000-0000" />
+          </Field>
+          <Field label="지역">
+            <RegionSearchField value={draft.region} onChange={(value) => update("region", value)} required />
+          </Field>
           <Field label="상호"><input value={draft.businessName} onChange={(event) => update("businessName", event.target.value)} required /></Field>
           <Field label="사업자등록번호"><input value={formatBusinessNumber(draft.businessNumber)} onChange={(event) => update("businessNumber", formatBusinessNumber(event.target.value))} required inputMode="numeric" /></Field>
           <Field label="대표자명"><input value={draft.representativeName} onChange={(event) => update("representativeName", event.target.value)} required /></Field>
           <Field label="개업일자"><input type="date" value={draft.openingDate} onChange={(event) => update("openingDate", event.target.value)} required /></Field>
         </div>
-        <Field label="사업장 주소"><input value={draft.businessAddress} onChange={(event) => update("businessAddress", event.target.value)} placeholder="예: 서울 강남구 테헤란로 12" /></Field>
+        <div className="addressFieldGroup">
+          <Field label="사업장 주소">
+            <div className="addressSearchRow">
+              <input value={draft.businessAddress} onChange={(event) => update("businessAddress", event.target.value)} required autoComplete="street-address" placeholder="주소 검색으로 도로명 주소를 선택하세요" />
+              <button className="secondaryButton compact addressSearchButton" type="button" onClick={() => setPostcodeOpen(true)}>주소 검색</button>
+            </div>
+          </Field>
+          <Field label="상세주소">
+            <input ref={detailAddressRef} value={draft.businessDetailAddress} onChange={(event) => update("businessDetailAddress", event.target.value)} autoComplete="address-line2" placeholder="층, 호수, 매장 위치 등" />
+          </Field>
+        </div>
+        <KakaoPostcodeLayer open={postcodeOpen} onClose={closePostcode} onSelect={handlePostcodeSelect} />
         {draft.role === "supplier" && (
           <div className="supplierSignupBlock">
             <SectionHeader title="공급사 입점 정보" />
@@ -15755,6 +15986,113 @@ function SectionHeader({ title, action, onAction }: { title: string; action?: st
           <ArrowRight size={15} />
         </button>
       )}
+    </div>
+  );
+}
+
+function RegionSearchField({ value, onChange, required = false }: { value: string; onChange: (value: string) => void; required?: boolean }) {
+  const [query, setQuery] = useState(value);
+  const [open, setOpen] = useState(false);
+  const normalizedQuery = query.trim().replace(/\s+/g, " ");
+  const suggestions = useMemo(() => {
+    if (!normalizedQuery) return KOREA_REGION_OPTIONS.slice(0, 12);
+    return KOREA_REGION_OPTIONS
+      .filter((region) => region.includes(normalizedQuery) || region.replace(/\s+/g, "").includes(normalizedQuery.replace(/\s+/g, "")))
+      .slice(0, 12);
+  }, [normalizedQuery]);
+
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
+
+  function selectRegion(region: string) {
+    setQuery(region);
+    onChange(region);
+    setOpen(false);
+  }
+
+  return (
+    <div className="regionSearchField">
+      <input
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          onChange(event.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 140)}
+        required={required}
+        placeholder="지역명 검색: 서울 강남구"
+        autoComplete="address-level2"
+      />
+      {open && suggestions.length > 0 && (
+        <div className="regionSuggestionList" role="listbox" aria-label="대한민국 지역 선택">
+          {suggestions.map((region) => (
+            <button type="button" role="option" onMouseDown={(event) => event.preventDefault()} onClick={() => selectRegion(region)} key={region}>
+              {region}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KakaoPostcodeLayer({ open, onClose, onSelect }: { open: boolean; onClose: () => void; onSelect: (result: KakaoPostcodeResult) => void }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setStatus("주소 검색을 불러오는 중입니다.");
+    loadKakaoPostcodeScript()
+      .then(() => {
+        const Postcode = getKakaoPostcodeConstructor();
+        if (cancelled || !containerRef.current || !Postcode) return;
+        containerRef.current.innerHTML = "";
+        const postcode = new Postcode({
+          width: "100%",
+          height: "100%",
+          maxSuggestItems: 5,
+          onresize: (size) => {
+            if (containerRef.current) containerRef.current.style.height = `${Math.max(size.height, 460)}px`;
+          },
+          oncomplete: (data) => {
+            const address = data.userSelectedType === "R" ? data.roadAddress || data.address : data.jibunAddress || data.address;
+            onSelect({
+              address,
+              zonecode: data.zonecode,
+              region: formatKakaoRegion(data),
+            });
+            onClose();
+          },
+        });
+        postcode.embed(containerRef.current);
+        setStatus("");
+      })
+      .catch(() => {
+        if (!cancelled) setStatus("주소 검색을 불러오지 못했습니다. 잠시 후 다시 시도하거나 주소를 직접 입력해 주세요.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, onClose, onSelect]);
+
+  if (!open) return null;
+
+  return (
+    <div className="postcodeLayerBackdrop" role="dialog" aria-modal="true" aria-label="사업장 주소 검색">
+      <div className="postcodeLayerPanel">
+        <div className="postcodeLayerHeader">
+          <strong>사업장 주소 검색</strong>
+          <button className="ghostButton compact" type="button" onClick={onClose}>닫기</button>
+        </div>
+        <p className="postcodeLayerGuide">도로명, 건물명, 지번 주소를 검색한 뒤 사업장 주소를 선택해 주세요.</p>
+        {status && <p className="postcodeLayerStatus">{status}</p>}
+        <div className="postcodeLayerFrame" ref={containerRef} />
+      </div>
     </div>
   );
 }

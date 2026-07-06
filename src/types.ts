@@ -370,6 +370,15 @@ export interface Profile {
   created_at: string;
 }
 
+export interface LocalAuthAccount {
+  id: string;
+  profile_id: string;
+  email: string;
+  password: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -2543,6 +2552,7 @@ export interface AppData {
   onboarding_completed: boolean;
   onboarding_completed_at?: string;
   profiles: Profile[];
+  local_auth_accounts: LocalAuthAccount[];
   categories: Category[];
   quote_requests: QuoteRequest[];
   quote_request_items: QuoteRequestItem[];

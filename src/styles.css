@@ -1107,6 +1107,120 @@ button:disabled {
   resize: vertical;
 }
 
+.regionSearchField {
+  position: relative;
+}
+
+.regionSuggestionList {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  max-height: 260px;
+  overflow-y: auto;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 16px 38px rgba(16, 32, 51, 0.14);
+}
+
+.regionSuggestionList button {
+  min-height: 42px;
+  justify-content: flex-start;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--charcoal);
+  font-weight: 850;
+  text-align: left;
+}
+
+.regionSuggestionList button:hover,
+.regionSuggestionList button:focus {
+  background: var(--orange-soft);
+  color: var(--orange);
+  outline: none;
+}
+
+.addressFieldGroup {
+  display: grid;
+  gap: 12px;
+}
+
+.addressSearchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.addressSearchButton {
+  min-height: 46px;
+  white-space: nowrap;
+}
+
+.postcodeLayerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 20, 35, 0.48);
+}
+
+.postcodeLayerPanel {
+  width: min(720px, 100%);
+  max-height: min(760px, calc(100vh - 40px));
+  display: grid;
+  grid-template-rows: auto auto auto minmax(360px, 1fr);
+  gap: 12px;
+  padding: 18px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  box-shadow: 0 26px 70px rgba(8, 20, 35, 0.24);
+}
+
+.postcodeLayerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.postcodeLayerHeader strong {
+  color: var(--navy);
+  font-size: 18px;
+}
+
+.postcodeLayerGuide,
+.postcodeLayerStatus {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.postcodeLayerStatus {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--orange-soft);
+  color: var(--orange);
+  font-weight: 850;
+}
+
+.postcodeLayerFrame {
+  min-height: 460px;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
 .formGrid,
 .toggleGrid,
 .itemRow {
@@ -7192,6 +7306,25 @@ tr.selectedRow {
   .wizardActions > button,
   .businessCheckActions > button {
     width: 100%;
+  }
+
+  .addressSearchRow {
+    grid-template-columns: 1fr;
+  }
+
+  .postcodeLayerBackdrop {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  .postcodeLayerPanel {
+    max-height: calc(100vh - 20px);
+    grid-template-rows: auto auto auto minmax(420px, 1fr);
+    padding: 14px;
+  }
+
+  .postcodeLayerFrame {
+    min-height: 420px;
   }
 
   .wizardShell {

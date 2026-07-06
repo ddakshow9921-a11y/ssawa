@@ -61,6 +61,7 @@ import type {
   FocusSetting,
   ImprovementPriority,
   ImprovementPriorityStatus,
+  LocalAuthAccount,
   ManualPurchaseDraft,
   Message,
   MessageReadState,
@@ -688,6 +689,21 @@ export const testLoginAccounts = [
   { role: "supplier", label: "테스트 업체", email: "supplier@test.ssawa.local", password: "test1234!" },
   { role: "admin", label: "테스트 관리자", email: "admin@test.ssawa.local", password: "test1234!" },
 ] as const;
+
+const testProfileIdByRole: Record<(typeof testLoginAccounts)[number]["role"], string> = {
+  buyer: "test-buyer-1",
+  supplier: "test-supplier-1",
+  admin: "test-admin-1",
+};
+
+const sampleLocalAuthAccounts: LocalAuthAccount[] = testLoginAccounts.map((account) => ({
+  id: `local-auth-${account.role}`,
+  profile_id: testProfileIdByRole[account.role],
+  email: account.email,
+  password: account.password,
+  created_at: now,
+  updated_at: now,
+}));
 
 const testProfiles: Profile[] = [
   {
@@ -3005,6 +3021,7 @@ export const initialData: AppData = {
     profile("buyer-2", "박대표", "meat@ssawa.local", "buyer", "고깃집오늘", "222-33-44444", "010-3333-4444", "경기 성남시"),
     profile("admin-1", "운영자", "admin@ssawa.local", "admin", "싸와 운영팀", "000-00-00000", "02-000-0000", "서울"),
   ],
+  local_auth_accounts: sampleLocalAuthAccounts,
   categories,
   quote_requests: [
   request("req-1", "buyer-1", "치킨집 포장재 견적 요청", "cat-2", "포장재", "서울 노원구", "2026-07-10", true, true, "배달 주문량이 늘어 포장재를 한 번에 비교하고 싶습니다.", "quoted"),
@@ -3206,6 +3223,7 @@ const productionInitialData: AppData = {
   onboarding_completed: false,
   onboarding_completed_at: undefined,
   profiles: [],
+  local_auth_accounts: [],
   quote_requests: [],
   quote_request_items: [],
   supplier_profiles: [],
@@ -11544,6 +11562,7 @@ function createAccountingEntryFromPurchaseRecord(record: PurchaseRecord, created
 function normalizeData(data: Partial<AppData>): AppData {
   const fallbackData = baseInitialData();
   const requiredProfiles = appConfig.enableDemoData ? testProfiles : [];
+  const requiredLocalAuthAccounts = appConfig.enableDemoData ? sampleLocalAuthAccounts : [];
   const requiredSupplierProfiles = appConfig.enableDemoData ? testSupplierProfiles : [];
   const merged: AppData = {
     ...fallbackData,
@@ -11554,6 +11573,7 @@ function normalizeData(data: Partial<AppData>): AppData {
     onboarding_completed: data.onboarding_completed ?? fallbackData.onboarding_completed,
     onboarding_completed_at: data.onboarding_completed_at ?? fallbackData.onboarding_completed_at,
     profiles: mergeRequiredRecords(data.profiles ?? fallbackData.profiles, requiredProfiles),
+    local_auth_accounts: mergeRequiredRecords(data.local_auth_accounts ?? fallbackData.local_auth_accounts, requiredLocalAuthAccounts),
     categories: data.categories ?? fallbackData.categories,
     quote_requests: normalizeQuoteRequests(data.quote_requests ?? fallbackData.quote_requests, data.categories ?? fallbackData.categories),
     quote_request_items: data.quote_request_items ?? fallbackData.quote_request_items,
