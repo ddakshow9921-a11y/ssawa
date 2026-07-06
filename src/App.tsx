@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, ReactNode, SyntheticEvent, useEffect, useMemo, useRef, useState } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -211,7 +211,7 @@ import type { AccountingStatus, AnalysisDisclosureScope, AnalysisItem, AnalysisI
 import { appConfig, environmentLabel, isLiveModeReady } from "./lib/env";
 import { getSupabaseClient, isSupabaseConfigured, SUPABASE_PROJECT_URL } from "./lib/supabase/client";
 import { ensureProfile, getCurrentProfile, signOut as signOutSupabase } from "./lib/supabase/auth";
-import { storageBuckets, uploadAppFile } from "./lib/supabase/storage";
+import { storageBuckets, uploadAppFile, validateUploadFile } from "./lib/supabase/storage";
 import { liveFeatureMatrix } from "./services/liveDataService";
 
 const today = "2026-07-04";
@@ -270,13 +270,11 @@ const mobileNavItemsByRole: Record<UserRole, NavItem[]> = {
     navItemsByRole.buyer[1],
     navItemsByRole.buyer[2],
     navItemsByRole.buyer[3],
-    { label: "알림", path: "/app/notifications", icon: Bell, key: "buyer-mobile-notifications" },
   ],
   supplier: [
     navItemsByRole.supplier[0],
     navItemsByRole.supplier[1],
     navItemsByRole.supplier[2],
-    navItemsByRole.supplier[5],
     navItemsByRole.supplier[3],
   ],
   admin: [
@@ -809,7 +807,7 @@ export default function App() {
   const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole, handleSignOut);
   const showChatShortcut = Boolean(authSession && isProtectedAppPath(path) && !isNavItemActive(path, chatPath));
   const showMobileNav = Boolean(authSession && isProtectedAppPath(path));
-  const showMobileMore = Boolean(showMobileNav && shellRole === "admin" && mobileMoreItems.length > 0);
+  const showMobileMore = Boolean(showMobileNav && mobileMoreItems.length > 0);
   const mobileMoreActive = mobileMoreItems.some((item) => isNavItemActive(path, item.path));
 
   function navBadgeCount(itemPath: string) {
@@ -931,7 +929,7 @@ export default function App() {
                 const active = isNavItemActive(path, item.path);
                 const badgeCount = navBadgeCount(item.path);
                 return (
-                  <button className={active ? "mobileMoreItem active" : "mobileMoreItem"} type="button" onClick={() => navigate(item.path)} key={item.key ?? item.path}>
+                  <button className={active ? "mobileMoreItem active" : "mobileMoreItem"} type="button" onClick={() => { setMobileMoreOpen(false); navigate(item.path); }} key={item.key ?? item.path}>
                     <span className="navIconWrap">
                       <Icon size={18} />
                       {badgeCount > 0 && <UnreadBadge count={badgeCount} />}
@@ -2319,10 +2317,91 @@ function HomePage({ data, navigate }: PageProps) {
   );
 }
 
+const productImageExtensions = new Set(["jpg", "jpeg", "png", "webp"]);
+const productImageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function validateProductImageFile(file: File) {
+  const validation = validateUploadFile(file);
+  if (!validation.ok) return validation;
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!productImageMimeTypes.has(file.type) && !productImageExtensions.has(extension)) {
+    return { ok: false, message: "상품 이미지는 JPG, PNG, WebP 파일만 등록할 수 있습니다." };
+  }
+  return { ok: true, message: "" };
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error ?? new Error("파일을 읽을 수 없습니다."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function createLocalProductImageUrl(file: File) {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await withTimeout(image.decode(), 4000, "이미지 준비 시간이 길어 로컬 파일로 저장합니다.");
+    const maxSize = 900;
+    const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return readFileAsDataUrl(file);
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", 0.78);
+  } catch {
+    return readFileAsDataUrl(file);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function useImageFallback(event: SyntheticEvent<HTMLImageElement>) {
+  const image = event.currentTarget;
+  if (image.dataset.fallbackApplied) return;
+  image.dataset.fallbackApplied = "true";
+  image.src = "/아이콘.png";
+}
+
+function productSaveErrorMessage(error: unknown) {
+  if (error instanceof DOMException && error.name === "QuotaExceededError") {
+    return "이미지 용량이 커서 앱 저장공간이 부족합니다. 더 작은 JPG 이미지로 다시 등록해 주세요.";
+  }
+  if (error instanceof Error && /quota|storage/i.test(error.message)) {
+    return "이미지 저장공간이 부족하거나 브라우저 저장소에 접근할 수 없습니다. 더 작은 이미지로 다시 시도해 주세요.";
+  }
+  return error instanceof Error ? error.message : "상품 이미지 저장 중 오류가 발생했습니다.";
+}
+
 function ProductThumb({ product }: { product: SupplierProduct }) {
   return (
     <div className="productThumb" aria-hidden="true">
-      <img src={product.main_image_url || "/아이콘.png"} alt="" loading="lazy" />
+      <img src={product.main_image_url || "/아이콘.png"} alt="" loading="lazy" onError={useImageFallback} />
     </div>
   );
 }
@@ -2532,7 +2611,7 @@ function ProductDetailPage({ data, navigate, setData, productId }: MutatingPageP
       <BackButton onClick={() => navigate("/app/products")} label="상품 목록" />
       <section className="productDetailHero">
         <div className="productImageFrame">
-          <img src={product.main_image_url || "/아이콘.png"} alt="" />
+          <img src={product.main_image_url || "/아이콘.png"} alt="" onError={useImageFallback} />
         </div>
         <div className="productDetailCopy">
           <span className="eyebrow">{categoryName} · {supplier?.business_name ?? "공급업체"}</span>
@@ -2773,7 +2852,23 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
   const supplier = getActiveSupplier(data);
   const existing = productId ? data.supplier_products.find((entry) => entry.id === productId && entry.supplier_id === supplier.id) : undefined;
   const [draft, setDraft] = useState<SupplierProductDraft>(() => existing ? productToDraft(existing) : defaultProductDraft(data, supplier));
+  const [productImageFile, setProductImageFile] = useState<File | null>(null);
+  const [productImagePreview, setProductImagePreview] = useState(draft.main_image_url || "/아이콘.png");
+  const [imageNotice, setImageNotice] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [savingStep, setSavingStep] = useState("");
+  const [saveWarning, setSaveWarning] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!productImageFile) setProductImagePreview(draft.main_image_url || "/아이콘.png");
+  }, [draft.main_image_url, productImageFile]);
+
+  useEffect(() => {
+    return () => {
+      if (productImagePreview.startsWith("blob:")) URL.revokeObjectURL(productImagePreview);
+    };
+  }, [productImagePreview]);
 
   function update<K extends keyof SupplierProductDraft>(key: K, value: SupplierProductDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -2783,29 +2878,88 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
     update("available_regions", draft.available_regions.includes(region) ? draft.available_regions.filter((entry) => entry !== region) : [...draft.available_regions, region]);
   }
 
-  function submit(event: FormEvent) {
+  function handleProductImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0] ?? null;
+    setError("");
+    setImageNotice("");
+    setSaveWarning("");
+    if (!file) {
+      setProductImageFile(null);
+      return;
+    }
+    const validation = validateProductImageFile(file);
+    if (!validation.ok) {
+      event.currentTarget.value = "";
+      setProductImageFile(null);
+      setError(validation.message);
+      return;
+    }
+    const previewUrl = URL.createObjectURL(file);
+    setProductImageFile(file);
+    setProductImagePreview(previewUrl);
+    setImageNotice(`${file.name} 파일을 선택했습니다. 저장하면 상품 대표 이미지로 등록됩니다.`);
+  }
+
+  async function resolveProductImageUrl() {
+    if (!productImageFile) return draft.main_image_url || "/아이콘.png";
+    setSavingStep("상품 이미지를 앱에 맞게 준비하고 있습니다.");
+    const localImageUrl = await createLocalProductImageUrl(productImageFile);
+    setSavingStep("상품 이미지를 서버에 업로드하고 있습니다.");
+    try {
+      const uploadResult = await withTimeout(
+        uploadAppFile("productImage", supplier.user_id, productImageFile),
+        8000,
+        "서버 업로드 응답이 늦어 앱 내부 저장으로 전환했습니다.",
+      );
+      if (uploadResult.ok) {
+        setImageNotice("상품 이미지가 서버에 업로드되었습니다.");
+        return uploadResult.publicUrl || localImageUrl;
+      }
+      setSaveWarning(`서버 업로드는 실패했지만 앱 안에는 이미지가 저장됩니다. (${uploadResult.message})`);
+    } catch (uploadError) {
+      setSaveWarning(uploadError instanceof Error ? uploadError.message : "서버 업로드에 실패해 앱 내부 저장으로 전환했습니다.");
+    }
+    return localImageUrl;
+  }
+
+  async function submit(event: FormEvent) {
     event.preventDefault();
+    if (isSaving) return;
+    setError("");
+    setSaveWarning("");
     if (!draft.title.trim()) return setError("상품명을 입력해 주세요.");
     if (!draft.category_id) return setError("카테고리를 선택해 주세요.");
     if (!draft.unit_label.trim()) return setError("단위를 입력해 주세요.");
     if (!draft.available_regions.length) return setError("납품 가능 지역을 1개 이상 선택해 주세요.");
-    const nextDraft = {
-      ...draft,
-      is_public: supplier.approval_status === "approved" && draft.is_public,
-    };
-    if (existing) {
-      const nextData = updateSupplierProduct(data, existing.id, {
-        ...existing,
-        ...nextDraft,
-        main_image_url: nextDraft.main_image_url || "/아이콘.png",
-      });
-      setData(nextData);
+    setIsSaving(true);
+    setSavingStep(productImageFile ? "상품 이미지 저장을 시작합니다." : "상품 정보를 저장하고 있습니다.");
+    try {
+      const mainImageUrl = await resolveProductImageUrl();
+      setSavingStep(existing ? "수정한 상품 정보를 저장하고 있습니다." : "새 상품 정보를 등록하고 있습니다.");
+      const nextDraft = {
+        ...draft,
+        main_image_url: mainImageUrl,
+        is_public: supplier.approval_status === "approved" && draft.is_public,
+      };
+      if (existing) {
+        const nextData = updateSupplierProduct(data, existing.id, {
+          ...existing,
+          ...nextDraft,
+          main_image_url: nextDraft.main_image_url || "/아이콘.png",
+        });
+        setData(nextData);
+        navigate("/app/supplier/products");
+        return;
+      }
+      const result = createSupplierProduct(data, supplier.id, nextDraft);
+      setData(result.data);
       navigate("/app/supplier/products");
-      return;
+    } catch (submitError) {
+      setError(productSaveErrorMessage(submitError));
+    } finally {
+      setIsSaving(false);
+      setSavingStep("");
     }
-    const result = createSupplierProduct(data, supplier.id, nextDraft);
-    setData(result.data);
-    navigate("/app/supplier/products");
   }
 
   return (
@@ -2813,7 +2967,16 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
       <BackButton onClick={() => navigate("/app/supplier/products")} label="내 상품" />
       <PageTitle eyebrow="상품 등록" title={existing ? "상품 정보를 수정하세요." : "3분 안에 상품을 등록하세요."} desc="가격을 모르면 견적 문의로 등록할 수 있고, 공개 상품은 관리자 검토 후 구매자에게 노출됩니다." />
       {error && <div className="statusNotice warning"><strong>{error}</strong></div>}
-      <form className="wizardShell productFormShell" onSubmit={submit}>
+      {saveWarning && !isSaving && <div className="statusNotice warning"><strong>{saveWarning}</strong></div>}
+      <form className={isSaving ? "wizardShell productFormShell saving" : "wizardShell productFormShell"} onSubmit={submit} aria-busy={isSaving}>
+        {isSaving && (
+          <div className="productUploadOverlay" role="status" aria-live="polite">
+            <span className="spinner large" />
+            <strong>{productImageFile ? "상품 이미지를 등록하고 있습니다." : "상품 정보를 저장하고 있습니다."}</strong>
+            <p>{savingStep || "잠시만 기다려 주세요. 완료되면 상품 목록으로 이동합니다."}</p>
+            {productImageFile && <small>화면을 닫거나 뒤로 가지 말고 기다려 주세요.</small>}
+          </div>
+        )}
         <section className="wizardPanel">
           <SectionHeader title="1. 기본 정보" />
           <div className="formGrid">
@@ -2826,7 +2989,13 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
               </select>
             </Field>
             <Field label="대표 이미지">
-              <input type="file" accept="image/*" onChange={(event) => update("main_image_url", event.currentTarget.files?.[0] ? "/아이콘.png" : draft.main_image_url)} />
+              <div className="productImagePicker">
+                <div className="productImagePreview">
+                  <img src={productImagePreview || "/아이콘.png"} alt="상품 대표 이미지 미리보기" onError={useImageFallback} />
+                </div>
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleProductImageChange} />
+                {imageNotice && <small>{imageNotice}</small>}
+              </div>
             </Field>
             <Field label="한 줄 설명">
               <input value={draft.short_description} onChange={(event) => update("short_description", event.target.value)} placeholder="구매자가 목록에서 바로 이해할 설명" />
@@ -2901,7 +3070,7 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
           {supplier.approval_status !== "approved" && <p className="mutedText">입점 승인 전에는 상품이 임시저장만 가능하며 구매자에게 공개되지 않습니다.</p>}
           <div className="formActions">
             <button className="secondaryButton" type="button" onClick={() => navigate("/app/supplier/products")}>취소</button>
-            <button className="primaryButton" type="submit">{existing ? "수정 저장" : "상품 등록"}</button>
+            <button className="primaryButton" type="submit" disabled={isSaving}>{isSaving ? "저장 중" : existing ? "수정 저장" : "상품 등록"}</button>
           </div>
         </section>
       </form>
@@ -9841,29 +10010,74 @@ function QuoteItemComparisonTable({ data, quotes, items }: { data: AppData; quot
   if (!quotes.length || !items.length) return null;
 
   return (
-    <section className="toolPanel">
-      <SectionHeader title="품목별 비교" />
-      <p className="mutedText summaryLine">품목별 단가가 비어 있으면 총액만으로 비교하지 않도록 확인 필요로 표시합니다.</p>
-      <div className="tableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>품목</th>
-              {quotes.map((quote) => <th key={quote.id}>{supplierName(data, quote.supplier_id)}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id}>
-                <td>{item.item_name}</td>
-                {quotes.map((quote) => (
-                  <td key={`${item.id}-${quote.id}`}>{quoteItemComparisonText(quote)}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <section className="toolPanel quoteItemPanel">
+      <div className="itemComparisonHeader">
+        <div>
+          <span className="eyebrow">품목 확인</span>
+          <h2>요청 품목 {items.length}개를 업체별로 확인하세요.</h2>
+          <p>품목별 단가가 따로 없으면 업체의 단가 메모를 기준으로 표시합니다.</p>
+        </div>
+        <strong>{quotes.length}개 견적</strong>
       </div>
+      <div className="requestedItemStrip" aria-label="요청 품목">
+        {items.map((item) => (
+          <span key={item.id}>
+            <b>{item.item_name}</b>
+            <small>{item.quantity.toLocaleString()} {item.unit}</small>
+          </span>
+        ))}
+      </div>
+      <div className="supplierItemSummaryList" aria-label="업체별 품목 확인 요약">
+        {quotes.map((quote) => {
+          const missingItemCount = quoteMissingItemCount(quote, items);
+          const memo = quote.item_price_memo.trim();
+          return (
+            <article className="supplierItemSummary" key={quote.id}>
+              <div className="supplierItemTop">
+                <div>
+                  <strong>{supplierName(data, quote.supplier_id)}</strong>
+                  <span>{money(quote.final_amount)} · 납품 {quote.available_delivery_date}</span>
+                </div>
+                <StatusBadge tone={missingItemCount > 0 ? "orange" : "green"}>
+                  {missingItemCount > 0 ? `${missingItemCount}개 확인` : "품목 확인됨"}
+                </StatusBadge>
+              </div>
+              <div className="supplierItemMemo">
+                <span>단가 메모</span>
+                <p title={memo || undefined}>{memo || "업체 문의 필요"}</p>
+              </div>
+              <div className="supplierItemFacts">
+                <span>배송 {quote.delivery_fee > 0 ? money(quote.delivery_fee) : "포함"}</span>
+                <span>세금계산서 {yesNo(quote.tax_invoice_available)}</span>
+                <span>카드 {yesNo(quote.card_payment_available)}</span>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      <details className="itemComparisonDetails">
+        <summary>상세 표 보기</summary>
+        <div className="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>품목</th>
+                {quotes.map((quote) => <th key={quote.id}>{supplierName(data, quote.supplier_id)}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.item_name}</td>
+                  {quotes.map((quote) => (
+                    <td key={`${item.id}-${quote.id}`}>{quoteItemComparisonText(quote)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </section>
   );
 }
@@ -9940,6 +10154,21 @@ function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFas
   const stats = supplier ? supplierStatsFor(data, supplier.id) : null;
   const documents = supplier ? data.supplier_documents.filter((document) => document.supplier_id === supplier.id) : [];
   const missingItemCount = quoteMissingItemCount(quote, requestItems);
+  const badges = [
+    isSelected ? { tone: "green" as const, label: "선택됨" } : null,
+    isRecommended ? { tone: "blue" as const, label: "추천" } : null,
+    isCheapest ? { tone: "green" as const, label: "최저가" } : null,
+    isFastest ? { tone: "blue" as const, label: "빠른 납품" } : null,
+    missingItemCount > 0 ? { tone: "orange" as const, label: "품목 확인" } : null,
+    isRejected ? { tone: "gray" as const, label: "미선택" } : null,
+  ].filter((badge): badge is { tone: "orange" | "blue" | "green" | "gray"; label: string } => Boolean(badge));
+  const capabilityLabels = [
+    quote.tax_invoice_available ? "세금계산서" : null,
+    quote.card_payment_available ? "카드결제" : null,
+    supplier?.urgent_delivery_available ? "긴급배송" : null,
+    documents.some((document) => document.status === "approved") ? "인증자료" : null,
+  ].filter((label): label is string => Boolean(label));
+  const responseLabel = stats?.average_response_minutes ? `${stats.average_response_minutes}분` : "신규";
   return (
     <article className={isSelected ? "quoteCard selected" : "quoteCard"}>
       <div className="quoteHeader">
@@ -9947,47 +10176,46 @@ function QuoteCard({ data, quote, requestItems, isRecommended, isCheapest, isFas
           <span className="eyebrow">공급업체</span>
           <h3>{supplierName(data, quote.supplier_id)}</h3>
         </div>
-        {isRecommended && <StatusBadge tone="blue">추천견적</StatusBadge>}
-        {isCheapest && <StatusBadge tone="green">최저가</StatusBadge>}
-        {isFastest && <StatusBadge tone="blue">빠른납품</StatusBadge>}
-        {quote.tax_invoice_available && <StatusBadge tone="green">세금계산서 가능</StatusBadge>}
-        {missingItemCount > 0 && <StatusBadge tone="orange">품목 확인 필요</StatusBadge>}
-        {isSelected && <StatusBadge tone="green">선택된 견적</StatusBadge>}
-        {isRejected && <StatusBadge tone="gray">미선택 처리됨</StatusBadge>}
+        <div className="quoteBadges" aria-label="견적 특징">
+          {badges.map((badge) => <StatusBadge tone={badge.tone} key={badge.label}>{badge.label}</StatusBadge>)}
+        </div>
       </div>
       {supplier && (
-        <div className="supplierTrustLine">
-          <span>승인된 공급업체의 견적입니다.</span>
-          <span>평점 {stats?.rating ? stats.rating.toFixed(1) : "신규"}</span>
-          <span>후기 {stats?.review_count ?? 0}개</span>
-          <span>응답 {stats?.average_response_minutes ? `${stats.average_response_minutes}분` : "신규"}</span>
-          <span>거래 {stats?.selected_quotes_count ?? 0}건</span>
-          {supplier.tax_invoice_available && <span>세금계산서 가능</span>}
-          {supplier.card_payment_available && <span>카드결제 가능</span>}
-          {supplier.urgent_delivery_available && <span>긴급배송 가능</span>}
-          {documents.some((document) => document.status === "approved") && <span>인증자료 확인</span>}
+        <div className="quoteTrustSummary">
+          <div className="quoteTrustIntro">
+            <strong>승인 공급업체</strong>
+            <span>{capabilityLabels.length ? capabilityLabels.join(" · ") : "기본 조건 확인 필요"}</span>
+          </div>
+          <div className="quoteTrustMetrics" aria-label="공급업체 신뢰 요약">
+            <span><b>{stats?.rating ? stats.rating.toFixed(1) : "신규"}</b><small>평점</small></span>
+            <span><b>{responseLabel}</b><small>응답</small></span>
+            <span><b>{stats?.selected_quotes_count ?? 0}건</b><small>거래</small></span>
+          </div>
         </div>
       )}
-      <div className="priceBlock">
+      <div className="priceBlock quotePricePanel">
+        <span className="quotePriceLabel">최종 견적가</span>
         <strong>{money(quote.final_amount)}</strong>
-        <span>상품 {money(quote.total_amount)} · 배송 {money(quote.delivery_fee)}</span>
+        <div className="quoteAmountBreakdown">
+          <span>상품 {money(quote.total_amount)}</span>
+          <span>배송 {quote.delivery_fee > 0 ? money(quote.delivery_fee) : "포함"}</span>
+        </div>
       </div>
-      <div className="quoteFacts">
-        <span className="fact">배송비 {quote.delivery_fee > 0 ? "별도" : "포함"}</span>
-        <span className={isFastest ? "fact strong" : "fact"}>납품 {quote.available_delivery_date}</span>
-        <span className="fact">세금계산서 {yesNo(quote.tax_invoice_available)}</span>
-        <span className="fact">카드결제 {yesNo(quote.card_payment_available)}</span>
-        <span className={missingItemCount > 0 ? "fact strong" : "fact"}>품목 {missingItemCount > 0 ? `${missingItemCount}개 확인 필요` : "확인됨"}</span>
-        {quote.alternative_proposal && <span className="fact strong">대체품 제안 있음</span>}
+      <div className="quoteFacts quoteKeyFacts" aria-label="견적 핵심 조건">
+        <span className={isFastest ? "fact strong" : "fact"}><small>납품</small>{quote.available_delivery_date}</span>
+        <span className="fact"><small>배송비</small>{quote.delivery_fee > 0 ? "별도" : "포함"}</span>
+        <span className="fact"><small>세금</small>{yesNo(quote.tax_invoice_available)}</span>
+        <span className="fact"><small>카드</small>{yesNo(quote.card_payment_available)}</span>
+        <span className={missingItemCount > 0 ? "fact strong" : "fact"}><small>품목</small>{missingItemCount > 0 ? `${missingItemCount}개 확인` : "확인됨"}</span>
       </div>
-      <dl className="quoteDetails">
+      <dl className="quoteDetails quoteMemoGrid">
         <div>
           <dt>단가 메모</dt>
-          <dd>{quote.item_price_memo || "미입력"}</dd>
+          <dd title={quote.item_price_memo || undefined}>{quote.item_price_memo || "미입력"}</dd>
         </div>
         <div>
           <dt>업체 메모</dt>
-          <dd>{quote.memo || "미입력"}</dd>
+          <dd title={quote.memo || undefined}>{quote.memo || "미입력"}</dd>
         </div>
         <div>
           <dt>유효기간</dt>

@@ -2,7 +2,7 @@ import { appConfig } from "../env";
 import { getSupabaseClient } from "./client";
 import { logSupabaseError } from "./errors";
 
-export type UploadKind = "quote" | "deal" | "supplierDocument" | "analysis" | "feedback";
+export type UploadKind = "quote" | "deal" | "supplierDocument" | "analysis" | "feedback" | "productImage";
 
 export const storageBuckets: Record<UploadKind, string> = {
   quote: "quote-attachments",
@@ -10,6 +10,7 @@ export const storageBuckets: Record<UploadKind, string> = {
   supplierDocument: "supplier-documents",
   analysis: "analysis-files",
   feedback: "feedback-attachments",
+  productImage: "product-images",
 };
 
 const allowedExtensions = new Set(["jpg", "jpeg", "png", "webp", "heic", "pdf", "xlsx", "xls", "csv"]);
@@ -62,5 +63,6 @@ export async function uploadAppFile(kind: UploadKind, userId: string, file: File
     logSupabaseError(`storage.${bucket}.upload`, error);
     return { ok: false as const, message: error.message };
   }
-  return { ok: true as const, bucket, path: data.path };
+  const publicUrl = client.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
+  return { ok: true as const, bucket, path: data.path, publicUrl };
 }

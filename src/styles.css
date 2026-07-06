@@ -1615,6 +1615,10 @@ code {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.quoteCompareGrid > * {
+  min-width: 0;
+}
+
 .quoteSummaryStrip {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1675,13 +1679,92 @@ code {
 
 .quoteCard {
   display: grid;
-  gap: 15px;
+  min-width: 0;
+  gap: 14px;
   padding: 18px;
 }
 
 .quoteCard.selected {
   border-color: rgba(18, 128, 92, 0.45);
   box-shadow: 0 10px 28px rgba(18, 128, 92, 0.11);
+}
+
+.quoteHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.quoteHeader > div {
+  min-width: 0;
+}
+
+.quoteBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quoteTrustSummary {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.quoteTrustIntro {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.quoteTrustIntro strong {
+  color: var(--green);
+  font-size: 14px;
+}
+
+.quoteTrustIntro span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quoteTrustMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.quoteTrustMetrics span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 9px 8px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+}
+
+.quoteTrustMetrics b {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--navy);
+  font-size: 15px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quoteTrustMetrics small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .priceBlock {
@@ -1693,11 +1776,63 @@ code {
   color: var(--navy);
   font-size: 30px;
   line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .priceBlock span {
   color: var(--muted);
   font-weight: 760;
+}
+
+.quotePricePanel {
+  gap: 6px;
+  padding-block: 2px;
+}
+
+.quotePricePanel strong {
+  font-size: 34px;
+}
+
+.quotePriceLabel {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.quoteAmountBreakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.quoteAmountBreakdown span {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.quoteKeyFacts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.quoteKeyFacts .fact {
+  min-width: 0;
+  min-height: 54px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.quoteKeyFacts .fact small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .quoteDetails {
@@ -1721,6 +1856,208 @@ code {
   margin: 0;
   color: var(--charcoal);
   line-height: 1.55;
+}
+
+.quoteMemoGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-top: 2px;
+}
+
+.quoteMemoGrid div {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fbfcfd;
+  border: 1px solid var(--line);
+}
+
+.quoteMemoGrid dd {
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.quoteItemPanel {
+  display: grid;
+  gap: 14px;
+}
+
+.itemComparisonHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.itemComparisonHeader h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.itemComparisonHeader p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.itemComparisonHeader > strong {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: var(--green);
+  background: var(--green-soft);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.requestedItemStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.requestedItemStrip span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+}
+
+.requestedItemStrip b {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--navy);
+  font-size: 14px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.requestedItemStrip small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.supplierItemSummaryList {
+  display: grid;
+  gap: 10px;
+}
+
+.supplierItemSummary {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.supplierItemTop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.supplierItemTop > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.supplierItemTop strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--navy);
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.supplierItemTop span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.supplierItemMemo {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.supplierItemMemo span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.supplierItemMemo p {
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--charcoal);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.supplierItemFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.supplierItemFacts span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: var(--charcoal);
+  background: #f4f6f8;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.itemComparisonDetails {
+  display: grid;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.itemComparisonDetails summary {
+  width: fit-content;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: var(--navy);
+  background: #f4f6f8;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.itemComparisonDetails[open] summary {
+  margin-bottom: 10px;
 }
 
 .proposal {
@@ -4345,10 +4682,85 @@ tbody tr:hover {
 }
 
 .productFormShell {
+  position: relative;
   background: transparent;
   border: 0;
   box-shadow: none;
   padding: 0;
+}
+
+.productFormShell.saving {
+  min-height: 360px;
+}
+
+.productFormShell.saving .wizardPanel {
+  pointer-events: none;
+}
+
+.productUploadOverlay {
+  position: sticky;
+  top: 88px;
+  z-index: 16;
+  display: grid;
+  place-items: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 22px;
+  border: 1px solid var(--orange-line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 46px rgba(16, 32, 51, 0.16);
+  text-align: center;
+}
+
+.productUploadOverlay strong {
+  color: var(--navy);
+  font-size: 20px;
+}
+
+.productUploadOverlay p,
+.productUploadOverlay small {
+  max-width: 460px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.productUploadOverlay small {
+  color: #9a3412;
+  font-weight: 900;
+}
+
+.productImagePicker {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.productImagePreview {
+  width: min(220px, 100%);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff7f2;
+}
+
+.productImagePreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 10px;
+}
+
+.productImagePicker small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .protectionNotice,
@@ -5360,6 +5772,91 @@ tr.selectedRow {
   .supplierFlow,
   .faqGrid {
     grid-template-columns: 1fr;
+  }
+
+  .quoteCard {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .quoteBadges {
+    gap: 5px;
+  }
+
+  .quoteSummaryStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quoteSummaryCard {
+    padding: 12px;
+  }
+
+  .quoteSummaryCard strong {
+    font-size: 16px;
+  }
+
+  .quoteTrustSummary {
+    padding: 10px;
+  }
+
+  .quoteTrustMetrics {
+    gap: 6px;
+  }
+
+  .quoteTrustMetrics span {
+    padding: 8px 6px;
+  }
+
+  .quoteTrustMetrics b {
+    font-size: 14px;
+  }
+
+  .priceBlock strong {
+    font-size: 32px;
+  }
+
+  .quoteKeyFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quoteKeyFacts .fact {
+    min-height: 50px;
+  }
+
+  .quoteMemoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .quoteMemoGrid div {
+    padding: 10px;
+  }
+
+  .itemComparisonHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .itemComparisonHeader h2 {
+    font-size: 20px;
+  }
+
+  .itemComparisonHeader > strong {
+    width: fit-content;
+  }
+
+  .requestedItemStrip {
+    grid-template-columns: 1fr;
+  }
+
+  .supplierItemSummary {
+    padding: 10px;
+  }
+
+  .supplierItemTop {
+    grid-template-columns: 1fr;
+  }
+
+  .supplierItemMemo p {
+    -webkit-line-clamp: 3;
   }
 
   .productImageFrame {
