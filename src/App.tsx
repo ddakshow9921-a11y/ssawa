@@ -382,6 +382,7 @@ function getRouteRole(path: string): UserRole | null {
   if (path.startsWith("/app/admin")) return "admin";
   if (path === "/app/today/supplier" || path.startsWith("/app/today/supplier/")) return "supplier";
   if (path.startsWith("/app/supplier") || path === "/partners" || path === "/supplier/apply") return "supplier";
+  if (path.startsWith("/app/buyer")) return "buyer";
   if (path.startsWith("/app/chats")) return "buyer";
   return null;
 }
@@ -1243,7 +1244,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
     if (shellRole === "supplier") return <SupplierDashboard data={data} navigate={navigate} />;
     return <HomePage data={data} navigate={navigate} />;
   }
-  if (path === "/app/buyer/profile") return <BuyerProfilePage data={data} navigate={navigate} setData={setData} authSession={authSession} onAuthChange={onAuthChange} onSignOut={onSignOut} />;
+  if (routePath === "/app/buyer/profile") return <BuyerProfilePage data={data} navigate={navigate} setData={setData} authSession={authSession} onAuthChange={onAuthChange} onSignOut={onSignOut} />;
   if (path === "/app/onboarding" || path === "/app/buyer/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="buyer" onSignOut={onSignOut} />;
   if (path === "/app/supplier/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="supplier" onSignOut={onSignOut} />;
   if (path === "/app/beta") return <BetaNoticePage navigate={navigate} appMode />;
@@ -6033,7 +6034,25 @@ function BuyerProfilePage({
   onAuthChange: (session: AppAuthSession | null) => void;
   onSignOut?: () => void | Promise<void>;
 }) {
-  const profile = data.profiles.find((entry) => entry.id === authSession?.id && entry.role === "buyer") ?? data.profiles.find((entry) => entry.role === "buyer");
+  const profileFromSession: Profile | null = authSession?.role === "buyer"
+    ? {
+        id: authSession.id,
+        name: authSession.name,
+        email: authSession.email,
+        role: "buyer",
+        business_name: authSession.businessName,
+        business_number: authSession.businessNumber,
+        phone: "",
+        region: "",
+        business_verification_status: authSession.verificationStatus,
+        created_at: new Date().toISOString(),
+      }
+    : null;
+  const profile = data.profiles.find((entry) => entry.id === authSession?.id && entry.role === "buyer")
+    ?? data.profiles.find((entry) => Boolean(authSession?.email) && entry.email.toLowerCase() === authSession?.email.toLowerCase() && entry.role === "buyer")
+    ?? profileFromSession
+    ?? data.profiles.find((entry) => entry.role === "buyer");
+  const profileExists = Boolean(profile && data.profiles.some((entry) => entry.id === profile.id));
   const fallbackProfile: Profile = profile ?? {
     id: "",
     name: "",
@@ -6072,7 +6091,9 @@ function BuyerProfilePage({
     };
     const nextData: AppData = {
       ...data,
-      profiles: data.profiles.map((entry) => (entry.id === profile.id ? nextProfile : entry)),
+      profiles: profileExists
+        ? data.profiles.map((entry) => (entry.id === profile.id ? nextProfile : entry))
+        : [nextProfile, ...data.profiles],
     };
     saveData(nextData);
     setData(nextData);
