@@ -700,6 +700,10 @@ function extractRegionFromAddress(address: string) {
   return parts.slice(0, 2).join(" ");
 }
 
+function isKoreaRegionOption(value: string) {
+  return KOREA_REGION_OPTIONS.includes(value.trim());
+}
+
 function formatKakaoRegion(data: KakaoPostcodeData) {
   const sido = normalizeKoreaRegionName(data.sido);
   const sigungu = data.sigungu.trim();
@@ -7538,6 +7542,10 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
       setError("배송 지역과 희망 납품일을 입력해 주세요.");
       return;
     }
+    if (step === 2 && !isKoreaRegionOption(draft.delivery_region)) {
+      setError("배송 지역은 검색 후 목록에서 표준 지역명을 선택해 주세요. 예: 서울 강남구");
+      return;
+    }
     setStep((current) => Math.min(wizardSteps.length - 1, current + 1));
   }
 
@@ -7545,6 +7553,10 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
     event.preventDefault();
     if (!draft.delivery_region.trim() || !draft.desired_delivery_date || !draft.items.some((entry) => entry.item_name.trim())) {
       setError("배송 지역, 희망 납품일, 품목을 입력해 주세요.");
+      return;
+    }
+    if (!isKoreaRegionOption(draft.delivery_region)) {
+      setError("배송 지역은 검색 후 목록에서 표준 지역명을 선택해 주세요. 예: 서울 강남구");
       return;
     }
     if (todayDraft?.status === "submitted") {
@@ -7646,7 +7658,14 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
             <SectionHeader title="납품 조건을 입력하세요" />
             <div className="conditionGrid essentialConditions">
               <Field label="배송 지역">
-                <input value={draft.delivery_region} onChange={(event) => setDraft({ ...draft, delivery_region: event.target.value })} placeholder="예: 서울 노원구" />
+                <RegionSearchField
+                  value={draft.delivery_region}
+                  onChange={(value) => setDraft((current) => ({ ...current, delivery_region: value }))}
+                  required
+                  selectionOnly
+                  placeholder="배송 지역 검색: 서울 강남구"
+                />
+                <small className="fieldHelp">공급업체 매칭을 위해 목록에서 표준 지역명을 선택해 주세요.</small>
               </Field>
               <Field label="희망 납품일">
                 <input type="date" value={draft.desired_delivery_date} onChange={(event) => setDraft({ ...draft, desired_delivery_date: event.target.value })} />
@@ -15984,7 +16003,19 @@ function SectionHeader({ title, action, onAction }: { title: string; action?: st
   );
 }
 
-function RegionSearchField({ value, onChange, required = false }: { value: string; onChange: (value: string) => void; required?: boolean }) {
+function RegionSearchField({
+  value,
+  onChange,
+  required = false,
+  selectionOnly = false,
+  placeholder = "지역명 검색: 서울 강남구",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  selectionOnly?: boolean;
+  placeholder?: string;
+}) {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
   const normalizedQuery = query.trim().replace(/\s+/g, " ");
@@ -16005,19 +16036,41 @@ function RegionSearchField({ value, onChange, required = false }: { value: strin
     setOpen(false);
   }
 
+  function updateQuery(nextQuery: string) {
+    setQuery(nextQuery);
+    if (selectionOnly) {
+      const exactRegion = KOREA_REGION_OPTIONS.find((region) => region === nextQuery.trim());
+      onChange(exactRegion ?? "");
+    } else {
+      onChange(nextQuery);
+    }
+    setOpen(true);
+  }
+
+  function handleBlur() {
+    window.setTimeout(() => {
+      setOpen(false);
+      if (selectionOnly && query.trim() && !isKoreaRegionOption(query)) {
+        setQuery(value);
+      }
+    }, 140);
+  }
+
   return (
     <div className="regionSearchField">
       <input
         value={query}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          onChange(event.target.value);
-          setOpen(true);
-        }}
+        onChange={(event) => updateQuery(event.target.value)}
         onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 140)}
+        onBlur={handleBlur}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && suggestions[0]) {
+            event.preventDefault();
+            selectRegion(suggestions[0]);
+          }
+        }}
         required={required}
-        placeholder="지역명 검색: 서울 강남구"
+        placeholder={placeholder}
         autoComplete="address-level2"
       />
       {open && suggestions.length > 0 && (
