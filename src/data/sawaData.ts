@@ -154,16 +154,77 @@ import type {
   SupplierDocumentType,
   SupplierProduct,
   SupplierProductDraft,
+  SupplierProductEvent,
   SupplierProfile,
   SupplierReputationScore,
   SupplierStoreProfile,
+  SupplierTask,
+  SupplierTodayInsight,
   SupplierMatchCandidate,
   SupplierResponseOpsRow,
   SupplierResponseStatus,
   SupplierGrade,
+  SupplierSalesRecord,
   SupplierStats,
+  SupplierTaxInvoiceStatus,
   SupplierUsage,
   TaxInvoiceStatus,
+  TaxDocument,
+  TaxDocumentCheck,
+  TaxDocumentStatus,
+  TaxDocumentType,
+  TaxExportRequest,
+  AdminTodayAction,
+  TodayAIConversation,
+  TodayAIInsight,
+  TodayAIMessage,
+  TodayAIUsage,
+  TodayAdminSetting,
+  TodayBacklogStatus,
+  TodayBetaApplication,
+  TodayBetaBacklogItem,
+  TodayBetaSegment,
+  TodayBetaSurveyResponse,
+  TodayCategory,
+  TodayCategoryClassificationLog,
+  TodayCategoryRule,
+  TodayEvidenceStatus,
+  TodayExpenseRecord,
+  TodayHelpArticle,
+  TodayLaunchChecklistItem,
+  TodayNotification,
+  TodayNotificationAudience,
+  TodayNotificationCategory,
+  TodayNotificationDeliveryLog,
+  TodayNotificationPreference,
+  TodayNotificationStatus,
+  TodayOnboardingProgress,
+  TodayPricingPlan,
+  TodayProductEvent,
+  TodayProductEventName,
+  TodayRecurringRule,
+  TodayReminderRule,
+  TodayRequoteLog,
+  TodayRequoteLogAction,
+  TodayRequoteRecommendation,
+  TodayRequoteRecommendationLevel,
+  TodayRequoteRecommendationType,
+  TodaySalesRecord,
+  TodaySsawaQuoteDraft,
+  TodayUploadBatch,
+  TodayUploadColumnMapping,
+  TodayUploadFinalRecordType,
+  TodayUploadRecordType,
+  TodayUploadRow,
+  TodayUploadTargetField,
+  TodayUploadType,
+  TodayUploadValidationStatus,
+  TodaySecurityEvent,
+  TodaySupplierSyncLog,
+  TodaySupplierSyncTrigger,
+  TodaySsawaSyncLog,
+  TodaySsawaSyncTrigger,
+  TodaySupportTicket,
   UserRole,
   UserSanction,
   VatPolicy,
@@ -174,10 +235,453 @@ import type {
   SalesLeadPriority,
   SalesLeadStage,
 } from "../types";
+import { appConfig } from "../lib/env";
 
-const STORAGE_KEY = "ssawa-mvp-data-v6";
+const STORAGE_KEY = appConfig.enableDemoData ? "ssawa-mvp-data-v7" : "ssawa-production-data-v1";
 
 const now = "2026-07-04T12:00:00.000Z";
+
+const sampleTodaySalesRecords: TodaySalesRecord[] = [
+  {
+    id: "today-sale-1",
+    business_id: "buyer-1",
+    source: "manual",
+    sales_type: "매장 매출",
+    payment_method: "card",
+    sales_channel: "store",
+    amount: 820000,
+    sales_date: "2026-07-06",
+    memo: "점심/저녁 매장 매출",
+    evidence_status: "not_required",
+    evidence_files_json: "[]",
+    created_by: "buyer-1",
+    created_at: "2026-07-06T12:00:00.000Z",
+    updated_at: "2026-07-06T12:00:00.000Z",
+  },
+  {
+    id: "today-sale-2",
+    business_id: "buyer-1",
+    source: "manual",
+    sales_type: "배달앱 매출",
+    payment_method: "delivery_app",
+    sales_channel: "baemin",
+    amount: 410000,
+    sales_date: "2026-07-05",
+    memo: "배달앱 정산 전 참고 금액",
+    evidence_status: "needs_review",
+    evidence_files_json: "[]",
+    created_by: "buyer-1",
+    created_at: "2026-07-05T12:00:00.000Z",
+    updated_at: "2026-07-05T12:00:00.000Z",
+  },
+  {
+    id: "today-sale-previous-1",
+    business_id: "buyer-1",
+    source: "manual",
+    sales_type: "매장 매출",
+    payment_method: "card",
+    sales_channel: "store",
+    amount: 960000,
+    sales_date: "2026-06-06",
+    memo: "지난달 비교용 매출",
+    evidence_status: "not_required",
+    evidence_files_json: "[]",
+    created_by: "buyer-1",
+    created_at: "2026-06-06T12:00:00.000Z",
+    updated_at: "2026-06-06T12:00:00.000Z",
+  },
+  {
+    id: "today-sale-3",
+    business_id: "buyer-2",
+    source: "manual",
+    sales_type: "매장 매출",
+    payment_method: "cash",
+    sales_channel: "store",
+    amount: 1380000,
+    sales_date: "2026-07-06",
+    memo: "관리자 확인용 다른 사업장 샘플",
+    evidence_status: "not_required",
+    evidence_files_json: "[]",
+    created_by: "buyer-2",
+    created_at: "2026-07-06T12:00:00.000Z",
+    updated_at: "2026-07-06T12:00:00.000Z",
+  },
+];
+
+const sampleTodayExpenseRecords: TodayExpenseRecord[] = [
+  {
+    id: "today-expense-1",
+    business_id: "buyer-1",
+    expense_type: "임대료",
+    payment_method: "transfer",
+    vendor_name: "건물주",
+    amount: 1200000,
+    expense_date: "2026-07-01",
+    memo: "월 고정비",
+    evidence_status: "complete",
+    evidence_files_json: "[]",
+    is_recurring: true,
+    recurring_rule_id: "today-recurring-1",
+    created_by: "buyer-1",
+    created_at: "2026-07-01T09:00:00.000Z",
+    updated_at: "2026-07-01T09:00:00.000Z",
+  },
+  {
+    id: "today-expense-2",
+    business_id: "buyer-1",
+    expense_type: "광고비",
+    payment_method: "card",
+    vendor_name: "지역 광고",
+    amount: 120000,
+    expense_date: "2026-07-06",
+    memo: "주간 광고 집행",
+    evidence_status: "missing",
+    evidence_files_json: "[]",
+    is_recurring: false,
+    created_by: "buyer-1",
+    created_at: "2026-07-06T11:30:00.000Z",
+    updated_at: "2026-07-06T11:30:00.000Z",
+  },
+  {
+    id: "today-expense-previous-1",
+    business_id: "buyer-1",
+    expense_type: "광고비",
+    payment_method: "card",
+    vendor_name: "지역 광고",
+    amount: 70000,
+    expense_date: "2026-06-06",
+    memo: "지난달 비교용 광고비",
+    evidence_status: "complete",
+    evidence_files_json: "[]",
+    is_recurring: false,
+    created_by: "buyer-1",
+    created_at: "2026-06-06T11:30:00.000Z",
+    updated_at: "2026-06-06T11:30:00.000Z",
+  },
+  {
+    id: "today-expense-3",
+    business_id: "buyer-2",
+    expense_type: "공과금",
+    payment_method: "auto_withdrawal",
+    vendor_name: "전기요금",
+    amount: 210000,
+    expense_date: "2026-07-04",
+    memo: "관리자 확인용 다른 사업장 샘플",
+    evidence_status: "needs_review",
+    evidence_files_json: "[]",
+    is_recurring: true,
+    created_by: "buyer-2",
+    created_at: "2026-07-04T12:00:00.000Z",
+    updated_at: "2026-07-04T12:00:00.000Z",
+  },
+];
+
+const sampleTaxDocuments: TaxDocument[] = [
+  {
+    id: "tax-doc-1",
+    business_id: "buyer-1",
+    source_type: "purchase",
+    source_id: "purchase-1",
+    document_type: "transaction_statement",
+    document_name: "서울포장_거래명세서.pdf",
+    file_url: "#",
+    file_path: "tax-documents/buyer-1/2026/07/tax-doc-1.pdf",
+    file_mime_type: "application/pdf",
+    file_size: 412000,
+    amount: 420000,
+    issued_at: "2026-07-04",
+    supplier_name: "서울포장",
+    memo: "싸와 거래자료에서 연결된 거래명세서 샘플",
+    status: "verified",
+    uploaded_by: "system",
+    created_at: "2026-07-04T09:30:00.000Z",
+    updated_at: "2026-07-04T09:30:00.000Z",
+  },
+  {
+    id: "tax-doc-2",
+    business_id: "buyer-1",
+    source_type: "expense",
+    source_id: "today-expense-1",
+    document_type: "bank_transfer",
+    document_name: "7월_임대료_이체내역.pdf",
+    file_url: "#",
+    file_path: "tax-documents/buyer-1/2026/07/tax-doc-2.pdf",
+    file_mime_type: "application/pdf",
+    file_size: 218000,
+    amount: 1200000,
+    issued_at: "2026-07-01",
+    supplier_name: "건물주",
+    memo: "월 임대료 이체내역",
+    status: "verified",
+    uploaded_by: "buyer-1",
+    created_at: "2026-07-01T09:20:00.000Z",
+    updated_at: "2026-07-01T09:20:00.000Z",
+  },
+];
+
+const sampleTaxDocumentChecks: TaxDocumentCheck[] = [
+  {
+    id: "tax-check-1",
+    business_id: "buyer-1",
+    source_type: "purchase",
+    source_id: "purchase-4",
+    check_type: "receipt_missing",
+    status: "missing",
+    message: "영수증 또는 거래 증빙을 확인해주세요.",
+    severity: "high",
+    created_at: "2026-07-01T13:05:00.000Z",
+    updated_at: "2026-07-01T13:05:00.000Z",
+  },
+];
+
+const sampleTaxExportRequests: TaxExportRequest[] = [];
+
+const sampleSupplierSalesRecords: SupplierSalesRecord[] = [
+  {
+    id: "supplier-sale-1",
+    supplier_business_id: "sup-1",
+    buyer_business_id: "buyer-1",
+    buyer_display_name: "테스트식당",
+    source: "ssawa",
+    source_id: "deal-1",
+    ssawa_deal_id: "deal-1",
+    ssawa_quote_request_id: "req-1",
+    ssawa_quote_id: "quote-1",
+    item_summary: "치킨박스 외 2건",
+    category: "포장재",
+    total_amount: 420000,
+    supply_amount: 381818,
+    vat_amount: 38182,
+    payment_method: "bank_transfer",
+    sale_status: "confirmed",
+    settlement_status: "scheduled",
+    tax_invoice_status: "required",
+    evidence_status: "needs_review",
+    sold_at: "2026-07-04",
+    memo: "싸와 거래에서 공급업체 매출로 정리된 샘플입니다.",
+    created_by: "system",
+    created_at: "2026-07-04T09:20:00.000Z",
+    updated_at: "2026-07-04T09:20:00.000Z",
+  },
+  {
+    id: "supplier-sale-2",
+    supplier_business_id: "sup-1",
+    buyer_business_id: "buyer-1",
+    buyer_display_name: "테스트식당",
+    source: "ssawa",
+    source_id: "deal-1-prev",
+    ssawa_deal_id: "deal-1-prev",
+    ssawa_quote_request_id: "req-1",
+    ssawa_quote_id: "quote-1-prev",
+    item_summary: "지난달 포장재",
+    category: "포장재",
+    total_amount: 260000,
+    supply_amount: 236364,
+    vat_amount: 23636,
+    payment_method: "bank_transfer",
+    sale_status: "completed",
+    settlement_status: "paid",
+    tax_invoice_status: "issued",
+    evidence_status: "complete",
+    sold_at: "2026-06-04",
+    completed_at: "2026-06-04T09:20:00.000Z",
+    settled_at: "2026-06-10T09:00:00.000Z",
+    memo: "정산 완료 샘플입니다.",
+    created_by: "system",
+    created_at: "2026-06-04T09:20:00.000Z",
+    updated_at: "2026-06-10T09:00:00.000Z",
+  },
+  {
+    id: "supplier-sale-3",
+    supplier_business_id: "sup-2",
+    buyer_business_id: "buyer-2",
+    buyer_display_name: "강남분식",
+    source: "ssawa",
+    source_id: "deal-2",
+    ssawa_deal_id: "deal-2",
+    ssawa_quote_request_id: "req-2",
+    ssawa_quote_id: "quote-3",
+    item_summary: "식자재 3건",
+    category: "식자재",
+    total_amount: 780000,
+    supply_amount: 709091,
+    vat_amount: 70909,
+    payment_method: "direct",
+    sale_status: "confirmed",
+    settlement_status: "not_applicable",
+    tax_invoice_status: "requested",
+    evidence_status: "needs_review",
+    sold_at: "2026-07-03",
+    memo: "다른 공급업체 권한 분리 확인용 샘플입니다.",
+    created_by: "system",
+    created_at: "2026-07-03T08:40:00.000Z",
+    updated_at: "2026-07-03T08:40:00.000Z",
+  },
+];
+
+const sampleTodaySupplierSyncLogs: TodaySupplierSyncLog[] = [
+  {
+    id: "supplier-sync-1",
+    supplier_business_id: "sup-1",
+    buyer_business_id: "buyer-1",
+    ssawa_deal_id: "deal-1",
+    supplier_sales_record_id: "supplier-sale-1",
+    action: "auto_sync",
+    status: "success",
+    message: "싸와 거래를 공급업체 매출로 정리했습니다.",
+    triggered_by: "system",
+    triggered_user_id: "system",
+    payload_snapshot_json: JSON.stringify({ dealId: "deal-1", status: "confirmed" }),
+    created_at: "2026-07-04T09:20:00.000Z",
+  },
+];
+
+const sampleSupplierProductEvents: SupplierProductEvent[] = [
+  { id: "spevent-1", supplier_business_id: "sup-1", product_id: "prod-1", buyer_business_id: "buyer-1", event_type: "view", source: "ssawa", metadata_json: "{}", created_at: "2026-07-04T08:20:00.000Z" },
+  { id: "spevent-2", supplier_business_id: "sup-1", product_id: "prod-1", buyer_business_id: "buyer-1", event_type: "inquiry", source: "ssawa", metadata_json: "{}", created_at: "2026-07-04T08:25:00.000Z" },
+  { id: "spevent-3", supplier_business_id: "sup-1", product_id: "prod-3", buyer_business_id: "buyer-1", event_type: "order_request", source: "ssawa", metadata_json: "{}", created_at: "2026-07-03T10:00:00.000Z" },
+  { id: "spevent-4", supplier_business_id: "sup-1", product_id: "prod-1", buyer_business_id: "buyer-1", event_type: "deal_completed", source: "ssawa", metadata_json: JSON.stringify({ dealId: "deal-1" }), created_at: "2026-07-04T09:20:00.000Z" },
+];
+
+const sampleSupplierTodayInsights: SupplierTodayInsight[] = [];
+const sampleSupplierTasks: SupplierTask[] = [];
+const sampleTodayAIConversations: TodayAIConversation[] = [];
+const sampleTodayAIMessages: TodayAIMessage[] = [];
+const sampleTodayAIInsights: TodayAIInsight[] = [];
+const sampleTodayAIUsage: TodayAIUsage[] = [];
+const sampleTodaySecurityEvents: TodaySecurityEvent[] = [
+  {
+    id: "today-sec-1",
+    user_id: "buyer-1",
+    role: "buyer",
+    business_id: "buyer-1",
+    event_type: "ai_scope_blocked",
+    severity: "medium",
+    route: "/app/today/ai",
+    resource_type: "today_ai_messages",
+    resource_id: "sample-blocked-ai",
+    message: "AI 권한 범위 밖 질문이 안전가드에서 차단되었습니다.",
+    ip_hash: "hash-demo-buyer",
+    user_agent_hash: "hash-demo-browser",
+    created_at: "2026-07-06T08:50:00.000Z",
+  },
+  {
+    id: "today-sec-2",
+    user_id: "sup-1-user",
+    role: "supplier",
+    supplier_business_id: "sup-1",
+    event_type: "admin_route_denied",
+    severity: "high",
+    route: "/app/admin/today",
+    resource_type: "admin_route",
+    message: "공급업체 계정의 관리자 운영 화면 접근이 차단되었습니다.",
+    ip_hash: "hash-demo-supplier",
+    user_agent_hash: "hash-demo-browser",
+    created_at: "2026-07-06T08:44:00.000Z",
+  },
+];
+const sampleAdminTodayActions: AdminTodayAction[] = [
+  {
+    id: "today-admin-action-1",
+    admin_user_id: "admin-1",
+    action_type: "check_environment",
+    target_type: "environment",
+    target_id: "status",
+    memo: "출시 전 환경 설정 요약을 확인했습니다.",
+    result_status: "success",
+    created_at: "2026-07-06T08:55:00.000Z",
+  },
+];
+const sampleTodayAdminSettings: TodayAdminSetting[] = [
+  { id: "today-admin-setting-1", setting_key: "sync_failure_threshold", setting_value: "3", value_type: "number", description: "동기화 실패 긴급 알림 기준", updated_by: "admin-1", created_at: "2026-07-06T08:00:00.000Z", updated_at: "2026-07-06T08:00:00.000Z" },
+  { id: "today-admin-setting-2", setting_key: "upload_error_threshold", setting_value: "5", value_type: "number", description: "업로드 오류 확인 기준", updated_by: "admin-1", created_at: "2026-07-06T08:00:00.000Z", updated_at: "2026-07-06T08:00:00.000Z" },
+  { id: "today-admin-setting-3", setting_key: "large_amount_threshold", setting_value: "1000000", value_type: "number", description: "큰 금액 증빙 확인 기준", updated_by: "admin-1", created_at: "2026-07-06T08:00:00.000Z", updated_at: "2026-07-06T08:00:00.000Z" },
+  { id: "today-admin-setting-4", setting_key: "tax_missing_high_amount", setting_value: "500000", value_type: "number", description: "세무자료 누락 high 기준 금액", updated_by: "admin-1", created_at: "2026-07-06T08:00:00.000Z", updated_at: "2026-07-06T08:00:00.000Z" },
+  { id: "today-admin-setting-5", setting_key: "ai_daily_request_limit", setting_value: "30", value_type: "number", description: "AI 일일 요청 제한 점검 기준", updated_by: "admin-1", created_at: "2026-07-06T08:00:00.000Z", updated_at: "2026-07-06T08:00:00.000Z" },
+  { id: "today-admin-setting-6", setting_key: "security_repeat_threshold", setting_value: "3", value_type: "number", description: "반복 접근 차단 알림 기준", updated_by: "admin-1", created_at: "2026-07-06T08:00:00.000Z", updated_at: "2026-07-06T08:00:00.000Z" },
+  { id: "today-admin-setting-7", setting_key: "settlement_review_threshold", setting_value: "1", value_type: "number", description: "정산 확인 필요 알림 기준", updated_by: "admin-1", created_at: "2026-07-06T08:00:00.000Z", updated_at: "2026-07-06T08:00:00.000Z" },
+  { id: "today-admin-setting-8", setting_key: "admin_alerts_enabled", setting_value: "true", value_type: "boolean", description: "관리자 홈 알림 표시 여부", updated_by: "admin-1", created_at: "2026-07-06T08:00:00.000Z", updated_at: "2026-07-06T08:00:00.000Z" },
+];
+
+const sampleTodayRecurringRules: TodayRecurringRule[] = [
+  {
+    id: "today-recurring-1",
+    business_id: "buyer-1",
+    record_type: "expense",
+    title: "월 임대료",
+    amount: 1200000,
+    category: "임대료",
+    payment_method: "transfer",
+    repeat_type: "monthly",
+    day_of_month: 1,
+    start_date: "2026-07-01",
+    is_active: true,
+    created_by: "buyer-1",
+    created_at: "2026-07-01T09:00:00.000Z",
+    updated_at: "2026-07-01T09:00:00.000Z",
+  },
+];
+
+export const todayPurchaseCategoryNames = [
+  "식자재비",
+  "포장재비",
+  "소모품비",
+  "주방용품",
+  "설비자재",
+  "닥트/환기자재",
+  "건축자재",
+  "공구/산업자재",
+  "배송비",
+  "기타 매입",
+  "미분류",
+] as const;
+
+const todayCategoryDescriptions: Record<(typeof todayPurchaseCategoryNames)[number], string> = {
+  "식자재비": "식당 운영에 쓰는 원재료와 식품 매입",
+  "포장재비": "배달, 테이크아웃, 보관용 포장 자재",
+  "소모품비": "청소, 위생, 매장 운영 소모품",
+  "주방용품": "조리 도구와 주방 비품",
+  "설비자재": "매장 설비와 보수 자재",
+  "닥트/환기자재": "닥트, 환풍, 배기 관련 자재",
+  "건축자재": "인테리어와 공사 관련 자재",
+  "공구/산업자재": "공구, 철물, 산업 자재",
+  "배송비": "구매와 별도 표시된 배송비",
+  "기타 매입": "다른 분류에 바로 맞지 않는 매입",
+  "미분류": "사용자 확인이 필요한 매입",
+};
+
+export const defaultTodayCategories: TodayCategory[] = todayPurchaseCategoryNames.map((name, index) => ({
+  id: `today-category-${index + 1}`,
+  name,
+  description: todayCategoryDescriptions[name],
+  sort_order: index + 1,
+  is_default: true,
+  is_active: true,
+  created_at: now,
+  updated_at: now,
+}));
+
+const systemTodayCategoryRuleDrafts: Array<Pick<TodayCategoryRule, "category_name" | "rule_type" | "pattern" | "confidence">> = [
+  { category_name: "식자재비", rule_type: "item_contains", pattern: "고기,쌀,김치,채소,야채,대파,양파,마늘,식용유,소스,면,냉동,식자재,농산,수산,축산", confidence: 0.9 },
+  { category_name: "포장재비", rule_type: "item_contains", pattern: "포장,박스,봉투,비닐,용기,컵,빨대,랩,쇼핑백,테이크아웃,배달용기", confidence: 0.88 },
+  { category_name: "소모품비", rule_type: "item_contains", pattern: "세제,장갑,물티슈,청소,휴지,위생,소모품,행주,수세미,살균", confidence: 0.86 },
+  { category_name: "주방용품", rule_type: "item_contains", pattern: "냄비,팬,칼,도마,집게,국자,주방용품,조리도구,그릇,식기", confidence: 0.84 },
+  { category_name: "설비자재", rule_type: "item_contains", pattern: "모터,펌프,필터,배관,설비,수리,냉장고,냉동고,부품", confidence: 0.82 },
+  { category_name: "닥트/환기자재", rule_type: "item_contains", pattern: "닥트,환기,후드,배기,환풍기,플렉시블,댐퍼,스파이럴", confidence: 0.9 },
+  { category_name: "건축자재", rule_type: "item_contains", pattern: "목재,철판,타일,시멘트,석고,페인트,건축,인테리어,실리콘", confidence: 0.84 },
+  { category_name: "공구/산업자재", rule_type: "item_contains", pattern: "공구,드릴,나사,볼트,용접,전선,산업,테이프,케이블타이", confidence: 0.84 },
+  { category_name: "배송비", rule_type: "item_contains", pattern: "배송비,운임,퀵,택배,화물,운송료", confidence: 0.92 },
+  { category_name: "기타 매입", rule_type: "request_category", pattern: "기타,잡화,일반", confidence: 0.72 },
+];
+
+export const defaultTodayCategoryRules: TodayCategoryRule[] = systemTodayCategoryRuleDrafts.map((rule, index) => ({
+  id: `today-rule-system-${index + 1}`,
+  ...rule,
+  source: "system",
+  use_count: 0,
+  created_at: now,
+  updated_at: now,
+}));
 
 export const testLoginAccounts = [
   { role: "buyer", label: "테스트 고객", email: "buyer@test.ssawa.local", password: "test1234!" },
@@ -420,7 +924,11 @@ export const supplierDocumentStatusLabels: Record<SupplierDocumentStatus, string
 
 export const taxInvoiceStatusLabels: Record<TaxInvoiceStatus, string> = {
   none: "발행 없음",
+  required: "요청 필요",
   requested: "요청됨",
+  received: "수령 완료",
+  not_needed: "불필요",
+  unknown: "확인 필요",
   issued: "발행 완료",
   pending: "확인 대기",
   rejected: "반려",
@@ -1377,6 +1885,40 @@ const samplePurchaseRecords: PurchaseRecord[] = [
     created_at: "2026-06-29T15:30:00.000Z",
     updated_at: "2026-06-29T15:30:00.000Z",
   },
+  {
+    id: "purchase-6",
+    deal_id: "deal-1-prev",
+    quote_request_id: "req-1",
+    buyer_id: "buyer-1",
+    supplier_id: "sup-1",
+    supplier_name: "서울포장",
+    supplier_business_number: "120-81-55221",
+    purchase_title: "지난달 포장재 구매",
+    purchase_date: "2026-06-04",
+    category_name: "포장재",
+    accounting_category: "포장재비",
+    sub_category: "배달 포장",
+    item_count: 2,
+    total_amount: 260000,
+    supply_amount: 236364,
+    vat_amount: 23636,
+    delivery_fee: 10000,
+    discount_amount: 0,
+    estimated_savings_amount: 0,
+    estimated_savings_rate: 0,
+    previous_purchase_amount: 0,
+    payment_method: "bank_transfer",
+    tax_invoice_status: "issued",
+    receipt_status: "uploaded",
+    delivery_note_status: "confirmed",
+    accounting_status: "synced",
+    sync_target: "today_jangsa",
+    memo: "비용 상승 감지 비교용 지난달 포장재 구매입니다.",
+    user_memo: "",
+    admin_memo: "",
+    created_at: "2026-06-04T09:20:00.000Z",
+    updated_at: "2026-06-04T09:20:00.000Z",
+  },
 ];
 
 const samplePurchaseRecordItems: PurchaseRecordItem[] = [
@@ -2246,6 +2788,212 @@ const sampleRoadmapItems: RoadmapItem[] = [
   roadmapItem("roadmap-8", "정식 런칭 판단 리포트", "집중 카테고리, 공급망, 재요청 데이터를 기반으로 런칭 판단을 정리합니다.", 4, "high", "admin-1", "planned", "런칭/보류 기준 확정"),
 ];
 
+const sampleTodayNotifications: TodayNotification[] = [
+  {
+    id: "today-noti-buyer-tax-1",
+    audience: "buyer",
+    user_id: "buyer-1",
+    business_id: "buyer-1",
+    category: "tax",
+    severity: "warning",
+    status: "unread",
+    title: "세금계산서 확인이 필요한 매입 2건",
+    message: "싸와 구매내역에서 반영된 매입 중 세금계산서 상태가 확인 전입니다. 세무자료 제출 전에 증빙 상태를 확인하세요.",
+    action_label: "세무자료 보기",
+    action_url: "/app/today/tax",
+    amount: 1240000,
+    due_at: "2026-07-10T09:00:00.000Z",
+    group_key: "buyer-1-tax",
+    dedupe_key: "buyer-1-tax-2026-07-06",
+    generated_from: "tax_document_check",
+    created_at: "2026-07-06T08:30:00.000Z",
+  },
+  {
+    id: "today-noti-buyer-requote-1",
+    audience: "buyer",
+    user_id: "buyer-1",
+    business_id: "buyer-1",
+    category: "requote",
+    severity: "info",
+    status: "unread",
+    title: "포장재비 재견적 초안이 준비되었습니다",
+    message: "최근 구매 단가가 전월 대비 올라 재견적 추천을 만들었습니다. 수량과 납품일만 확인하면 싸와 견적요청으로 넘길 수 있습니다.",
+    action_label: "재견적 확인",
+    action_url: "/app/today/requotes",
+    amount: 390000,
+    group_key: "buyer-1-requote",
+    dedupe_key: "buyer-1-requote-packaging-2026-07",
+    generated_from: "requote_recommendation",
+    created_at: "2026-07-06T09:10:00.000Z",
+  },
+  {
+    id: "today-noti-supplier-settlement-1",
+    audience: "supplier",
+    user_id: "sup-1-user",
+    supplier_business_id: "sup-1",
+    category: "settlement",
+    severity: "warning",
+    status: "unread",
+    title: "정산 확인이 필요한 매출 1건",
+    message: "거래 완료 매출 중 정산 상태가 보류로 표시된 항목이 있습니다. 입금 여부와 증빙 발행 상태를 확인하세요.",
+    action_label: "정산 보기",
+    action_url: "/app/today/supplier/settlements",
+    amount: 390000,
+    due_at: "2026-07-09T18:00:00.000Z",
+    group_key: "sup-1-settlement",
+    dedupe_key: "sup-1-settlement-deal-1",
+    generated_from: "supplier_sales_record",
+    created_at: "2026-07-06T09:35:00.000Z",
+  },
+  {
+    id: "today-noti-supplier-quote-1",
+    audience: "supplier",
+    user_id: "sup-1-user",
+    supplier_business_id: "sup-1",
+    category: "quote",
+    severity: "info",
+    status: "read",
+    title: "응답 가능한 견적요청이 있습니다",
+    message: "주력 지역과 취급 품목이 맞는 구매요청이 감지되었습니다. 응답 시간을 줄이면 선택률이 올라갑니다.",
+    action_label: "견적 검토",
+    action_url: "/app/today/supplier/quotes",
+    group_key: "sup-1-quotes",
+    dedupe_key: "sup-1-quotes-2026-07-06",
+    generated_from: "quote_matching",
+    created_at: "2026-07-06T10:00:00.000Z",
+    read_at: "2026-07-06T10:05:00.000Z",
+  },
+  {
+    id: "today-noti-admin-env-1",
+    audience: "admin",
+    user_id: "admin-1",
+    category: "env",
+    severity: "critical",
+    status: "unread",
+    title: "운영 환경 설정 점검 필요",
+    message: "국세청 API, 앱 대표 URL, 알림 발송 채널 같은 운영 변수를 상태 화면에서 확인해야 합니다.",
+    action_label: "운영 상태 보기",
+    action_url: "/app/admin/today/settings",
+    group_key: "admin-env",
+    dedupe_key: "admin-env-2026-07-06",
+    generated_from: "environment_audit",
+    created_at: "2026-07-06T07:50:00.000Z",
+  },
+  {
+    id: "today-noti-admin-upload-1",
+    audience: "admin",
+    user_id: "admin-1",
+    category: "upload",
+    severity: "warning",
+    status: "unread",
+    title: "업로드 검증 오류가 누적되었습니다",
+    message: "엑셀/CSV 일괄 입력에서 중복 의심과 필수값 누락이 함께 발견되었습니다. 운영자가 일괄 반영 전 샘플을 확인해야 합니다.",
+    action_label: "업로드 오류 보기",
+    action_url: "/app/admin/today/uploads",
+    group_key: "admin-upload",
+    dedupe_key: "admin-upload-2026-07-06",
+    generated_from: "upload_validation",
+    created_at: "2026-07-06T10:15:00.000Z",
+  },
+];
+
+const todayNotificationPreferenceUsers: Array<{ audience: TodayNotificationAudience; userId: string }> = [
+  { audience: "buyer", userId: "buyer-1" },
+  { audience: "supplier", userId: "sup-1-user" },
+  { audience: "admin", userId: "admin-1" },
+];
+
+const todayNotificationCategories: TodayNotificationCategory[] = ["tax", "evidence", "category", "cost", "requote", "upload", "ai", "sync", "quote", "deal", "settlement", "security", "env", "feedback"];
+
+const sampleTodayNotificationPreferences: TodayNotificationPreference[] = todayNotificationPreferenceUsers.flatMap((user) =>
+  todayNotificationCategories.map((category) => ({
+    id: `today-pref-${user.audience}-${user.userId}-${category}`,
+    audience: user.audience,
+    user_id: user.userId,
+    category,
+    in_app_enabled: true,
+    email_enabled: user.audience === "admin",
+    sms_enabled: false,
+    kakao_enabled: false,
+    push_enabled: category === "tax" || category === "settlement" || category === "env",
+    frequency: category === "env" || category === "security" ? "instant" : "daily",
+    quiet_hours_start: "22:00",
+    quiet_hours_end: "08:00",
+    updated_at: "2026-07-06T08:00:00.000Z",
+  })),
+);
+
+const sampleTodayReminderRules: TodayReminderRule[] = [
+  { id: "today-rule-buyer-tax", audience: "buyer", category: "tax", name: "세무자료 마감 전 확인", condition_text: "증빙 누락 또는 세금계산서 미확인 상태가 있으면 매일 오전 알림", frequency: "daily", channels: ["in_app", "push"], enabled: true, created_at: now, updated_at: now },
+  { id: "today-rule-buyer-requote", audience: "buyer", category: "requote", name: "매입 단가 상승 재견적", condition_text: "최근 매입 단가가 전월 대비 10% 이상 상승하면 재견적 추천", frequency: "weekly", channels: ["in_app"], enabled: true, created_at: now, updated_at: now },
+  { id: "today-rule-supplier-settlement", audience: "supplier", category: "settlement", name: "정산 보류 확인", condition_text: "정산 보류/실패/확인 필요 매출 발생 시 공급업체에 인앱 알림", frequency: "instant", channels: ["in_app", "push"], enabled: true, created_at: now, updated_at: now },
+  { id: "today-rule-admin-security", audience: "admin", category: "security", name: "보안/RLS 운영 감시", condition_text: "권한 차단, 반복 접근, 환경 변수 누락은 관리자 즉시 알림", frequency: "instant", channels: ["in_app", "email"], enabled: true, created_at: now, updated_at: now },
+];
+
+const sampleTodayNotificationDeliveryLogs: TodayNotificationDeliveryLog[] = [
+  { id: "today-delivery-1", notification_id: "today-noti-buyer-tax-1", channel: "in_app", status: "sent", provider: "local", message: "인앱 알림 생성", created_at: "2026-07-06T08:30:01.000Z" },
+  { id: "today-delivery-2", notification_id: "today-noti-buyer-tax-1", channel: "kakao", status: "skipped", provider: "not_configured", message: "외부 발송 연동은 베타 범위에서 제외", created_at: "2026-07-06T08:30:01.000Z" },
+  { id: "today-delivery-3", notification_id: "today-noti-admin-env-1", channel: "email", status: "skipped", provider: "not_configured", message: "메일 발송은 운영 서버 연동 후 활성화", created_at: "2026-07-06T07:50:01.000Z" },
+];
+
+const sampleTodayOnboardingProgress: TodayOnboardingProgress[] = [
+  { id: "today-onboarding-buyer-1", audience: "buyer", user_id: "buyer-1", completed_step_ids: ["connect-ssawa"], dismissed_guide_ids: [], last_opened_at: "2026-07-06T08:00:00.000Z", updated_at: "2026-07-06T08:00:00.000Z" },
+  { id: "today-onboarding-supplier-1", audience: "supplier", user_id: "sup-1-user", completed_step_ids: ["confirm-sales"], dismissed_guide_ids: [], last_opened_at: "2026-07-06T08:10:00.000Z", updated_at: "2026-07-06T08:10:00.000Z" },
+  { id: "today-onboarding-admin-1", audience: "admin", user_id: "admin-1", completed_step_ids: ["check-env", "review-qa"], dismissed_guide_ids: [], last_opened_at: "2026-07-06T08:20:00.000Z", updated_at: "2026-07-06T08:20:00.000Z" },
+];
+
+const sampleTodayHelpArticles: TodayHelpArticle[] = [
+  { id: "today-help-buyer-1", audience: "buyer", category: "매입/세무", title: "싸와 구매내역이 오늘장사 매입으로 들어오는 방식", body: "거래 완료된 싸와 구매내역은 매입 장부 후보로 들어오며, 금액·공급업체·증빙 상태를 검토한 뒤 장부에 반영합니다.", tags: ["매입", "싸와", "세무"], safe_copy: "오늘장사는 세무 판단을 대신하지 않습니다. 신고 전 세무사 또는 담당자 확인이 필요합니다.", route_hint: "/app/today/purchases", updated_at: now },
+  { id: "today-help-buyer-2", audience: "buyer", category: "재견적", title: "재견적 추천을 싸와 견적요청으로 넘기기", body: "최근 매입 가격, 반복 구매 품목, 수량을 기준으로 견적 초안을 만들고 구매자가 납품일과 조건을 확인한 뒤 전송합니다.", tags: ["재견적", "견적", "단가"], safe_copy: "AI 추천은 초안이며, 실제 발송 전 품목·수량·납기 확인이 필요합니다.", route_hint: "/app/today/requotes", updated_at: now },
+  { id: "today-help-supplier-1", audience: "supplier", category: "매출/정산", title: "싸와 거래가 공급업체 매출로 정리되는 방식", body: "선택·완료된 거래는 공급업체용 매출 장부에 반영됩니다. 정산 상태와 세금계산서 발행 필요 여부를 함께 확인하세요.", tags: ["매출", "정산", "세금계산서"], safe_copy: "정산 표시 금액은 거래 상태 기반 참고값입니다. 실제 입금 여부는 별도 확인이 필요합니다.", route_hint: "/app/today/supplier/settlements", updated_at: now },
+  { id: "today-help-admin-1", audience: "admin", category: "운영", title: "오늘장사 운영 모니터링 우선순위", body: "환경 변수, 동기화 실패, 업로드 검증, AI 차단, 보안/RLS 이벤트를 우선 확인합니다.", tags: ["운영", "QA", "환경"], safe_copy: "관리자 화면은 운영 판단 보조용이며, 외부 API 키나 민감정보 원문을 노출하지 않습니다.", route_hint: "/app/admin/today", updated_at: now },
+  { id: "today-help-common-1", audience: "common", category: "FAQ", title: "오늘장사와 싸와는 어떤 관계인가요?", body: "싸와는 구매·견적·거래 흐름을 담당하고, 오늘장사는 그 결과를 매입·매출·세무·정산 장부로 정리합니다.", tags: ["FAQ", "싸와", "오늘장사"], safe_copy: "연동 데이터는 사용자가 확인하고 반영하는 흐름을 기본으로 합니다.", route_hint: "/app/help/today", updated_at: now },
+];
+
+const sampleTodayLaunchChecklist: TodayLaunchChecklistItem[] = [
+  { id: "launch-qa", category: "QA", title: "구매자/공급업체/관리자 E2E 점검", description: "핵심 라우트, 권한 차단, 빈 상태, 오류 상태, 모바일 폭을 점검합니다.", owner: "admin-1", status: "doing", evidence_url: "/app/admin/qa", updated_at: now },
+  { id: "launch-env", category: "운영", title: "대표 URL과 국세청 API 환경값 확인", description: "배포 URL, 앱 대표 URL, 사업자 인증 API 상태를 /status와 관리자 설정에서 확인합니다.", owner: "admin-1", status: "done", evidence_url: "/status", updated_at: now },
+  { id: "launch-policy", category: "정책", title: "약관/개인정보/세무 고지 공개", description: "베타 출시 전 필수 고지 페이지와 지원 채널을 열어둡니다.", owner: "admin-1", status: "done", evidence_url: "/terms", updated_at: now },
+  { id: "launch-feedback", category: "피드백", title: "피드백 위젯과 백로그 운영", description: "사용자 피드백이 관리자 백로그로 이어지는 흐름을 확인합니다.", owner: "admin-1", status: "todo", evidence_url: "/app/admin/beta/backlog", updated_at: now },
+];
+
+const sampleTodayPricingPlans: TodayPricingPlan[] = [
+  { id: "price-buyer-beta", audience: "buyer", name: "오늘장사 베타", price_label: "베타 기간 무료", description: "싸와 구매내역을 매입 장부로 정리하고 세무자료 누락을 확인합니다.", features: ["매입/매출/지출 장부", "싸와 구매내역 자동 반영", "세무자료 누락 알림", "재견적 추천"], beta_badge: "선착순 베타" },
+  { id: "price-supplier-beta", audience: "supplier", name: "공급업체 베타", price_label: "베타 기간 무료", description: "싸와 거래 매출과 정산 상태를 공급업체 관점에서 정리합니다.", features: ["거래 매출 정리", "정산 확인", "세금계산서 발행 체크", "견적 전환 분석"], beta_badge: "공급업체 파일럿" },
+];
+
+const sampleTodayBetaApplications: TodayBetaApplication[] = [
+  { id: "beta-apply-1", application_type: "buyer", business_name: "한강치킨", contact_name: "김사장", phone: "010-1111-2222", email: "owner@ssawa.local", region: "서울 강남구", memo: "포장재비와 식자재 매입 정리를 먼저 써보고 싶습니다.", consent_marketing: true, status: "accepted", created_at: "2026-07-05T09:00:00.000Z", updated_at: "2026-07-05T09:00:00.000Z" },
+  { id: "beta-apply-2", application_type: "supplier", business_name: "서울포장", contact_name: "박팀장", phone: "010-2222-3333", email: "supplier@ssawa.local", region: "서울 동대문구", memo: "거래 매출과 정산 확인 기능을 테스트하고 싶습니다.", consent_marketing: true, status: "contacted", created_at: "2026-07-05T10:00:00.000Z", updated_at: "2026-07-05T10:00:00.000Z" },
+];
+
+const sampleTodaySupportTickets: TodaySupportTicket[] = [
+  { id: "support-1", user_role: "buyer", user_id: "buyer-1", title: "업로드 후 중복 표시 문의", description: "엑셀 업로드에서 같은 거래가 중복 의심으로 표시됩니다.", page_url: "/app/today/uploads", status: "reviewing", created_at: "2026-07-06T11:00:00.000Z", updated_at: "2026-07-06T11:00:00.000Z" },
+];
+
+const sampleTodayProductEvents: TodayProductEvent[] = [
+  { id: "event-1", user_id: "buyer-1", user_role: "buyer", event_name: "page_view", page_url: "/app/today", metadata_json: "{\"section\":\"home\"}", created_at: "2026-07-06T09:00:00.000Z" },
+  { id: "event-2", user_id: "buyer-1", user_role: "buyer", event_name: "requote_draft", page_url: "/app/today/requotes", metadata_json: "{\"category\":\"packaging\"}", created_at: "2026-07-06T09:12:00.000Z" },
+  { id: "event-3", user_id: "sup-1-user", user_role: "supplier", event_name: "notification_action", page_url: "/app/today/supplier/settlements", metadata_json: "{\"category\":\"settlement\"}", created_at: "2026-07-06T09:40:00.000Z" },
+  { id: "event-4", user_id: "admin-1", user_role: "admin", event_name: "page_view", page_url: "/app/admin/today", metadata_json: "{\"section\":\"overview\"}", created_at: "2026-07-06T10:00:00.000Z" },
+];
+
+const sampleTodayBetaSurveyResponses: TodayBetaSurveyResponse[] = [
+  { id: "survey-1", user_id: "buyer-1", user_role: "buyer", score: 4, nps_score: 8, comment: "매입 정리는 편하지만 세무 용어 설명이 더 필요합니다.", pain_point: "세무자료", created_at: "2026-07-06T12:00:00.000Z" },
+  { id: "survey-2", user_id: "sup-1-user", user_role: "supplier", score: 3, nps_score: 6, comment: "정산 상태 기준을 더 명확하게 보고 싶습니다.", pain_point: "정산", created_at: "2026-07-06T12:20:00.000Z" },
+];
+
+const sampleTodayBetaBacklog: TodayBetaBacklogItem[] = [
+  { id: "backlog-1", source_type: "survey", source_id: "survey-1", title: "세무자료 용어 도움말 강화", description: "세금계산서, 영수증, 거래명세서 상태 차이를 화면에서 바로 설명합니다.", user_segment: "buyer", impact_score: 5, effort_score: 2, priority_score: 13, status: "planned", owner: "product", created_at: now, updated_at: now },
+  { id: "backlog-2", source_type: "analytics", source_id: "event-3", title: "공급업체 정산 기준 안내 추가", description: "정산 보류/예정/완료 상태의 기준과 다음 행동을 알림과 화면에 함께 표시합니다.", user_segment: "supplier", impact_score: 4, effort_score: 2, priority_score: 10, status: "triaged", owner: "ops", created_at: now, updated_at: now },
+];
+
+const sampleTodayBetaSegments: TodayBetaSegment[] = [
+  { id: "segment-buyer-active", label: "활성 구매자", audience: "buyer", user_count: 18, activation_rate: 72, retention_rate: 61, feedback_count: 7, risk_note: "세무 도움말 부족 시 이탈 가능" },
+  { id: "segment-supplier-active", label: "활성 공급업체", audience: "supplier", user_count: 11, activation_rate: 64, retention_rate: 54, feedback_count: 5, risk_note: "정산 기준 안내 필요" },
+  { id: "segment-admin-ops", label: "운영 관리자", audience: "admin", user_count: 2, activation_rate: 100, retention_rate: 100, feedback_count: 3, risk_note: "환경값과 알림 피로도 모니터링 필요" },
+];
+
 export const initialData: AppData = {
   environment: "demo",
   is_demo: true,
@@ -2341,6 +3089,18 @@ export const initialData: AppData = {
   purchase_records: samplePurchaseRecords,
   purchase_record_items: samplePurchaseRecordItems,
   purchase_documents: samplePurchaseDocuments,
+  tax_documents: sampleTaxDocuments,
+  tax_document_checks: sampleTaxDocumentChecks,
+  tax_export_requests: sampleTaxExportRequests,
+  supplier_sales_records: sampleSupplierSalesRecords,
+  today_supplier_sync_logs: sampleTodaySupplierSyncLogs,
+  sales_records: sampleTodaySalesRecords,
+  expense_records: sampleTodayExpenseRecords,
+  recurring_rules: sampleTodayRecurringRules,
+  today_categories: defaultTodayCategories,
+  today_category_rules: defaultTodayCategoryRules,
+  today_category_classification_logs: [],
+  today_ssawa_sync_logs: [],
   accounting_entries: sampleAccountingEntries,
   analysis_jobs: sampleAnalysisJobs,
   analysis_items: sampleAnalysisItems,
@@ -2403,21 +3163,172 @@ export const initialData: AppData = {
     log("log-8", "deal-3", "confirmed", "preparing", "supplier", "자재 준비"),
     log("log-9", "deal-3", "preparing", "delivering", "supplier", "배송 출발"),
   ],
+  today_requote_recommendations: [],
+  today_ssawa_quote_drafts: [],
+  today_requote_logs: [],
+  today_upload_batches: [],
+  today_upload_rows: [],
+  today_upload_column_mappings: [],
+  today_upload_logs: [],
+  supplier_product_events: sampleSupplierProductEvents,
+  supplier_today_insights: sampleSupplierTodayInsights,
+  supplier_tasks: sampleSupplierTasks,
+  today_ai_conversations: sampleTodayAIConversations,
+  today_ai_messages: sampleTodayAIMessages,
+  today_ai_insights: sampleTodayAIInsights,
+  today_ai_usage: sampleTodayAIUsage,
+  today_security_events: sampleTodaySecurityEvents,
+  admin_today_actions: sampleAdminTodayActions,
+  today_admin_settings: sampleTodayAdminSettings,
+  today_notifications: sampleTodayNotifications,
+  today_notification_preferences: sampleTodayNotificationPreferences,
+  today_reminder_rules: sampleTodayReminderRules,
+  today_notification_delivery_logs: sampleTodayNotificationDeliveryLogs,
+  today_onboarding_progress: sampleTodayOnboardingProgress,
+  today_help_articles: sampleTodayHelpArticles,
+  today_launch_checklist: sampleTodayLaunchChecklist,
+  today_pricing_plans: sampleTodayPricingPlans,
+  today_beta_applications: sampleTodayBetaApplications,
+  today_support_tickets: sampleTodaySupportTickets,
+  today_product_events: sampleTodayProductEvents,
+  today_beta_survey_responses: sampleTodayBetaSurveyResponses,
+  today_beta_backlog: sampleTodayBetaBacklog,
+  today_beta_segments: sampleTodayBetaSegments,
 };
+
+// Production/beta launches must not bootstrap fake users, quote requests, deals, or messages.
+// Keep only taxonomy and configuration records that the app needs to create real data.
+const productionInitialData: AppData = {
+  ...initialData,
+  environment: "production",
+  is_demo: false,
+  demo_label: "Production beta data",
+  onboarding_completed: false,
+  onboarding_completed_at: undefined,
+  profiles: [],
+  quote_requests: [],
+  quote_request_items: [],
+  supplier_profiles: [],
+  supplier_documents: [],
+  supplier_stats: [],
+  supplier_reviews: [],
+  supplier_store_profiles: [],
+  supplier_products: [],
+  product_inquiries: [],
+  product_order_requests: [],
+  product_favorites: [],
+  product_quote_items: [],
+  product_reports: [],
+  quotes: [],
+  quote_attachments: [],
+  deals: [],
+  deal_items: [],
+  deal_attachments: [],
+  purchase_records: [],
+  purchase_record_items: [],
+  purchase_documents: [],
+  tax_documents: [],
+  tax_document_checks: [],
+  tax_export_requests: [],
+  supplier_sales_records: [],
+  today_supplier_sync_logs: [],
+  sales_records: [],
+  expense_records: [],
+  recurring_rules: [],
+  today_category_classification_logs: [],
+  today_ssawa_sync_logs: [],
+  accounting_entries: [],
+  analysis_jobs: [],
+  analysis_items: [],
+  analysis_attachments: [],
+  analysis_raw_results: [],
+  analysis_conversions: [],
+  notifications: [],
+  notification_events: [],
+  notification_settings: [],
+  message_threads: [],
+  messages: [],
+  message_read_states: [],
+  message_reports: [],
+  platform_fees: [],
+  supplier_subscriptions: [],
+  supplier_usage: [],
+  quote_participation_credits: [],
+  settlements: [],
+  settlement_items: [],
+  billing_events: [],
+  billing_accounts: [],
+  reports: [],
+  report_attachments: [],
+  report_actions: [],
+  report_comments: [],
+  reviews: [],
+  review_replies: [],
+  review_reports: [],
+  supplier_reputation_scores: [],
+  user_sanctions: [],
+  blacklist_entries: [],
+  business_verifications: [],
+  business_manual_review_requests: [],
+  feedbacks: [],
+  beta_participants: [],
+  sales_leads: [],
+  sales_activities: [],
+  beta_experiments: [],
+  beta_feedback_insights: [],
+  operator_tasks: [],
+  business_validation_reports: [],
+  favorite_item_groups: [],
+  favorite_items: [],
+  deal_status_logs: [],
+  today_requote_recommendations: [],
+  today_ssawa_quote_drafts: [],
+  today_requote_logs: [],
+  today_upload_batches: [],
+  today_upload_rows: [],
+  today_upload_column_mappings: [],
+  today_upload_logs: [],
+  supplier_product_events: [],
+  supplier_today_insights: [],
+  supplier_tasks: [],
+  today_ai_conversations: [],
+  today_ai_messages: [],
+  today_ai_insights: [],
+  today_ai_usage: [],
+  today_security_events: [],
+  admin_today_actions: [],
+  today_notifications: [],
+  today_notification_preferences: [],
+  today_reminder_rules: [],
+  today_notification_delivery_logs: [],
+  today_onboarding_progress: [],
+  today_beta_applications: [],
+  today_support_tickets: [],
+  today_product_events: [],
+  today_beta_survey_responses: [],
+  today_beta_backlog: [],
+  today_beta_segments: [],
+};
+
+function baseInitialData() {
+  return appConfig.enableDemoData ? initialData : productionInitialData;
+}
 
 export function loadData(): AppData {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) {
-    saveData(initialData);
-    return initialData;
+    const seedData = baseInitialData();
+    saveData(seedData);
+    return seedData;
   }
 
   try {
     const parsed = JSON.parse(raw) as Partial<AppData>;
     return normalizeData(parsed);
   } catch {
-    saveData(initialData);
-    return initialData;
+    const seedData = baseInitialData();
+    saveData(seedData);
+    return seedData;
   }
 }
 
@@ -2425,9 +3336,647 @@ export function saveData(data: AppData): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+function localId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export function resetData(): AppData {
-  saveData(initialData);
-  return initialData;
+  const seedData = baseInitialData();
+  saveData(seedData);
+  return seedData;
+}
+
+type UploadRawRow = Record<string, string>;
+type UploadMappedRow = {
+  date?: string;
+  amount?: number;
+  record_type?: string;
+  category?: string;
+  counterparty_name?: string;
+  item_summary?: string;
+  payment_method?: string;
+  memo?: string;
+  tax_invoice_status?: string;
+  evidence_status?: string;
+};
+
+export const todayUploadTypeLabels: Record<TodayUploadType, string> = {
+  sales: "매출",
+  expense: "지출",
+  purchase: "매입",
+  mixed: "혼합",
+  unknown: "자동 판단",
+};
+
+export const todayUploadBatchStatusLabels: Record<TodayUploadBatch["status"], string> = {
+  uploaded: "업로드됨",
+  parsed: "분석됨",
+  mapping_needed: "매핑 확인 필요",
+  ready_to_import: "반영 준비",
+  imported: "반영 완료",
+  partially_imported: "일부 반영",
+  failed: "실패",
+  cancelled: "취소됨",
+};
+
+export const todayUploadValidationStatusLabels: Record<TodayUploadValidationStatus, string> = {
+  valid: "반영 가능",
+  warning: "확인 필요",
+  invalid: "오류",
+  duplicate: "중복 의심",
+  skipped: "건너뜀",
+  imported: "반영 완료",
+};
+
+export const todayUploadRecordTypeLabels: Record<TodayUploadFinalRecordType, string> = {
+  sales: "매출",
+  expense: "지출",
+  purchase: "매입",
+  unknown: "미확정",
+  skip: "건너뛰기",
+};
+
+export const todayUploadTargetFieldLabels: Record<TodayUploadTargetField, string> = {
+  date: "날짜",
+  amount: "금액",
+  record_type: "구분",
+  category: "카테고리",
+  counterparty_name: "거래처",
+  item_summary: "품목",
+  payment_method: "결제수단",
+  memo: "메모",
+  tax_invoice_status: "세금계산서",
+  evidence_status: "증빙",
+  ignore: "무시",
+};
+
+export const todayUploadTargetFields: TodayUploadTargetField[] = ["date", "amount", "record_type", "category", "counterparty_name", "item_summary", "payment_method", "memo", "tax_invoice_status", "evidence_status", "ignore"];
+
+const uploadColumnKeywords: Record<Exclude<TodayUploadTargetField, "ignore">, string[]> = {
+  date: ["date", "일자", "날짜", "거래일", "매출일", "지출일", "매입일", "purchase date", "sales date"],
+  amount: ["amount", "금액", "합계", "총액", "매출액", "지출액", "결제금액", "입금", "출금", "total", "price"],
+  record_type: ["구분", "유형", "타입", "type", "record", "매출매입", "수입지출"],
+  category: ["카테고리", "분류", "계정", "항목", "category", "expense type"],
+  counterparty_name: ["거래처", "상호", "업체", "공급업체", "매입처", "판매처", "vendor", "supplier", "customer"],
+  item_summary: ["품목", "상품", "내역", "내용", "item", "description", "title"],
+  payment_method: ["결제", "결제수단", "지급", "payment", "method", "카드", "현금"],
+  memo: ["메모", "비고", "note", "memo", "remark"],
+  tax_invoice_status: ["세금계산서", "계산서", "tax", "invoice"],
+  evidence_status: ["증빙", "영수증", "receipt", "evidence", "첨부"],
+};
+
+function safeJsonParse<T>(input: string | undefined, fallback: T): T {
+  if (!input) return fallback;
+  try {
+    return JSON.parse(input) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function stableUploadHash(input: string) {
+  let hash = 0;
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash << 5) - hash + input.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+export function sanitizeUploadCell(value: unknown) {
+  const raw = String(value ?? "").replace(/\u0000/g, "").trim();
+  if (!raw) return "";
+  const cardMasked = raw.replace(/\b(\d{4})[-\s]?(\d{4})[-\s]?(\d{4})[-\s]?(\d{4})\b/g, "$1-****-****-$4");
+  return cardMasked.replace(/\b(\d{6})[-\s]?(\d{7})\b/g, "$1-*******");
+}
+
+export function parseCsvText(text: string): { headers: string[]; rows: UploadRawRow[]; error?: string } {
+  const normalized = text.replace(/^\uFEFF/, "");
+  const lines: string[][] = [];
+  let current = "";
+  let row: string[] = [];
+  let quoted = false;
+  for (let index = 0; index < normalized.length; index += 1) {
+    const char = normalized[index];
+    const next = normalized[index + 1];
+    if (char === "\"") {
+      if (quoted && next === "\"") {
+        current += "\"";
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+      continue;
+    }
+    if (!quoted && (char === "," || char === "\t")) {
+      row.push(current);
+      current = "";
+      continue;
+    }
+    if (!quoted && (char === "\n" || char === "\r")) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(current);
+      if (row.some((cell) => cell.trim())) lines.push(row);
+      row = [];
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  row.push(current);
+  if (row.some((cell) => cell.trim())) lines.push(row);
+  if (!lines.length) return { headers: [], rows: [], error: "파일에 읽을 수 있는 행이 없습니다." };
+  const headers = lines[0].map((header, index) => sanitizeUploadCell(header) || `열${index + 1}`);
+  const rows = lines.slice(1).map((cells) => Object.fromEntries(headers.map((header, index) => [header, sanitizeUploadCell(cells[index])])) as UploadRawRow);
+  return { headers, rows };
+}
+
+function normalizeUploadHeader(header: string) {
+  return header.toLowerCase().replace(/\s+/g, "");
+}
+
+export function detectUploadColumnMappings(headers: string[], rows: UploadRawRow[] = [], businessId = "buyer-1", batchId = "preview", createdBy = businessId): TodayUploadColumnMapping[] {
+  const used = new Set<TodayUploadTargetField>();
+  const createdAt = new Date().toISOString();
+  return headers.map((header, index) => {
+    const normalized = normalizeUploadHeader(header);
+    let target: TodayUploadTargetField = "ignore";
+    let confidence = 0.2;
+    for (const [field, keywords] of Object.entries(uploadColumnKeywords) as Array<[Exclude<TodayUploadTargetField, "ignore">, string[]]>) {
+      if (used.has(field)) continue;
+      const matched = keywords.some((keyword) => normalized.includes(normalizeUploadHeader(keyword)));
+      if (matched) {
+        target = field;
+        confidence = 0.9;
+        break;
+      }
+    }
+    used.add(target);
+    return {
+      id: `${batchId}-mapping-${index + 1}`,
+      business_id: businessId,
+      batch_id: batchId,
+      source_column_name: header,
+      target_field: target,
+      confidence,
+      sample_values_json: JSON.stringify(rows.slice(0, 3).map((rowEntry) => rowEntry[header]).filter(Boolean)),
+      created_by: createdBy,
+      created_at: createdAt,
+      updated_at: createdAt,
+    };
+  });
+}
+
+function parseUploadAmount(value: unknown) {
+  const normalized = String(value ?? "").replace(/[^\d.-]/g, "");
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? Math.abs(Math.round(amount)) : 0;
+}
+
+function parseUploadDate(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const excelSerial = Number(raw);
+  if (Number.isFinite(excelSerial) && excelSerial > 30000 && excelSerial < 60000) {
+    const date = new Date(Math.round((excelSerial - 25569) * 86400 * 1000));
+    return date.toISOString().slice(0, 10);
+  }
+  const ymd = raw.match(/(20\d{2})[./-](\d{1,2})[./-](\d{1,2})/);
+  if (ymd) return `${ymd[1]}-${ymd[2].padStart(2, "0")}-${ymd[3].padStart(2, "0")}`;
+  const mdy = raw.match(/(\d{1,2})[./-](\d{1,2})[./-](20\d{2})/);
+  if (mdy) return `${mdy[3]}-${mdy[1].padStart(2, "0")}-${mdy[2].padStart(2, "0")}`;
+  return "";
+}
+
+function mapUploadRow(raw: UploadRawRow, mappings: TodayUploadColumnMapping[]): UploadMappedRow {
+  const mapped: UploadMappedRow = {};
+  mappings.forEach((mapping) => {
+    if (mapping.target_field === "ignore") return;
+    const value = sanitizeUploadCell(raw[mapping.source_column_name]);
+    if (!value) return;
+    if (mapping.target_field === "amount") mapped.amount = parseUploadAmount(value);
+    else if (mapping.target_field === "date") mapped.date = parseUploadDate(value);
+    else mapped[mapping.target_field] = value;
+  });
+  return mapped;
+}
+
+function detectUploadRecordType(mapped: UploadMappedRow, uploadType: TodayUploadType): TodayUploadRecordType {
+  if (uploadType === "sales" || uploadType === "expense" || uploadType === "purchase") return uploadType;
+  const merged = `${mapped.record_type ?? ""} ${mapped.category ?? ""} ${mapped.memo ?? ""}`.toLowerCase();
+  if (/매출|입금|sales|sale|revenue/.test(merged)) return "sales";
+  if (/매입|구매|purchase|supplier|자재/.test(merged)) return "purchase";
+  if (/지출|비용|출금|expense|fee|rent|임대|인건비/.test(merged)) return "expense";
+  return "unknown";
+}
+
+function normalizeUploadEvidence(value: string | undefined): TodayEvidenceStatus {
+  const raw = (value ?? "").toLowerCase();
+  if (/완료|있음|첨부|complete|ok|yes|y/.test(raw)) return "complete";
+  if (/불필요|not/.test(raw)) return "not_required";
+  if (/확인|review/.test(raw)) return "needs_review";
+  return "missing";
+}
+
+function normalizeUploadPayment(value: string | undefined, finalType: TodayUploadFinalRecordType) {
+  const raw = (value ?? "").toLowerCase();
+  if (/카드|card/.test(raw)) return "card";
+  if (/현금|cash/.test(raw)) return "cash";
+  if (/계좌|이체|transfer|bank/.test(raw)) return finalType === "purchase" ? "bank_transfer" : "transfer";
+  if (/배달/.test(raw)) return "delivery_app";
+  if (/자동|auto/.test(raw)) return "auto_withdrawal";
+  return finalType === "purchase" ? "undecided" : "unknown";
+}
+
+function normalizeUploadTaxInvoice(value: string | undefined): TaxInvoiceStatus {
+  const raw = (value ?? "").toLowerCase();
+  if (/발행|수취|received|issued|complete/.test(raw)) return "received";
+  if (/요청|required|requested/.test(raw)) return "requested";
+  if (/불필요|not/.test(raw)) return "not_needed";
+  if (/없음|none/.test(raw)) return "none";
+  return "unknown";
+}
+
+function buildUploadRowHash(mapped: UploadMappedRow, finalType: TodayUploadFinalRecordType, raw: UploadRawRow) {
+  const base = finalType === "unknown" ? raw : { finalType, date: mapped.date, amount: mapped.amount, counterparty: mapped.counterparty_name ?? "", item: mapped.item_summary ?? "", category: mapped.category ?? "" };
+  return stableUploadHash(JSON.stringify(base));
+}
+
+function getDuplicateCandidates(data: AppData, businessId: string, mapped: UploadMappedRow, finalType: TodayUploadFinalRecordType, rowHash: string, localDuplicate: boolean) {
+  const candidates: Array<{ type: string; id: string; title: string }> = [];
+  if (localDuplicate || data.today_upload_rows.some((row) => row.business_id === businessId && row.row_hash === rowHash && row.import_target_id)) {
+    candidates.push({ type: "upload_row", id: rowHash, title: "같은 내용의 업로드 반영 이력이 있습니다." });
+  }
+  if (!mapped.date || !mapped.amount) return candidates;
+  if (finalType === "sales") {
+    data.sales_records.forEach((record) => {
+      if (!record.deleted_at && record.business_id === businessId && record.sales_date === mapped.date && record.amount === mapped.amount) candidates.push({ type: "sales_records", id: record.id, title: record.sales_type });
+    });
+  }
+  if (finalType === "expense") {
+    data.expense_records.forEach((record) => {
+      if (!record.deleted_at && record.business_id === businessId && record.expense_date === mapped.date && record.amount === mapped.amount && (!mapped.counterparty_name || record.vendor_name.includes(mapped.counterparty_name))) candidates.push({ type: "expense_records", id: record.id, title: record.expense_type });
+    });
+  }
+  if (finalType === "purchase") {
+    data.purchase_records.forEach((record) => {
+      if (!record.deleted_at && (record.business_id === businessId || record.buyer_id === businessId) && record.purchase_date === mapped.date && record.total_amount === mapped.amount && (!mapped.counterparty_name || record.supplier_name.includes(mapped.counterparty_name))) candidates.push({ type: "purchase_records", id: record.id, title: record.purchase_title });
+    });
+  }
+  return candidates;
+}
+
+function validateUploadRow(data: AppData, businessId: string, mapped: UploadMappedRow, finalType: TodayUploadFinalRecordType, rowHash: string, localDuplicate: boolean): { status: TodayUploadValidationStatus; messages: string[]; duplicateCandidates: Array<{ type: string; id: string; title: string }> } {
+  if (finalType === "skip") return { status: "skipped", messages: ["반영 제외로 표시되었습니다."], duplicateCandidates: [] };
+  const messages: string[] = [];
+  if (finalType === "unknown") messages.push("매출/지출/매입 구분을 확인해 주세요.");
+  if (!mapped.date) messages.push("날짜를 확인해 주세요.");
+  if (!mapped.amount || mapped.amount <= 0) messages.push("금액을 확인해 주세요.");
+  const duplicateCandidates = getDuplicateCandidates(data, businessId, mapped, finalType, rowHash, localDuplicate);
+  if (duplicateCandidates.length) return { status: "duplicate", messages: ["중복 가능성이 있어 반영 전 확인이 필요합니다."], duplicateCandidates };
+  if (messages.length) return { status: "invalid", messages, duplicateCandidates };
+  if (!mapped.counterparty_name && finalType !== "sales") messages.push("거래처가 비어 있습니다.");
+  if (!mapped.category) messages.push("카테고리가 비어 있습니다.");
+  if (finalType !== "sales" && normalizeUploadEvidence(mapped.evidence_status) !== "complete") messages.push("증빙 상태 확인이 필요합니다.");
+  return { status: messages.length ? "warning" : "valid", messages, duplicateCandidates };
+}
+
+function summarizeUploadBatch(batch: TodayUploadBatch, rows: TodayUploadRow[]): TodayUploadBatch {
+  const validCount = rows.filter((row) => row.validation_status === "valid").length;
+  const warningCount = rows.filter((row) => row.validation_status === "warning").length;
+  const invalidCount = rows.filter((row) => row.validation_status === "invalid").length;
+  const duplicateCount = rows.filter((row) => row.validation_status === "duplicate").length;
+  const skippedCount = rows.filter((row) => row.validation_status === "skipped").length;
+  const importedCount = rows.filter((row) => row.imported_at).length;
+  const importableCount = validCount + warningCount;
+  return {
+    ...batch,
+    status: importedCount > 0 ? (importedCount + skippedCount >= rows.length ? "imported" : "partially_imported") : invalidCount + duplicateCount > 0 || importableCount === 0 ? "mapping_needed" : "ready_to_import",
+    row_count: rows.length,
+    valid_count: validCount,
+    warning_count: warningCount,
+    invalid_count: invalidCount,
+    duplicate_count: duplicateCount,
+    imported_count: importedCount,
+    skipped_count: skippedCount,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function rebuildUploadRows(data: AppData, batch: TodayUploadBatch, mappings: TodayUploadColumnMapping[], rows: TodayUploadRow[]) {
+  const seen = new Set<string>();
+  const rebuilt = rows.map((row) => {
+    const raw = safeJsonParse<UploadRawRow>(row.raw_json, {});
+    const mapped = mapUploadRow(raw, mappings);
+    const detected = detectUploadRecordType(mapped, batch.upload_type);
+    const finalType: TodayUploadFinalRecordType = row.final_record_type === "skip" ? "skip" : row.final_record_type === "unknown" ? detected : row.final_record_type;
+    const rowHash = buildUploadRowHash(mapped, finalType, raw);
+    const localDuplicate = seen.has(rowHash);
+    seen.add(rowHash);
+    const validation = validateUploadRow(data, batch.business_id, mapped, finalType, rowHash, localDuplicate);
+    return {
+      ...row,
+      row_hash: rowHash,
+      mapped_json: JSON.stringify(mapped),
+      detected_record_type: detected,
+      final_record_type: finalType,
+      validation_status: validation.status,
+      validation_messages_json: JSON.stringify(validation.messages),
+      duplicate_candidate_json: JSON.stringify(validation.duplicateCandidates),
+      updated_at: new Date().toISOString(),
+    };
+  });
+  return rebuilt;
+}
+
+export function createUploadPreview(data: AppData, input: { businessId?: string; uploadType: TodayUploadType; fileName: string; fileMimeType: string; fileSize: number; headers: string[]; rows: UploadRawRow[]; createdBy?: string }): { data: AppData; batchId: string; error?: string } {
+  const businessId = input.businessId ?? "buyer-1";
+  if (!input.rows.length) return { data, batchId: "", error: "미리볼 행이 없습니다." };
+  if (input.fileSize > 10 * 1024 * 1024) return { data, batchId: "", error: "10MB 이하 파일만 업로드할 수 있습니다." };
+  const createdAt = new Date().toISOString();
+  const batchId = `today-upload-${Date.now()}`;
+  const mappings = detectUploadColumnMappings(input.headers, input.rows, businessId, batchId, input.createdBy ?? businessId);
+  const batch: TodayUploadBatch = {
+    id: batchId,
+    business_id: businessId,
+    upload_context: "buyer_today",
+    upload_type: input.uploadType,
+    status: "parsed",
+    file_name: sanitizeUploadCell(input.fileName),
+    file_mime_type: input.fileMimeType,
+    file_size: input.fileSize,
+    original_header_json: JSON.stringify(input.headers),
+    detected_mapping_json: JSON.stringify(Object.fromEntries(mappings.map((mapping) => [mapping.source_column_name, mapping.target_field]))),
+    row_count: input.rows.length,
+    valid_count: 0,
+    warning_count: 0,
+    invalid_count: 0,
+    duplicate_count: 0,
+    imported_count: 0,
+    skipped_count: 0,
+    created_by: input.createdBy ?? businessId,
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+  const draftRows: TodayUploadRow[] = input.rows.map((raw, index) => ({
+    id: `${batchId}-row-${index + 1}`,
+    business_id: businessId,
+    batch_id: batchId,
+    row_index: index + 1,
+    row_hash: "",
+    raw_json: JSON.stringify(raw),
+    mapped_json: "{}",
+    detected_record_type: "unknown",
+    final_record_type: "unknown",
+    validation_status: "invalid",
+    validation_messages_json: "[]",
+    duplicate_candidate_json: "[]",
+    created_at: createdAt,
+    updated_at: createdAt,
+  }));
+  const rows = rebuildUploadRows(data, batch, mappings, draftRows);
+  const summarizedBatch = summarizeUploadBatch(batch, rows);
+  const nextData: AppData = {
+    ...data,
+    today_upload_batches: [summarizedBatch, ...data.today_upload_batches],
+    today_upload_rows: [...rows, ...data.today_upload_rows],
+    today_upload_column_mappings: [...mappings, ...data.today_upload_column_mappings],
+    today_upload_logs: [{
+      id: `${batchId}-log-uploaded`,
+      business_id: businessId,
+      batch_id: batchId,
+      action: "uploaded",
+      message: `${input.fileName} 파일을 미리보기로 분석했습니다.`,
+      payload_json: JSON.stringify({ fileSize: input.fileSize, rowCount: rows.length }),
+      created_by: input.createdBy ?? businessId,
+      created_at: createdAt,
+    }, ...data.today_upload_logs],
+  };
+  saveData(nextData);
+  return { data: nextData, batchId };
+}
+
+export function updateUploadColumnMapping(data: AppData, batchId: string, sourceColumnName: string, targetField: TodayUploadTargetField): AppData {
+  const batch = data.today_upload_batches.find((entry) => entry.id === batchId);
+  if (!batch) return data;
+  const mappings = data.today_upload_column_mappings.map((mapping) => mapping.batch_id === batchId && mapping.source_column_name === sourceColumnName ? { ...mapping, target_field: targetField, confidence: 1, updated_at: new Date().toISOString() } : mapping);
+  const batchMappings = mappings.filter((mapping) => mapping.batch_id === batchId);
+  const rebuiltRows = rebuildUploadRows(data, batch, batchMappings, data.today_upload_rows.filter((row) => row.batch_id === batchId));
+  const summarizedBatch = summarizeUploadBatch(batch, rebuiltRows);
+  const nextData = {
+    ...data,
+    today_upload_batches: data.today_upload_batches.map((entry) => entry.id === batchId ? { ...summarizedBatch, detected_mapping_json: JSON.stringify(Object.fromEntries(batchMappings.map((mapping) => [mapping.source_column_name, mapping.target_field]))) } : entry),
+    today_upload_column_mappings: mappings,
+    today_upload_rows: data.today_upload_rows.map((row) => rebuiltRows.find((rebuilt) => rebuilt.id === row.id) ?? row),
+    today_upload_logs: [{
+      id: `${batchId}-log-mapping-${Date.now()}`,
+      business_id: batch.business_id,
+      batch_id: batchId,
+      action: "mapping_changed" as const,
+      message: `${sourceColumnName} 컬럼 매핑을 변경했습니다.`,
+      payload_json: JSON.stringify({ sourceColumnName, targetField }),
+      created_by: batch.business_id,
+      created_at: new Date().toISOString(),
+    }, ...data.today_upload_logs],
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function updateUploadRow(data: AppData, rowId: string, patch: Partial<UploadMappedRow> & { final_record_type?: TodayUploadFinalRecordType }): AppData {
+  const row = data.today_upload_rows.find((entry) => entry.id === rowId);
+  if (!row) return data;
+  const batch = data.today_upload_batches.find((entry) => entry.id === row.batch_id);
+  if (!batch) return data;
+  const mapped = { ...safeJsonParse<UploadMappedRow>(row.mapped_json, {}), ...patch };
+  const finalType = patch.final_record_type ?? row.final_record_type;
+  const raw = safeJsonParse<UploadRawRow>(row.raw_json, {});
+  const rowHash = buildUploadRowHash(mapped, finalType, raw);
+  const validation = validateUploadRow(data, row.business_id, mapped, finalType, rowHash, false);
+  const updatedRow: TodayUploadRow = {
+    ...row,
+    row_hash: rowHash,
+    mapped_json: JSON.stringify(mapped),
+    final_record_type: finalType,
+    validation_status: validation.status,
+    validation_messages_json: JSON.stringify(validation.messages),
+    duplicate_candidate_json: JSON.stringify(validation.duplicateCandidates),
+    updated_at: new Date().toISOString(),
+  };
+  const batchRows = data.today_upload_rows.map((entry) => entry.id === rowId ? updatedRow : entry).filter((entry) => entry.batch_id === batch.id);
+  const summarizedBatch = summarizeUploadBatch(batch, batchRows);
+  const nextData = {
+    ...data,
+    today_upload_rows: data.today_upload_rows.map((entry) => entry.id === rowId ? updatedRow : entry),
+    today_upload_batches: data.today_upload_batches.map((entry) => entry.id === batch.id ? summarizedBatch : entry),
+    today_upload_logs: [{
+      id: `${batch.id}-log-row-${Date.now()}`,
+      business_id: batch.business_id,
+      batch_id: batch.id,
+      row_id: rowId,
+      action: "row_updated" as const,
+      message: `${row.row_index}행을 수정했습니다.`,
+      payload_json: JSON.stringify(patch),
+      created_by: batch.business_id,
+      created_at: new Date().toISOString(),
+    }, ...data.today_upload_logs],
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function cancelUploadBatch(data: AppData, batchId: string): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData = {
+    ...data,
+    today_upload_batches: data.today_upload_batches.map((batch) => batch.id === batchId ? { ...batch, status: "cancelled" as const, cancelled_at: updatedAt, updated_at: updatedAt } : batch),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function importUploadRows(data: AppData, batchId: string, options: { selectedRowIds?: string[]; validOnly?: boolean; allowWarnings?: boolean; skipDuplicates?: boolean; actorUserId?: string } = {}): { data: AppData; importedCount: number; skippedCount: number; error?: string } {
+  const batch = data.today_upload_batches.find((entry) => entry.id === batchId);
+  if (!batch) return { data, importedCount: 0, skippedCount: 0, error: "업로드 묶음을 찾을 수 없습니다." };
+  const selected = options.selectedRowIds ? new Set(options.selectedRowIds) : null;
+  let nextData = data;
+  let importedCount = 0;
+  let skippedCount = 0;
+  const rows = data.today_upload_rows.filter((row) => row.batch_id === batchId && (!selected || selected.has(row.id)));
+  for (const row of rows) {
+    if (row.imported_at || row.final_record_type === "skip" || row.validation_status === "skipped") {
+      skippedCount += 1;
+      continue;
+    }
+    if (row.validation_status === "invalid" || row.validation_status === "duplicate" || (row.validation_status === "warning" && !options.allowWarnings) || (options.validOnly && row.validation_status !== "valid")) {
+      skippedCount += 1;
+      continue;
+    }
+    const mapped = safeJsonParse<UploadMappedRow>(row.mapped_json, {});
+    const type = row.final_record_type;
+    let targetTable: TodayUploadRow["import_target_table"];
+    let targetId = "";
+    if (type === "sales") {
+      const result = createSalesRecord(nextData, {
+        business_id: row.business_id,
+        sales_type: (mapped.category || "기타 매출") as TodaySalesRecord["sales_type"],
+        payment_method: normalizeUploadPayment(mapped.payment_method, type) as TodaySalesRecord["payment_method"],
+        sales_channel: "etc",
+        amount: mapped.amount ?? 0,
+        sales_date: mapped.date ?? "",
+        memo: [mapped.item_summary, mapped.memo, `업로드: ${batch.file_name}`].filter(Boolean).join(" / "),
+        evidence_status: normalizeUploadEvidence(mapped.evidence_status),
+        created_by: options.actorUserId ?? row.business_id,
+      });
+      if (result.error) {
+        skippedCount += 1;
+        continue;
+      }
+      nextData = {
+        ...result.data,
+        sales_records: result.data.sales_records.map((record) => record.id === result.salesId ? { ...record, source: "upload", source_id: row.id, upload_batch_id: batchId } : record),
+      };
+      targetTable = "sales_records";
+      targetId = result.salesId;
+    }
+    if (type === "expense") {
+      const result = createExpenseRecord(nextData, {
+        business_id: row.business_id,
+        expense_type: (mapped.category || "기타") as TodayExpenseRecord["expense_type"],
+        payment_method: normalizeUploadPayment(mapped.payment_method, type) as TodayExpenseRecord["payment_method"],
+        vendor_name: mapped.counterparty_name ?? "",
+        amount: mapped.amount ?? 0,
+        expense_date: mapped.date ?? "",
+        memo: [mapped.item_summary, mapped.memo, `업로드: ${batch.file_name}`].filter(Boolean).join(" / "),
+        evidence_status: normalizeUploadEvidence(mapped.evidence_status),
+        created_by: options.actorUserId ?? row.business_id,
+      });
+      if (result.error) {
+        skippedCount += 1;
+        continue;
+      }
+      nextData = {
+        ...result.data,
+        expense_records: result.data.expense_records.map((record) => record.id === result.expenseId ? { ...record, source: "upload", source_id: row.id, upload_batch_id: batchId } : record),
+      };
+      targetTable = "expense_records";
+      targetId = result.expenseId;
+    }
+    if (type === "purchase") {
+      const result = createManualPurchaseRecord(nextData, {
+        purchase_title: mapped.item_summary || mapped.category || "업로드 매입",
+        supplier_name: mapped.counterparty_name || "업로드 거래처",
+        supplier_business_number: "",
+        purchase_date: mapped.date ?? "",
+        category_name: mapped.category || "기타",
+        accounting_category: getAccountingCategory(mapped.category || "기타"),
+        sub_category: "",
+        total_amount: mapped.amount ?? 0,
+        supply_amount: 0,
+        vat_amount: 0,
+        delivery_fee: 0,
+        discount_amount: 0,
+        payment_method: normalizeUploadPayment(mapped.payment_method, type) as PaymentMethod,
+        tax_invoice_status: normalizeUploadTaxInvoice(mapped.tax_invoice_status),
+        receipt_status: normalizeUploadEvidence(mapped.evidence_status) === "complete" ? "confirmed" : "pending",
+        delivery_note_status: "none",
+        memo: [mapped.memo, `업로드: ${batch.file_name}`].filter(Boolean).join(" / "),
+        items: [{
+          item_name: mapped.item_summary || mapped.category || "업로드 매입",
+          spec: "",
+          quantity: 1,
+          unit: "건",
+          unit_price: mapped.amount ?? 0,
+          total_price: mapped.amount ?? 0,
+          memo: mapped.memo ?? "",
+        }],
+      });
+      nextData = {
+        ...result.data,
+        purchase_records: result.data.purchase_records.map((record) => record.id === result.purchaseId ? { ...record, source: "upload", source_id: row.id, business_id: row.business_id, evidence_status: normalizeUploadEvidence(mapped.evidence_status), evidence_files_json: "[]" } : record),
+      };
+      targetTable = "purchase_records";
+      targetId = result.purchaseId;
+    }
+    if (!targetId || !targetTable) {
+      skippedCount += 1;
+      continue;
+    }
+    const importedAt = new Date().toISOString();
+    nextData = {
+      ...nextData,
+      today_upload_rows: nextData.today_upload_rows.map((entry) => entry.id === row.id ? { ...entry, validation_status: "imported", import_target_table: targetTable, import_target_id: targetId, imported_at: importedAt, updated_at: importedAt } : entry),
+    };
+    importedCount += 1;
+  }
+  const batchRows = nextData.today_upload_rows.filter((row) => row.batch_id === batchId);
+  const summarizedBatch = summarizeUploadBatch(batch, batchRows);
+  const importedAt = new Date().toISOString();
+  nextData = {
+    ...nextData,
+    today_upload_batches: nextData.today_upload_batches.map((entry) => entry.id === batchId ? { ...summarizedBatch, imported_at: summarizedBatch.imported_count > 0 ? importedAt : entry.imported_at } : entry),
+    today_upload_logs: [{
+      id: `${batchId}-log-import-${Date.now()}`,
+      business_id: batch.business_id,
+      batch_id: batchId,
+      action: importedCount > 0 ? "imported" : "failed",
+      message: `${importedCount}건을 장부에 반영하고 ${skippedCount}건을 건너뛰었습니다.`,
+      payload_json: JSON.stringify({ importedCount, skippedCount }),
+      created_by: options.actorUserId ?? batch.business_id,
+      created_at: importedAt,
+    }, ...nextData.today_upload_logs],
+  };
+  saveData(nextData);
+  return { data: nextData, importedCount, skippedCount };
+}
+
+export function getTodayUploadTemplateRows(type: TodayUploadType): string[][] {
+  const base = ["날짜", "구분", "카테고리", "거래처", "품목", "금액", "결제수단", "증빙", "세금계산서", "메모"];
+  const rowType = type === "mixed" || type === "unknown" ? "매입" : todayUploadTypeLabels[type];
+  return [
+    base,
+    ["2026-07-06", rowType, type === "sales" ? "매장 매출" : type === "expense" ? "소모품" : "포장재", type === "sales" ? "" : "서울포장", type === "sales" ? "점심 매출" : "치킨박스", "120000", "카드", "있음", type === "sales" ? "불필요" : "수취", "검수 후 반영"],
+  ];
 }
 
 export function parseItemsFromText(input: string): QuoteRequestDraft["items"] {
@@ -3286,6 +4835,363 @@ export function createQuoteRequest(data: AppData, draft: QuoteRequestDraft): { d
   return { data: nextData, requestId };
 }
 
+type RequoteCandidate = {
+  businessId: string;
+  recommendationType: TodayRequoteRecommendationType;
+  periodKey: string;
+  category: string;
+  itemKeyword: string;
+  supplierName?: string;
+  records: PurchaseRecord[];
+  currentAmount: number;
+  previousAmount: number;
+  deltaAmount: number;
+  deltaRate: number;
+  purchaseFrequency: number;
+  recentPurchaseDays: number;
+  hasSsawaHistory: boolean;
+  categoryFit: boolean;
+  hasItemInfo: boolean;
+  hasRegionInfo: boolean;
+  hasInvalidStatus: boolean;
+};
+
+const requoteCandidateCategories = ["포장", "식자재", "소모", "자재", "공구", "설비", "주방", "농산", "축산", "수산", "용기", "봉투"];
+
+export const todayRequoteRecommendationLevelLabels: Record<TodayRequoteRecommendationLevel, string> = {
+  high: "우선 확인",
+  medium: "추천",
+  low: "참고",
+};
+
+export const todayRequoteRecommendationStatusLabels: Record<TodayRequoteRecommendation["status"], string> = {
+  active: "추천 중",
+  dismissed: "숨김",
+  draft_created: "초안 생성",
+  request_submitted: "요청 제출",
+  expired: "만료",
+};
+
+function getRecordOwnerBusinessId(record: PurchaseRecord) {
+  return record.business_id || record.buyer_id;
+}
+
+function safePurchaseAmount(value: number | null | undefined) {
+  return Number.isFinite(value) && Number(value) > 0 ? Number(value) : 0;
+}
+
+function isSsawaPurchaseRecord(record: PurchaseRecord) {
+  return record.source === "ssawa" || Boolean(record.ssawa_deal_id || record.deal_id);
+}
+
+function isRequoteEligiblePurchase(record: PurchaseRecord) {
+  if (record.deleted_at) return false;
+  if (record.total_amount < 10000) return false;
+  if (record.accounting_status === "excluded" || record.accounting_status === "failed") return false;
+  const text = `${record.purchase_title} ${record.category_name} ${record.accounting_category} ${record.item_summary ?? ""}`.toLowerCase();
+  if (/취소|환불|분쟁|cancel|refund|dispute/.test(text)) return false;
+  if (/임대|월세|인건비|급여|공과금|전기|가스|수도|세금|보험|수수료/.test(text)) return false;
+  return true;
+}
+
+function isRequoteFitCategory(category: string) {
+  return requoteCandidateCategories.some((keyword) => category.includes(keyword));
+}
+
+function parseJsonArray(value: string | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function buildRequotePeriodKey(createdAt = new Date()) {
+  return `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthsAgoDate(months: number, base = new Date()) {
+  return new Date(base.getFullYear(), base.getMonth() - months, base.getDate());
+}
+
+function daysSinceDate(dateText: string, base = new Date()) {
+  const time = new Date(`${dateText}T00:00:00`).getTime();
+  if (!Number.isFinite(time)) return 999;
+  return Math.max(0, Math.round((base.getTime() - time) / 86400000));
+}
+
+function groupByKey<T>(rows: T[], getKey: (row: T) => string) {
+  const map = new Map<string, T[]>();
+  rows.forEach((row) => {
+    const key = getKey(row).trim() || "기타";
+    map.set(key, [...(map.get(key) ?? []), row]);
+  });
+  return map;
+}
+
+function sumPurchaseAmount(records: PurchaseRecord[]) {
+  return records.reduce((sum, record) => sum + safePurchaseAmount(record.total_amount), 0);
+}
+
+function buildRequoteReason(candidate: RequoteCandidate, level: TodayRequoteRecommendationLevel) {
+  if (candidate.deltaRate >= 30 && candidate.purchaseFrequency >= 2) return "최근 자주 구매했고 이전 기간보다 금액이 많이 늘어난 품목이에요.";
+  if (candidate.hasSsawaHistory) return "싸와 구매 이력이 있어 지난 구매내역으로 초안을 만들기 좋아요.";
+  if (candidate.deltaAmount >= 50000) return "이전 기간보다 매입 금액이 커져 다시 비교해볼 만해요.";
+  if (level === "low") return "견적 대상이 될 수 있어 참고 추천으로 모았어요.";
+  return "최근 매입 흐름을 기준으로 다시 견적받아볼 수 있어요.";
+}
+
+export function scoreRequoteCandidate(candidate: RequoteCandidate): { score: number; level: TodayRequoteRecommendationLevel | null } {
+  let score = 0;
+  if (candidate.deltaRate >= 30) score += 30;
+  else if (candidate.deltaRate >= 15) score += 18;
+  if (candidate.deltaAmount >= 50000) score += 20;
+  else if (candidate.deltaAmount >= 20000) score += 10;
+  if (candidate.purchaseFrequency >= 2 && candidate.recentPurchaseDays <= 60) score += 20;
+  else if (candidate.purchaseFrequency >= 2) score += 10;
+  if (candidate.hasSsawaHistory) score += 15;
+  if (candidate.categoryFit) score += 10;
+  if (candidate.hasItemInfo) score += 10;
+  if (candidate.hasRegionInfo) score += 5;
+  if (candidate.hasInvalidStatus) score -= 50;
+  if (!candidate.hasItemInfo) score -= 20;
+  if (score >= 80) return { score, level: "high" };
+  if (score >= 50) return { score, level: "medium" };
+  if (score >= 30) return { score, level: "low" };
+  return { score, level: null };
+}
+
+function buildRequoteRecommendation(candidate: RequoteCandidate, existing: TodayRequoteRecommendation | undefined, createdAt: string): TodayRequoteRecommendation | null {
+  const scored = scoreRequoteCandidate(candidate);
+  if (!scored.level) return null;
+  const ids = candidate.records.map((record) => record.id);
+  const base: TodayRequoteRecommendation = {
+    id: existing?.id ?? `today-requote-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    business_id: candidate.businessId,
+    recommendation_type: candidate.recommendationType,
+    status: existing?.status ?? "active",
+    period_key: candidate.periodKey,
+    category: candidate.category,
+    item_keyword: candidate.itemKeyword,
+    supplier_name: candidate.supplierName,
+    related_purchase_record_ids_json: JSON.stringify(ids),
+    current_amount: candidate.currentAmount,
+    previous_amount: candidate.previousAmount,
+    delta_amount: candidate.deltaAmount,
+    delta_rate: candidate.deltaRate,
+    score: scored.score,
+    recommendation_level: scored.level,
+    reason: buildRequoteReason(candidate, scored.level),
+    action_label: "견적요청 초안 만들기",
+    action_url: `/app/today/requotes?recommendationId=${encodeURIComponent(existing?.id ?? "")}`,
+    ssawa_quote_draft_id: existing?.ssawa_quote_draft_id,
+    ssawa_quote_request_id: existing?.ssawa_quote_request_id,
+    dismissed_at: existing?.dismissed_at,
+    expires_at: existing?.expires_at,
+    created_at: existing?.created_at ?? createdAt,
+    updated_at: createdAt,
+  };
+  return { ...base, action_url: `/app/today/requotes?recommendationId=${encodeURIComponent(base.id)}` };
+}
+
+export function generateRequoteRecommendations(data: AppData, businessId = "buyer-1", now = new Date()): AppData {
+  const currentStart = monthsAgoDate(1, now);
+  const previousStart = monthsAgoDate(3, now);
+  const periodKey = buildRequotePeriodKey(now);
+  const purchases = data.purchase_records.filter((record) => getRecordOwnerBusinessId(record) === businessId && isRequoteEligiblePurchase(record));
+  const currentRecords = purchases.filter((record) => new Date(record.purchase_date) >= currentStart);
+  const previousRecords = purchases.filter((record) => new Date(record.purchase_date) >= previousStart && new Date(record.purchase_date) < currentStart);
+  const candidates: RequoteCandidate[] = [];
+
+  const buildCandidate = (type: TodayRequoteRecommendationType, key: string, records: PurchaseRecord[], previous: PurchaseRecord[], supplierName?: string) => {
+    const currentAmount = sumPurchaseAmount(records);
+    const previousAmount = sumPurchaseAmount(previous);
+    const deltaAmount = currentAmount - previousAmount;
+    const deltaRate = previousAmount > 0 ? (deltaAmount / previousAmount) * 100 : currentAmount >= 50000 ? 100 : 0;
+    if (deltaAmount <= 0 && records.length < 2) return;
+    const newest = records.reduce((latest, record) => (record.purchase_date > latest ? record.purchase_date : latest), records[0]?.purchase_date ?? "");
+    const category = records[0]?.category_name || records[0]?.accounting_category || key;
+    const itemKeyword = type === "category" ? category : key;
+    candidates.push({
+      businessId,
+      recommendationType: type,
+      periodKey,
+      category,
+      itemKeyword,
+      supplierName,
+      records,
+      currentAmount,
+      previousAmount,
+      deltaAmount: Math.max(0, deltaAmount),
+      deltaRate: Math.max(0, deltaRate),
+      purchaseFrequency: records.length,
+      recentPurchaseDays: daysSinceDate(newest, now),
+      hasSsawaHistory: records.some(isSsawaPurchaseRecord),
+      categoryFit: records.some((record) => isRequoteFitCategory(`${record.category_name} ${record.accounting_category} ${record.purchase_title}`)),
+      hasItemInfo: records.some((record) => Boolean((record.item_summary || record.purchase_title).trim())),
+      hasRegionInfo: true,
+      hasInvalidStatus: records.some((record) => !isRequoteEligiblePurchase(record)),
+    });
+  };
+
+  groupByKey(currentRecords, (record) => record.category_name || record.accounting_category).forEach((records, key) => {
+    buildCandidate("category", key, records, previousRecords.filter((record) => (record.category_name || record.accounting_category) === key));
+  });
+  groupByKey(currentRecords, (record) => record.item_summary || record.purchase_title).forEach((records, key) => {
+    buildCandidate("item", key, records, previousRecords.filter((record) => (record.item_summary || record.purchase_title) === key));
+  });
+  groupByKey(currentRecords, (record) => record.supplier_name).forEach((records, key) => {
+    buildCandidate("supplier", key, records, previousRecords.filter((record) => record.supplier_name === key), key);
+  });
+
+  const existingMap = new Map(data.today_requote_recommendations.map((entry) => [`${entry.business_id}|${entry.period_key}|${entry.recommendation_type}|${entry.category}|${entry.item_keyword}|${entry.supplier_name ?? ""}`, entry]));
+  const generated = candidates
+    .map((candidate) => {
+      const key = `${candidate.businessId}|${candidate.periodKey}|${candidate.recommendationType}|${candidate.category}|${candidate.itemKeyword}|${candidate.supplierName ?? ""}`;
+      return buildRequoteRecommendation(candidate, existingMap.get(key), now.toISOString());
+    })
+    .filter((entry): entry is TodayRequoteRecommendation => Boolean(entry));
+  const generatedIds = new Set(generated.map((entry) => entry.id));
+  const logs = generated
+    .filter((entry) => !data.today_requote_recommendations.some((existing) => existing.id === entry.id))
+    .map((entry): TodayRequoteLog => ({
+      id: `requote-log-${Date.now()}-${entry.id}`,
+      business_id: businessId,
+      recommendation_id: entry.id,
+      action: "recommendation_created",
+      message: "재견적 추천이 생성되었습니다.",
+      payload_json: JSON.stringify({ category: entry.category, item_keyword: entry.item_keyword, level: entry.recommendation_level }),
+      created_by: businessId,
+      created_at: now.toISOString(),
+    }));
+  const nextData: AppData = {
+    ...data,
+    today_requote_recommendations: [
+      ...generated,
+      ...data.today_requote_recommendations.filter((entry) => entry.business_id !== businessId || !generatedIds.has(entry.id)),
+    ],
+    today_requote_logs: [...logs, ...data.today_requote_logs],
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+function purchaseRecordToQuoteDraftItem(data: AppData, record: PurchaseRecord): QuoteRequestDraft["items"][number][] {
+  const items = data.purchase_record_items.filter((item) => item.purchase_record_id === record.id);
+  if (items.length) {
+    return items.map((item) => draftItem(item.item_name, item.spec, item.quantity || 1, item.unit || "개", "지난 구매내역 기준 수량입니다.", true, true, 88, false, ""));
+  }
+  return [draftItem(record.item_summary || record.purchase_title, "", Math.max(1, record.item_count || 1), "개", "수량과 규격을 확인해주세요.", true, true, record.item_summary ? 76 : 58, !record.item_summary, record.item_summary ? "" : "품목 정보가 부족해 확인이 필요합니다.")];
+}
+
+export function createRequoteDraftFromPurchaseRecords(data: AppData, input: { businessId?: string; purchaseRecordIds: string[]; category?: string; recommendationId?: string; createdBy?: string }): { data: AppData; draftId?: string; url?: string; error?: string } {
+  const businessId = input.businessId ?? "buyer-1";
+  const ids = Array.from(new Set(input.purchaseRecordIds));
+  const records = data.purchase_records.filter((record) => ids.includes(record.id) && getRecordOwnerBusinessId(record) === businessId && isRequoteEligiblePurchase(record));
+  const createdAt = new Date().toISOString();
+  if (!records.length) {
+    const failedData = appendRequoteLog(data, { business_id: businessId, recommendation_id: input.recommendationId, action: "failed", message: "초안을 만들 수 있는 매입내역이 없습니다.", payload_json: JSON.stringify({ purchaseRecordIds: ids }), created_by: input.createdBy ?? businessId, created_at: createdAt });
+    return { data: failedData, error: "초안을 만들 수 있는 매입내역이 없습니다." };
+  }
+  const categoryName = input.category || records[0].category_name || records[0].accounting_category || "구매 품목";
+  const category = data.categories.find((entry) => entry.name === categoryName || categoryName.includes(entry.name) || entry.name.includes(categoryName)) ?? data.categories[0];
+  const items = records.flatMap((record) => purchaseRecordToQuoteDraftItem(data, record)).slice(0, 12);
+  const draftId = `today-draft-${Date.now()}`;
+  const draft: TodaySsawaQuoteDraft = {
+    id: draftId,
+    business_id: businessId,
+    created_from: input.recommendationId ? "today_requote" : "today_purchase",
+    recommendation_id: input.recommendationId,
+    source_purchase_record_ids_json: JSON.stringify(records.map((record) => record.id)),
+    category: category?.name ?? categoryName,
+    title: records.length === 1 ? `${records[0].purchase_title} 다시 견적 요청` : `${categoryName} 외 ${records.length}건 견적 요청`,
+    description: "지난 구매내역을 바탕으로 만든 견적요청 초안입니다. 수량, 규격, 납품일을 확인해주세요.",
+    items_json: JSON.stringify(items),
+    preferred_delivery_date: "",
+    delivery_address_snapshot: "",
+    region: "",
+    attachments_json: "[]",
+    memo: "구매자 확인 전 초안입니다.",
+    status: "draft",
+    created_by: input.createdBy ?? businessId,
+    created_at: createdAt,
+    updated_at: createdAt,
+    expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
+  };
+  const nextRecommendations = data.today_requote_recommendations.map((entry) => entry.id === input.recommendationId ? { ...entry, status: "draft_created" as const, ssawa_quote_draft_id: draftId, updated_at: createdAt } : entry);
+  let nextData: AppData = {
+    ...data,
+    today_ssawa_quote_drafts: [draft, ...data.today_ssawa_quote_drafts],
+    today_requote_recommendations: nextRecommendations,
+  };
+  nextData = appendRequoteLog(nextData, { business_id: businessId, recommendation_id: input.recommendationId, draft_id: draftId, action: "draft_created", message: "견적요청 초안이 생성되었습니다.", payload_json: JSON.stringify({ source_purchase_record_ids: records.map((record) => record.id), category: category?.name ?? categoryName }), created_by: input.createdBy ?? businessId, created_at: createdAt });
+  saveData(nextData);
+  return { data: nextData, draftId, url: `/app/requests/new?source=today&draftId=${encodeURIComponent(draftId)}` };
+}
+
+export function createRequoteDraftFromRecommendation(data: AppData, recommendationId: string, businessId = "buyer-1") {
+  const recommendation = data.today_requote_recommendations.find((entry) => entry.id === recommendationId && entry.business_id === businessId);
+  if (!recommendation) return { data, error: "추천을 찾을 수 없습니다." };
+  return createRequoteDraftFromPurchaseRecords(data, {
+    businessId,
+    recommendationId,
+    category: recommendation.category,
+    purchaseRecordIds: parseJsonArray(recommendation.related_purchase_record_ids_json),
+  });
+}
+
+export function dismissRequoteRecommendation(data: AppData, recommendationId: string, businessId = "buyer-1"): AppData {
+  const updatedAt = new Date().toISOString();
+  let nextData: AppData = {
+    ...data,
+    today_requote_recommendations: data.today_requote_recommendations.map((entry) => entry.id === recommendationId && entry.business_id === businessId ? { ...entry, status: "dismissed", dismissed_at: updatedAt, updated_at: updatedAt } : entry),
+  };
+  nextData = appendRequoteLog(nextData, { business_id: businessId, recommendation_id: recommendationId, action: "dismissed", message: "재견적 추천이 숨겨졌습니다.", payload_json: "{}", created_by: businessId, created_at: updatedAt });
+  saveData(nextData);
+  return nextData;
+}
+
+export function getTodayQuoteDraft(data: AppData, draftId: string, businessId = "buyer-1") {
+  return data.today_ssawa_quote_drafts.find((draft) => draft.id === draftId && draft.business_id === businessId);
+}
+
+export function markTodayQuoteDraftOpened(data: AppData, draftId: string, businessId = "buyer-1"): AppData {
+  const draft = getTodayQuoteDraft(data, draftId, businessId);
+  if (!draft || draft.status !== "draft") return data;
+  const updatedAt = new Date().toISOString();
+  let nextData: AppData = {
+    ...data,
+    today_ssawa_quote_drafts: data.today_ssawa_quote_drafts.map((entry) => entry.id === draftId ? { ...entry, status: "opened", updated_at: updatedAt } : entry),
+  };
+  nextData = appendRequoteLog(nextData, { business_id: businessId, recommendation_id: draft.recommendation_id, draft_id: draftId, action: "draft_opened", message: "견적요청 초안이 열렸습니다.", payload_json: "{}", created_by: businessId, created_at: updatedAt });
+  saveData(nextData);
+  return nextData;
+}
+
+export function linkRequoteDraftToQuoteRequest(data: AppData, draftId: string, quoteRequestId: string, businessId = "buyer-1"): AppData {
+  const draft = getTodayQuoteDraft(data, draftId, businessId);
+  if (!draft || draft.status === "submitted") return data;
+  const updatedAt = new Date().toISOString();
+  let nextData: AppData = {
+    ...data,
+    today_ssawa_quote_drafts: data.today_ssawa_quote_drafts.map((entry) => entry.id === draftId ? { ...entry, status: "submitted", ssawa_quote_request_id: quoteRequestId, updated_at: updatedAt } : entry),
+    today_requote_recommendations: data.today_requote_recommendations.map((entry) => entry.id === draft.recommendation_id ? { ...entry, status: "request_submitted", ssawa_quote_request_id: quoteRequestId, updated_at: updatedAt } : entry),
+  };
+  nextData = appendRequoteLog(nextData, { business_id: businessId, recommendation_id: draft.recommendation_id, draft_id: draftId, quote_request_id: quoteRequestId, action: "request_submitted", message: "견적요청 제출 후 초안과 추천이 연결되었습니다.", payload_json: "{}", created_by: businessId, created_at: updatedAt });
+  saveData(nextData);
+  return nextData;
+}
+
+function appendRequoteLog(data: AppData, logDraft: Omit<TodayRequoteLog, "id">): AppData {
+  const logEntry: TodayRequoteLog = {
+    id: `today-requote-log-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    ...logDraft,
+  };
+  return { ...data, today_requote_logs: [logEntry, ...data.today_requote_logs] };
+}
+
 export function createQuote(data: AppData, requestId: string, draft: QuoteDraft): AppData {
   const createdAt = new Date().toISOString();
   const gate = canSubmitQuoteByPlan(data, draft.supplier_id);
@@ -3531,6 +5437,343 @@ export function createDealFromQuote(data: AppData, requestId: string, quoteId: s
   return { data: nextData, dealId };
 }
 
+type SsawaPurchaseSyncStatus = "created" | "updated" | "skipped" | "failed" | "not_eligible" | "needs_review";
+
+export type SsawaPurchaseSyncResult = {
+  data: AppData;
+  ok: boolean;
+  status: SsawaPurchaseSyncStatus;
+  purchaseRecordId?: string;
+  message: string;
+  errorCode?: string;
+};
+
+type SsawaPurchaseSyncOptions = {
+  force?: boolean;
+  actorUserId?: string;
+  triggeredBy?: TodaySsawaSyncTrigger;
+};
+
+export function getSsawaPurchaseSyncStatus(data: AppData, dealId: string) {
+  const dealRecord = data.deals.find((entry) => entry.id === dealId);
+  const record = findPurchaseRecordForDeal(data, dealId);
+  if (!dealRecord) return { label: "반영 대상 아님", tone: "gray" as const, record };
+  if (record?.accounting_status === "failed") return { label: "반영 실패", tone: "orange" as const, record };
+  if (record?.evidence_status === "needs_review" || record?.accounting_status === "hold") return { label: "확인 필요", tone: "orange" as const, record };
+  if (record) return { label: "반영 완료", tone: "green" as const, record };
+  if (!isDealEligibleForTodayPurchase(dealRecord)) return { label: "반영 대상 아님", tone: "gray" as const, record };
+  return { label: "미반영", tone: "blue" as const, record };
+}
+
+export function syncCompletedSsawaDealsToToday(data: AppData, businessId = "buyer-1", options: SsawaPurchaseSyncOptions = {}): SsawaPurchaseSyncResult {
+  const completedDeals = data.deals.filter((dealRecord) => dealRecord.buyer_id === businessId && isDealEligibleForTodayPurchase(dealRecord));
+  let nextData = data;
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+  let needsReview = 0;
+  completedDeals.forEach((dealRecord) => {
+    const result = syncSsawaDealToTodayPurchase(nextData, dealRecord.id, { ...options, triggeredBy: options.triggeredBy ?? "admin" });
+    nextData = result.data;
+    if (result.status === "created") created += 1;
+    if (result.status === "updated") updated += 1;
+    if (result.status === "skipped") skipped += 1;
+    if (result.status === "needs_review") needsReview += 1;
+  });
+  return {
+    data: nextData,
+    ok: true,
+    status: created || updated ? "updated" : "skipped",
+    message: `완료 거래 ${completedDeals.length}건 확인, 생성 ${created}건, 업데이트 ${updated}건, 확인 필요 ${needsReview}건, 중복 ${skipped}건`,
+  };
+}
+
+export function rebuildTodayPurchaseFromSsawaDeal(data: AppData, dealId: string, options: SsawaPurchaseSyncOptions = {}) {
+  return syncSsawaDealToTodayPurchase(data, dealId, { ...options, force: true, triggeredBy: options.triggeredBy ?? "admin" });
+}
+
+export function syncSsawaDealToTodayPurchase(
+  data: AppData,
+  dealId: string,
+  options: SsawaPurchaseSyncOptions = {},
+): SsawaPurchaseSyncResult {
+  const triggeredBy = options.triggeredBy ?? "system";
+  const createdAt = new Date().toISOString();
+  const dealRecord = data.deals.find((entry) => entry.id === dealId);
+  if (!dealRecord) {
+    return syncFailure(data, dealId, "", "fail", "failed", "deal_not_found", "거래 정보를 찾을 수 없습니다.", triggeredBy, options.actorUserId, createdAt);
+  }
+
+  const existing = findPurchaseRecordForDeal(data, dealId);
+  const businessId = dealRecord.buyer_id;
+  if (!businessId) {
+    return syncFailure(data, dealId, "", "fail", "failed", "business_missing", "사업장 정보를 확인해주세요.", triggeredBy, options.actorUserId, createdAt, snapshotDeal(dealRecord));
+  }
+
+  if (!isDealEligibleForTodayPurchase(dealRecord)) {
+    const nextData: AppData = existing && (dealRecord.status === "disputed" || dealRecord.status.includes("cancelled"))
+      ? {
+          ...data,
+          purchase_records: data.purchase_records.map((record) =>
+            record.id === existing.id
+              ? {
+                  ...record,
+                  accounting_status: "hold" as const,
+                  evidence_status: "needs_review" as const,
+                  admin_memo: `${dealStatusLabels[dealRecord.status]} 상태로 거래 상태 확인 필요`,
+                  updated_at: createdAt,
+                }
+              : record,
+          ),
+        }
+      : data;
+    return appendSyncLogResult(nextData, {
+      businessId,
+      dealId,
+      purchaseRecordId: existing?.id,
+      action: "skip",
+      logStatus: dealRecord.status === "disputed" ? "needs_review" : "skipped",
+      resultStatus: dealRecord.status === "disputed" ? "needs_review" : "not_eligible",
+      ok: false,
+      message: dealRecord.status === "disputed" ? "문제 신고 거래라 확인 필요 상태로 표시했습니다." : "거래 완료 후 반영할 수 있습니다.",
+      triggeredBy,
+      triggeredUserId: options.actorUserId,
+      payload: snapshotDeal(dealRecord),
+      createdAt,
+    });
+  }
+
+  const mapped = mapDealToTodayPurchase(dealRecord, data, existing?.id ?? `purchase-${Date.now()}`, createdAt);
+  const mappedRecord = existing?.category_confirmed_by_user && !options.force
+    ? {
+        ...mapped,
+        category_name: existing.category_name,
+        accounting_category: existing.accounting_category,
+        auto_category: existing.auto_category,
+        category_confidence: existing.category_confidence,
+        category_reason: existing.category_reason,
+        category_needs_review: existing.category_needs_review,
+        category_confirmed_by_user: existing.category_confirmed_by_user,
+        category_confirmed_at: existing.category_confirmed_at,
+        category_rule_id: existing.category_rule_id,
+      }
+    : mapped;
+  const needsReview = mappedRecord.evidence_status === "needs_review" || mappedRecord.evidence_status === "missing" || mappedRecord.total_amount <= 0 || mappedRecord.category_needs_review || mappedRecord.accounting_category === "미분류";
+  const nextStatus: SsawaPurchaseSyncStatus = existing ? options.force ? "updated" : "skipped" : needsReview ? "needs_review" : "created";
+  const action = existing ? options.force ? "resync" : "skip" : triggeredBy === "system" ? "auto_sync" : "manual_sync";
+  const purchaseItems = existing ? [] : createPurchaseRecordItemsFromDeal(dealRecord, data, mappedRecord.id, createdAt);
+  const purchaseDocuments = existing ? [] : createPurchaseDocumentsFromDeal(dealRecord, data, mappedRecord.id, createdAt);
+  const accountingEntry = existing ? null : createAccountingEntryFromPurchaseRecord(mappedRecord, createdAt);
+  const purchaseRecords: PurchaseRecord[] = existing
+    ? data.purchase_records.map((record) =>
+        record.id === existing.id
+          ? {
+              ...record,
+              ...mappedRecord,
+              id: existing.id,
+              created_at: record.created_at,
+              updated_at: createdAt,
+              accounting_status: needsReview ? "hold" as const : record.accounting_status === "synced" ? "synced" as const : "pending" as const,
+            }
+          : record,
+      )
+    : [mappedRecord, ...data.purchase_records];
+
+  let nextData: AppData = {
+    ...data,
+    purchase_records: purchaseRecords,
+    purchase_record_items: purchaseItems.length ? [...purchaseItems, ...data.purchase_record_items] : data.purchase_record_items,
+    purchase_documents: purchaseDocuments.length ? [...purchaseDocuments, ...data.purchase_documents] : data.purchase_documents,
+    accounting_entries: accountingEntry ? [accountingEntry, ...data.accounting_entries] : data.accounting_entries,
+  };
+
+  nextData = appendSyncLog(nextData, {
+    business_id: businessId,
+    ssawa_deal_id: dealId,
+    purchase_record_id: mappedRecord.id,
+    action,
+    status: nextStatus === "skipped" ? "skipped" : needsReview ? "needs_review" : "success",
+    message: nextStatus === "skipped" ? "이미 오늘장사에 반영된 거래입니다." : needsReview ? "오늘장사 매입장부에 반영되었고 일부 정보 확인이 필요합니다." : "오늘장사 매입장부에 반영되었습니다.",
+    triggered_by: triggeredBy,
+    triggered_user_id: options.actorUserId,
+    payload_snapshot_json: JSON.stringify(snapshotDeal(dealRecord)),
+    created_at: createdAt,
+  });
+  saveData(nextData);
+  return {
+    data: nextData,
+    ok: true,
+    status: nextStatus,
+    purchaseRecordId: mappedRecord.id,
+    message: nextStatus === "skipped" ? "이미 오늘장사에 반영된 거래입니다." : needsReview ? "오늘장사 매입장부에 반영되었습니다. 일부 정보 확인이 필요합니다." : "오늘장사 매입장부에 반영되었습니다.",
+  };
+}
+
+type SupplierSaleSyncStatus = "created" | "updated" | "skipped" | "failed" | "not_eligible" | "needs_review";
+
+export type SupplierSaleSyncResult = {
+  data: AppData;
+  ok: boolean;
+  status: SupplierSaleSyncStatus;
+  supplierSaleRecordId?: string;
+  message: string;
+  errorCode?: string;
+};
+
+type SupplierSaleSyncOptions = {
+  force?: boolean;
+  actorUserId?: string;
+  triggeredBy?: TodaySupplierSyncTrigger;
+};
+
+export function syncCompletedSsawaDealsToSupplierSales(data: AppData, supplierBusinessId = "sup-1", options: SupplierSaleSyncOptions = {}): SupplierSaleSyncResult {
+  const targetDeals = data.deals.filter((dealRecord) => dealRecord.supplier_id === supplierBusinessId && isDealEligibleForSupplierSale(dealRecord));
+  let nextData = data;
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+  let needsReview = 0;
+  targetDeals.forEach((dealRecord) => {
+    const result = syncSsawaDealToSupplierSale(nextData, dealRecord.id, { ...options, triggeredBy: options.triggeredBy ?? "admin" });
+    nextData = result.data;
+    if (result.status === "created") created += 1;
+    if (result.status === "updated") updated += 1;
+    if (result.status === "skipped") skipped += 1;
+    if (result.status === "needs_review") needsReview += 1;
+  });
+  return {
+    data: nextData,
+    ok: true,
+    status: created || updated ? "updated" : "skipped",
+    message: `공급업체 매출 후보 ${targetDeals.length}건 확인, 생성 ${created}건, 업데이트 ${updated}건, 확인 필요 ${needsReview}건, 중복 ${skipped}건`,
+  };
+}
+
+export function syncSsawaDealToSupplierSale(data: AppData, dealId: string, options: SupplierSaleSyncOptions = {}): SupplierSaleSyncResult {
+  const triggeredBy = options.triggeredBy ?? "system";
+  const createdAt = new Date().toISOString();
+  const dealRecord = data.deals.find((entry) => entry.id === dealId);
+  if (!dealRecord) {
+    return appendSupplierSyncLogResult(data, {
+      supplierBusinessId: "unknown",
+      dealId,
+      action: "fail",
+      logStatus: "failed",
+      resultStatus: "failed",
+      ok: false,
+      message: "거래 정보를 찾을 수 없습니다.",
+      errorCode: "deal_not_found",
+      triggeredBy,
+      triggeredUserId: options.actorUserId,
+      createdAt,
+    });
+  }
+
+  const existing = findSupplierSalesRecordForDeal(data, dealId, dealRecord.supplier_id);
+  if (!isDealEligibleForSupplierSale(dealRecord)) {
+    const nextData: AppData = existing && (dealRecord.status === "disputed" || dealRecord.status.includes("cancelled"))
+      ? {
+          ...data,
+          supplier_sales_records: data.supplier_sales_records.map((record) =>
+            record.id === existing.id
+              ? {
+                  ...record,
+                  sale_status: dealRecord.status === "disputed" ? "disputed" : "cancelled",
+                  settlement_status: "needs_review",
+                  evidence_status: "needs_review",
+                  memo: `${dealStatusLabels[dealRecord.status]} 상태라 매출 반영 확인이 필요합니다.`,
+                  updated_at: createdAt,
+                }
+              : record,
+          ),
+        }
+      : data;
+    return appendSupplierSyncLogResult(nextData, {
+      supplierBusinessId: dealRecord.supplier_id,
+      buyerBusinessId: dealRecord.buyer_id,
+      dealId,
+      supplierSaleRecordId: existing?.id,
+      action: "skip",
+      logStatus: dealRecord.status === "disputed" ? "needs_review" : "skipped",
+      resultStatus: dealRecord.status === "disputed" ? "needs_review" : "not_eligible",
+      ok: false,
+      message: dealRecord.status === "disputed" ? "분쟁 거래라 공급업체 매출 확인이 필요합니다." : "공급업체 매출 반영 대상 거래가 아닙니다.",
+      triggeredBy,
+      triggeredUserId: options.actorUserId,
+      payload: snapshotDeal(dealRecord),
+      createdAt,
+    });
+  }
+
+  const mapped = mapDealToSupplierSale(dealRecord, data, existing?.id ?? `supplier-sale-${Date.now()}`, createdAt);
+  const needsReview = mapped.sale_status === "needs_review" || mapped.evidence_status === "needs_review" || mapped.evidence_status === "missing" || mapped.tax_invoice_status === "unknown" || mapped.total_amount <= 0;
+  const nextStatus: SupplierSaleSyncStatus = existing ? options.force ? "updated" : "skipped" : needsReview ? "needs_review" : "created";
+  const action = existing ? options.force ? "resync" : "skip" : triggeredBy === "system" ? "auto_sync" : "manual_sync";
+  const supplierSalesRecords = existing
+    ? data.supplier_sales_records.map((record) =>
+        record.id === existing.id
+          ? {
+              ...record,
+              ...mapped,
+              id: existing.id,
+              created_at: record.created_at,
+              updated_at: createdAt,
+            }
+          : record,
+      )
+    : [mapped, ...data.supplier_sales_records];
+  const nextData = appendSupplierSyncLog({
+    ...data,
+    supplier_sales_records: supplierSalesRecords,
+  }, {
+    supplier_business_id: dealRecord.supplier_id,
+    buyer_business_id: dealRecord.buyer_id,
+    ssawa_deal_id: dealId,
+    supplier_sales_record_id: mapped.id,
+    action,
+    status: nextStatus === "skipped" ? "skipped" : needsReview ? "needs_review" : "success",
+    message: nextStatus === "skipped" ? "이미 공급업체 매출로 정리된 거래입니다." : needsReview ? "공급업체 매출로 정리했고 일부 확인이 필요합니다." : "공급업체 매출로 정리했습니다.",
+    triggered_by: triggeredBy,
+    triggered_user_id: options.actorUserId,
+    payload_snapshot_json: JSON.stringify(snapshotDeal(dealRecord)),
+    created_at: createdAt,
+  });
+  saveData(nextData);
+  return {
+    data: nextData,
+    ok: true,
+    status: nextStatus,
+    supplierSaleRecordId: mapped.id,
+    message: nextStatus === "skipped" ? "이미 공급업체 매출로 정리된 거래입니다." : needsReview ? "공급업체 매출로 정리했고 일부 확인이 필요합니다." : "공급업체 매출로 정리했습니다.",
+  };
+}
+
+export function createSupplierManualSalesRecord(data: AppData, input: Omit<SupplierSalesRecord, "id" | "source" | "source_id" | "created_at" | "updated_at">): { data: AppData; recordId: string } {
+  const createdAt = new Date().toISOString();
+  const recordId = `supplier-sale-${Date.now()}`;
+  const record: SupplierSalesRecord = normalizeSupplierSalesRecord({
+    ...input,
+    id: recordId,
+    source: "manual",
+    source_id: recordId,
+    created_at: createdAt,
+    updated_at: createdAt,
+  });
+  const nextData = { ...data, supplier_sales_records: [record, ...data.supplier_sales_records] };
+  saveData(nextData);
+  return { data: nextData, recordId };
+}
+
+export function updateSupplierSaleTaxInvoiceStatus(data: AppData, recordId: string, status: SupplierTaxInvoiceStatus): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData = {
+    ...data,
+    supplier_sales_records: data.supplier_sales_records.map((record) => record.id === recordId ? { ...record, tax_invoice_status: status, updated_at: updatedAt } : record),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
 export function updateDealStatus(
   data: AppData,
   dealId: string,
@@ -3543,13 +5786,6 @@ export function updateDealStatus(
 
   const updatedAt = new Date().toISOString();
   const completedAt = nextStatus === "completed" ? updatedAt : targetDeal.completed_at;
-  const purchaseRecord =
-    nextStatus === "completed" && !data.purchase_records.some((entry) => entry.deal_id === dealId)
-      ? createPurchaseRecordFromDeal(targetDeal, data, updatedAt)
-      : null;
-  const purchaseItems = purchaseRecord ? createPurchaseRecordItemsFromDeal(targetDeal, data, purchaseRecord.id, updatedAt) : [];
-  const purchaseDocuments = purchaseRecord ? createPurchaseDocumentsFromDeal(targetDeal, data, purchaseRecord.id, updatedAt) : [];
-  const accountingEntry = purchaseRecord ? createAccountingEntryFromPurchaseRecord(purchaseRecord, updatedAt) : null;
 
   const requestStatus =
     nextStatus === "completed"
@@ -3581,12 +5817,24 @@ export function updateDealStatus(
       log(`log-${Date.now()}`, dealId, targetDeal.status, nextStatus, changedBy, memo || dealStatusLabels[nextStatus]),
       ...data.deal_status_logs,
     ],
-    purchase_records: purchaseRecord ? [purchaseRecord, ...data.purchase_records] : data.purchase_records,
-    purchase_record_items: purchaseItems.length ? [...purchaseItems, ...data.purchase_record_items] : data.purchase_record_items,
-    purchase_documents: purchaseDocuments.length ? [...purchaseDocuments, ...data.purchase_documents] : data.purchase_documents,
-    accounting_entries: accountingEntry ? [accountingEntry, ...data.accounting_entries] : data.accounting_entries,
   };
   nextData = appendDealStatusMessage(nextData, dealId, dealStatusLabels[nextStatus], updatedAt);
+  const todaySync = syncSsawaDealToTodayPurchase(nextData, dealId, {
+    triggeredBy: "system",
+    actorUserId: changedBy === "buyer" ? targetDeal.buyer_id : changedBy === "admin" ? adminUserId(nextData) : "system",
+  });
+  nextData = todaySync.data;
+  const supplierSaleSync = syncSsawaDealToSupplierSale(nextData, dealId, {
+    triggeredBy: "system",
+    actorUserId: changedBy === "supplier" ? supplierUserId(targetDeal.supplier_id) : changedBy === "admin" ? adminUserId(nextData) : "system",
+  });
+  nextData = supplierSaleSync.data;
+  const syncedPurchaseRecord = todaySync.purchaseRecordId
+    ? nextData.purchase_records.find((entry) => entry.id === todaySync.purchaseRecordId)
+    : undefined;
+  const syncedSupplierSaleRecord = supplierSaleSync.supplierSaleRecordId
+    ? nextData.supplier_sales_records.find((entry) => entry.id === supplierSaleSync.supplierSaleRecordId)
+    : undefined;
   const supplierIdForNotification = supplierUserId(targetDeal.supplier_id);
   const actorId = changedBy === "buyer" ? targetDeal.buyer_id : changedBy === "supplier" ? supplierIdForNotification : adminUserId(nextData);
   if (["confirmed", "preparing", "delivering", "delivered"].includes(nextStatus)) {
@@ -3662,16 +5910,16 @@ export function updateDealStatus(
       priority: "high",
       actor_user_id: actorId,
     });
-    if (purchaseRecord) {
+    if (syncedPurchaseRecord && (todaySync.status === "created" || todaySync.status === "updated" || todaySync.status === "needs_review")) {
       nextData = appendNotification(nextData, {
         user_id: targetDeal.buyer_id,
         user_role: "buyer",
         type: "purchase_record_created",
-        title: "구매내역이 자동 생성되었습니다.",
-        body: `${purchaseRecord.purchase_title} 구매내역이 저장되었습니다.`,
-        link_url: `/app/purchases/${purchaseRecord.id}`,
+        title: "구매내역이 오늘장사 장부에 정리되었습니다.",
+        body: `${syncedPurchaseRecord.purchase_title} 매입이 오늘장사에 반영되었습니다.`,
+        link_url: `/app/today/purchases`,
         related_entity_type: "purchase_record",
-        related_entity_id: purchaseRecord.id,
+        related_entity_id: syncedPurchaseRecord.id,
         priority: "normal",
         actor_user_id: "system",
       });
@@ -3679,11 +5927,25 @@ export function updateDealStatus(
         user_id: targetDeal.buyer_id,
         user_role: "buyer",
         type: "accounting_sync_ready",
-        title: "장부 반영 대기 중인 구매내역이 있어요.",
-        body: "오늘장사 장부에 반영할 준비가 완료되었습니다.",
-        link_url: "/app/accounting/pending",
+        title: "오늘장사 매입을 확인해 주세요.",
+        body: todaySync.status === "needs_review" ? "일부 정보 확인이 필요한 싸와 매입이 있습니다." : "오늘장사 장부에 자동 반영되었습니다.",
+        link_url: "/app/today/ssawa",
         related_entity_type: "purchase_record",
-        related_entity_id: purchaseRecord.id,
+        related_entity_id: syncedPurchaseRecord.id,
+        priority: "normal",
+        actor_user_id: "system",
+      });
+    }
+    if (syncedSupplierSaleRecord && (supplierSaleSync.status === "created" || supplierSaleSync.status === "updated" || supplierSaleSync.status === "needs_review")) {
+      nextData = appendNotification(nextData, {
+        user_id: supplierIdForNotification,
+        user_role: "supplier",
+        type: "settlement_ready",
+        title: "오늘장사 매출에 싸와 거래가 정리되었습니다.",
+        body: `${syncedSupplierSaleRecord.item_summary} 매출과 정산 상태를 확인해 주세요.`,
+        link_url: "/app/today/supplier/sales",
+        related_entity_type: "settlement",
+        related_entity_id: syncedSupplierSaleRecord.id,
         priority: "normal",
         actor_user_id: "system",
       });
@@ -3813,7 +6075,7 @@ export function calculatePurchaseSummary(records: PurchaseRecord[]) {
 }
 
 export function groupPurchasesByCategory(records: PurchaseRecord[]) {
-  return groupPurchases(records, (record) => record.accounting_category || record.category_name);
+  return groupPurchases(records, (record) => record.accounting_category || record.auto_category || record.category_name);
 }
 
 export function groupPurchasesBySupplier(records: PurchaseRecord[]) {
@@ -3829,6 +6091,280 @@ export function calculateEstimatedSavingsSummary(records: PurchaseRecord[]) {
     averageRate: totalPrevious > 0 ? Math.round((totalSavings / totalPrevious) * 100) : 0,
     recordCount: records.filter((record) => record.estimated_savings_amount > 0).length,
   };
+}
+
+export type PurchaseClassificationResult = {
+  category: string;
+  confidence: number;
+  reason: string;
+  ruleId?: string;
+  needsReview: boolean;
+};
+
+function normalizeCategoryText(value = "") {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function splitRulePattern(pattern: string) {
+  return pattern
+    .split(",")
+    .map((entry) => normalizeCategoryText(entry))
+    .filter(Boolean);
+}
+
+function getRecordBusinessId(record: PurchaseRecord) {
+  return record.business_id || record.buyer_id;
+}
+
+function directCategoryMatch(value = "") {
+  const source = normalizeCategoryText(value);
+  return todayPurchaseCategoryNames.find((category) => source.includes(normalizeCategoryText(category)));
+}
+
+function getPurchaseClassificationSource(data: AppData, record: PurchaseRecord) {
+  const items = data.purchase_record_items.filter((entry) => entry.purchase_record_id === record.id).map((entry) => entry.item_name);
+  return normalizeCategoryText([
+    record.item_summary,
+    record.purchase_title,
+    record.category_name,
+    record.sub_category,
+    record.supplier_name,
+    ...items,
+  ].filter(Boolean).join(" "));
+}
+
+function buildClassificationResult(category: string, confidence: number, reason: string, ruleId?: string): PurchaseClassificationResult {
+  const normalizedConfidence = Math.max(0, Math.min(0.99, Number(confidence.toFixed(2))));
+  const lowConfidence = normalizedConfidence < 0.7;
+  return {
+    category: lowConfidence ? "미분류" : category,
+    confidence: normalizedConfidence,
+    reason: lowConfidence ? `${reason} / 신뢰도 낮음` : reason,
+    ruleId,
+    needsReview: normalizedConfidence < 0.9,
+  };
+}
+
+function findMatchingRule(data: AppData, record: PurchaseRecord, source: string, sourceType: "user" | "system") {
+  const businessId = getRecordBusinessId(record);
+  return (data.today_category_rules ?? [])
+    .filter((rule) => rule.source === sourceType)
+    .filter((rule) => !rule.business_id || rule.business_id === businessId)
+    .filter((rule) => todayPurchaseCategoryNames.includes(rule.category_name as (typeof todayPurchaseCategoryNames)[number]))
+    .sort((a, b) => b.confidence - a.confidence || b.use_count - a.use_count)
+    .find((rule) => {
+      const patterns = splitRulePattern(rule.pattern);
+      if (!patterns.length) return false;
+      if (rule.rule_type === "request_category") return patterns.some((pattern) => normalizeCategoryText(record.category_name).includes(pattern));
+      if (rule.rule_type === "supplier_contains") return patterns.some((pattern) => normalizeCategoryText(record.supplier_name).includes(pattern));
+      return patterns.some((pattern) => source.includes(pattern));
+    });
+}
+
+export function classifyPurchaseRecord(data: AppData, record: PurchaseRecord): PurchaseClassificationResult {
+  const source = getPurchaseClassificationSource(data, record);
+  const direct = directCategoryMatch(`${record.item_summary ?? ""} ${record.category_name}`);
+  if (direct && direct !== "미분류") {
+    return buildClassificationResult(direct, 0.93, `품목/요청 카테고리에서 '${direct}'를 찾았습니다.`);
+  }
+
+  const userRule = findMatchingRule(data, record, source, "user");
+  if (userRule) {
+    return buildClassificationResult(userRule.category_name, Math.max(userRule.confidence, 0.91), `사용자 학습 규칙 '${userRule.pattern}' 적용`, userRule.id);
+  }
+
+  const systemRule = findMatchingRule(data, record, source, "system");
+  if (systemRule) {
+    return buildClassificationResult(systemRule.category_name, systemRule.confidence, `기본 키워드 규칙 '${systemRule.pattern}' 적용`, systemRule.id);
+  }
+
+  const supplier = data.supplier_profiles.find((entry) => entry.id === record.supplier_id);
+  const supplierCategory = supplier?.categories.map(directCategoryMatch).find(Boolean);
+  if (supplierCategory && supplierCategory !== "미분류") {
+    return buildClassificationResult(supplierCategory, 0.74, `공급업체 취급 카테고리 '${supplierCategory}' 참고`);
+  }
+
+  const fallback = directCategoryMatch(record.category_name);
+  if (fallback && fallback !== "미분류") {
+    return buildClassificationResult(fallback, 0.72, `요청 카테고리 '${record.category_name}' 참고`);
+  }
+
+  return buildClassificationResult("미분류", 0.45, "일치하는 분류 규칙이 없습니다.");
+}
+
+function applyClassificationToRecord(data: AppData, record: PurchaseRecord, force = false): PurchaseRecord {
+  if (record.category_confirmed_by_user && !force) return record;
+  const classification = classifyPurchaseRecord(data, record);
+  return {
+    ...record,
+    category_name: classification.category,
+    accounting_category: classification.category,
+    auto_category: classification.category,
+    category_confidence: classification.confidence,
+    category_reason: classification.reason,
+    category_needs_review: classification.needsReview,
+    category_confirmed_by_user: false,
+    category_rule_id: classification.ruleId,
+  };
+}
+
+function appendCategoryClassificationLog(
+  data: AppData,
+  record: PurchaseRecord,
+  input: Omit<TodayCategoryClassificationLog, "id" | "business_id" | "purchase_record_id" | "created_at">,
+) {
+  const createdAt = new Date().toISOString();
+  const logEntry: TodayCategoryClassificationLog = {
+    id: `today-category-log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    business_id: getRecordBusinessId(record),
+    purchase_record_id: record.id,
+    created_at: createdAt,
+    ...input,
+  };
+  return {
+    ...data,
+    today_category_classification_logs: [logEntry, ...(data.today_category_classification_logs ?? [])],
+  };
+}
+
+export function applyPurchaseClassification(data: AppData, purchaseId: string, options: { force?: boolean; actorUserId?: string } = {}): AppData {
+  const record = data.purchase_records.find((entry) => entry.id === purchaseId);
+  if (!record) return data;
+  const updatedAt = new Date().toISOString();
+  const classified = applyClassificationToRecord(data, record, Boolean(options.force));
+  const nextData = appendCategoryClassificationLog(
+    {
+      ...data,
+      purchase_records: data.purchase_records.map((entry) =>
+        entry.id === purchaseId ? { ...classified, updated_at: updatedAt } : entry,
+      ),
+    },
+    classified,
+    {
+      previous_category: record.accounting_category,
+      classified_category: classified.accounting_category,
+      confidence: classified.category_confidence ?? 0,
+      reason: classified.category_reason ?? "",
+      rule_id: classified.category_rule_id,
+      action: options.force ? "reclassified" : "auto_classified",
+      actor_user_id: options.actorUserId,
+    },
+  );
+  saveData(nextData);
+  return nextData;
+}
+
+function buildLearningPattern(record: PurchaseRecord) {
+  const source = `${record.item_summary ?? ""} ${record.purchase_title}`.trim();
+  const token = source.split(/[\s,./|·]+/).find((entry) => entry.trim().length >= 2);
+  return (token || source || record.supplier_name || record.category_name || "기타").slice(0, 40);
+}
+
+export function confirmPurchaseCategory(data: AppData, purchaseId: string, actorUserId = "buyer-1"): AppData {
+  const record = data.purchase_records.find((entry) => entry.id === purchaseId);
+  if (!record) return data;
+  const updatedAt = new Date().toISOString();
+  const nextRecord: PurchaseRecord = {
+    ...record,
+    category_needs_review: false,
+    category_confirmed_by_user: true,
+    category_confirmed_at: updatedAt,
+    updated_at: updatedAt,
+  };
+  const nextData = appendCategoryClassificationLog(
+    {
+      ...data,
+      purchase_records: data.purchase_records.map((entry) => entry.id === purchaseId ? nextRecord : entry),
+    },
+    nextRecord,
+    {
+      previous_category: record.accounting_category,
+      classified_category: nextRecord.accounting_category,
+      confidence: nextRecord.category_confidence ?? 1,
+      reason: "사용자가 분류를 확인했습니다.",
+      rule_id: nextRecord.category_rule_id,
+      action: "user_confirmed",
+      actor_user_id: actorUserId,
+    },
+  );
+  saveData(nextData);
+  return nextData;
+}
+
+export function changePurchaseCategory(
+  data: AppData,
+  purchaseId: string,
+  categoryName: string,
+  options: { learnSimilar?: boolean; actorUserId?: string } = {},
+): AppData {
+  const record = data.purchase_records.find((entry) => entry.id === purchaseId);
+  if (!record) return data;
+  const selected = todayPurchaseCategoryNames.includes(categoryName as (typeof todayPurchaseCategoryNames)[number]) ? categoryName : "기타 매입";
+  const updatedAt = new Date().toISOString();
+  const businessId = getRecordBusinessId(record);
+  const pattern = buildLearningPattern(record);
+  const rule: TodayCategoryRule | null = options.learnSimilar
+    ? {
+        id: `today-rule-user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        business_id: businessId,
+        category_name: selected,
+        rule_type: "item_contains",
+        pattern,
+        confidence: 0.96,
+        source: "user",
+        use_count: 1,
+        last_used_at: updatedAt,
+        created_by: options.actorUserId ?? record.buyer_id,
+        created_at: updatedAt,
+        updated_at: updatedAt,
+      }
+    : null;
+  const nextRecord: PurchaseRecord = {
+    ...record,
+    category_name: selected,
+    accounting_category: selected,
+    auto_category: record.auto_category || selected,
+    category_confidence: 1,
+    category_reason: options.learnSimilar ? `사용자 변경 및 유사 품목 규칙 '${pattern}' 저장` : "사용자가 이 건의 분류를 변경했습니다.",
+    category_needs_review: false,
+    category_confirmed_by_user: true,
+    category_confirmed_at: updatedAt,
+    category_rule_id: rule?.id ?? record.category_rule_id,
+    updated_at: updatedAt,
+  };
+  const nextData = appendCategoryClassificationLog(
+    {
+      ...data,
+      purchase_records: data.purchase_records.map((entry) => entry.id === purchaseId ? nextRecord : entry),
+      today_category_rules: rule ? [rule, ...(data.today_category_rules ?? [])] : data.today_category_rules,
+    },
+    nextRecord,
+    {
+      previous_category: record.accounting_category,
+      classified_category: selected,
+      confidence: 1,
+      reason: nextRecord.category_reason ?? "",
+      rule_id: rule?.id,
+      action: "user_changed",
+      actor_user_id: options.actorUserId ?? record.buyer_id,
+    },
+  );
+  saveData(nextData);
+  return nextData;
+}
+
+export function getPurchaseCategorySummary(records: PurchaseRecord[]) {
+  return todayPurchaseCategoryNames
+    .map((category) => {
+      const matches = records.filter((record) => (record.accounting_category || record.category_name) === category);
+      return {
+        category,
+        count: matches.length,
+        amount: matches.reduce((sum, record) => sum + record.total_amount, 0),
+        reviewCount: matches.filter((record) => record.category_needs_review || record.accounting_category === "미분류").length,
+      };
+    })
+    .filter((entry) => entry.count > 0 || entry.category === "미분류");
 }
 
 export function updatePurchaseRecord(data: AppData, purchaseId: string, patch: Partial<PurchaseRecord>): AppData {
@@ -3899,16 +6435,132 @@ export function addPurchaseDocument(
   return nextData;
 }
 
+export type TaxDocumentInput = {
+  business_id?: string;
+  source_type: TaxDocument["source_type"];
+  source_id: string;
+  document_type: TaxDocumentType;
+  document_name: string;
+  file_mime_type?: string;
+  file_size?: number;
+  amount?: number;
+  issued_at?: string;
+  supplier_name?: string;
+  memo?: string;
+  status?: TaxDocumentStatus;
+  uploaded_by?: string;
+};
+
+export function createTaxDocument(data: AppData, input: TaxDocumentInput): { data: AppData; documentId: string; error?: string } {
+  if (!input.source_id.trim()) return { data, documentId: "", error: "자료를 연결할 내역을 찾지 못했습니다." };
+  if (!input.document_name.trim()) return { data, documentId: "", error: "파일명을 입력해 주세요." };
+  const allowed = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
+  if (!allowed.some((ext) => input.document_name.toLowerCase().endsWith(ext))) {
+    return { data, documentId: "", error: "지원하지 않는 파일 형식입니다." };
+  }
+  if ((input.file_size ?? 0) > 10 * 1024 * 1024) return { data, documentId: "", error: "파일 크기는 10MB 이하로 올려주세요." };
+
+  const createdAt = new Date().toISOString();
+  const documentId = `tax-doc-${Date.now()}`;
+  const businessId = input.business_id || "buyer-1";
+  const yearMonth = (input.issued_at || createdAt.slice(0, 10)).slice(0, 7).replace("-", "/");
+  const document: TaxDocument = {
+    id: documentId,
+    business_id: businessId,
+    source_type: input.source_type,
+    source_id: input.source_id,
+    document_type: input.document_type,
+    document_name: input.document_name.trim(),
+    file_url: "#",
+    file_path: `tax-documents/${businessId}/${yearMonth}/${documentId}-${input.document_name.trim()}`,
+    file_mime_type: input.file_mime_type ?? guessTaxDocumentMime(input.document_name),
+    file_size: input.file_size ?? 0,
+    amount: input.amount,
+    issued_at: input.issued_at,
+    supplier_name: input.supplier_name,
+    memo: input.memo?.trim() ?? "",
+    status: input.status ?? "attached",
+    uploaded_by: input.uploaded_by ?? businessId,
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+
+  const nextData: AppData = {
+    ...data,
+    tax_documents: [document, ...(data.tax_documents ?? [])],
+    purchase_records: data.purchase_records.map((record) => {
+      if ((input.source_type === "purchase" || input.source_type === "ssawa_deal") && (record.id === input.source_id || record.ssawa_deal_id === input.source_id || record.deal_id === input.source_id)) {
+        return {
+          ...record,
+          evidence_status: "complete",
+          receipt_status: input.document_type === "receipt" || input.document_type === "card_receipt" || input.document_type === "cash_receipt" ? "uploaded" : record.receipt_status,
+          delivery_note_status: input.document_type === "transaction_statement" || input.document_type === "delivery_confirmation" || input.document_type === "invoice" ? "uploaded" : record.delivery_note_status,
+          tax_invoice_status: input.document_type === "tax_invoice" ? "received" : record.tax_invoice_status,
+          updated_at: createdAt,
+        };
+      }
+      return record;
+    }),
+    sales_records: data.sales_records.map((record) => input.source_type === "sales" && record.id === input.source_id ? { ...record, evidence_status: "complete", updated_at: createdAt } : record),
+    expense_records: data.expense_records.map((record) => input.source_type === "expense" && record.id === input.source_id ? { ...record, evidence_status: "complete", updated_at: createdAt } : record),
+  };
+  saveData(nextData);
+  return { data: nextData, documentId };
+}
+
+export function updateTaxDocumentStatus(data: AppData, documentId: string, status: TaxDocumentStatus): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData = {
+    ...data,
+    tax_documents: data.tax_documents.map((document) => document.id === documentId ? { ...document, status, updated_at: updatedAt } : document),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function updatePurchaseTaxInvoiceStatus(data: AppData, purchaseId: string, status: TaxInvoiceStatus): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData = {
+    ...data,
+    purchase_records: data.purchase_records.map((record) => record.id === purchaseId ? { ...record, tax_invoice_status: status, updated_at: updatedAt } : record),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function createTaxExportRequest(data: AppData, input: Omit<TaxExportRequest, "id" | "status" | "created_at" | "updated_at">): { data: AppData; exportId: string } {
+  const createdAt = new Date().toISOString();
+  const exportId = `tax-export-${Date.now()}`;
+  const request: TaxExportRequest = {
+    ...input,
+    id: exportId,
+    status: "generated",
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+  const nextData = { ...data, tax_export_requests: [request, ...data.tax_export_requests] };
+  saveData(nextData);
+  return { data: nextData, exportId };
+}
+
+function guessTaxDocumentMime(fileName: string) {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
+}
+
 export function createManualPurchaseRecord(data: AppData, draft: ManualPurchaseDraft): { data: AppData; purchaseId: string } {
   const createdAt = new Date().toISOString();
-  const purchaseId = `purchase-${Date.now()}`;
+  const purchaseId = localId("purchase");
   const totalAmount = Math.max(0, Math.round(draft.total_amount));
   const vat = draft.supply_amount && draft.vat_amount ? { supplyAmount: draft.supply_amount, vatAmount: draft.vat_amount } : calculateVatAmount(totalAmount);
   const items = draft.items.filter((itemEntry) => itemEntry.item_name.trim());
-  const record: PurchaseRecord = {
+  let record: PurchaseRecord = {
     id: purchaseId,
     buyer_id: "buyer-1",
-    supplier_id: `manual-${Date.now()}`,
+    supplier_id: localId("manual"),
     supplier_name: draft.supplier_name.trim() || "수동 등록 거래처",
     supplier_business_number: draft.supplier_business_number.trim() || "000-00-00000",
     purchase_title: draft.purchase_title.trim() || `${draft.category_name || "자재"} 수동 구매`,
@@ -3937,6 +6589,7 @@ export function createManualPurchaseRecord(data: AppData, draft: ManualPurchaseD
     created_at: createdAt,
     updated_at: createdAt,
   };
+  record = applyClassificationToRecord(data, record, true);
   const purchaseItems = (items.length ? items : [{
     item_name: record.purchase_title,
     spec: "",
@@ -3990,6 +6643,187 @@ export function createManualPurchaseRecord(data: AppData, draft: ManualPurchaseD
   });
   saveData(nextData);
   return { data: nextData, purchaseId };
+}
+
+export type TodaySalesRecordInput = {
+  business_id?: string;
+  sales_type: TodaySalesRecord["sales_type"];
+  payment_method: TodaySalesRecord["payment_method"];
+  sales_channel: TodaySalesRecord["sales_channel"];
+  amount: number;
+  sales_date: string;
+  memo?: string;
+  evidence_status?: TodayEvidenceStatus;
+  evidence_files_json?: string;
+  created_by?: string;
+};
+
+export type TodayExpenseRecordInput = {
+  business_id?: string;
+  expense_type: TodayExpenseRecord["expense_type"];
+  payment_method: TodayExpenseRecord["payment_method"];
+  vendor_name?: string;
+  amount: number;
+  expense_date: string;
+  memo?: string;
+  evidence_status?: TodayEvidenceStatus;
+  evidence_files_json?: string;
+  is_recurring?: boolean;
+  recurring_rule_id?: string;
+  created_by?: string;
+};
+
+function requirePositiveAmount(amount: number) {
+  return Number.isFinite(amount) && amount > 0;
+}
+
+export function createSalesRecord(data: AppData, input: TodaySalesRecordInput): { data: AppData; salesId: string; error?: string } {
+  if (!requirePositiveAmount(input.amount)) return { data, salesId: "", error: "금액을 입력해 주세요." };
+  if (!input.sales_date) return { data, salesId: "", error: "날짜를 선택해 주세요." };
+  if (!input.sales_type) return { data, salesId: "", error: "구분을 선택해 주세요." };
+  const createdAt = new Date().toISOString();
+  const record: TodaySalesRecord = {
+    id: localId("today-sale"),
+    business_id: input.business_id || "buyer-1",
+    source: "manual",
+    sales_type: input.sales_type,
+    payment_method: input.payment_method,
+    sales_channel: input.sales_channel,
+    amount: Math.round(input.amount),
+    sales_date: input.sales_date,
+    memo: input.memo?.trim() ?? "",
+    evidence_status: input.evidence_status ?? "not_required",
+    evidence_files_json: input.evidence_files_json ?? "[]",
+    created_by: input.created_by ?? input.business_id ?? "buyer-1",
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+  const nextData = { ...data, sales_records: [record, ...data.sales_records] };
+  saveData(nextData);
+  return { data: nextData, salesId: record.id };
+}
+
+export function updateSalesRecord(data: AppData, salesId: string, patch: Partial<TodaySalesRecordInput>): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData = {
+    ...data,
+    sales_records: data.sales_records.map((record) =>
+      record.id === salesId
+        ? {
+            ...record,
+            ...patch,
+            amount: patch.amount === undefined ? record.amount : Math.max(0, Math.round(patch.amount)),
+            memo: patch.memo ?? record.memo,
+            updated_at: updatedAt,
+          }
+        : record,
+    ),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function deleteSalesRecord(data: AppData, salesId: string): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData = {
+    ...data,
+    sales_records: data.sales_records.map((record) => record.id === salesId ? { ...record, deleted_at: updatedAt, updated_at: updatedAt } : record),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function createExpenseRecord(data: AppData, input: TodayExpenseRecordInput): { data: AppData; expenseId: string; error?: string } {
+  if (!requirePositiveAmount(input.amount)) return { data, expenseId: "", error: "금액을 입력해 주세요." };
+  if (!input.expense_date) return { data, expenseId: "", error: "날짜를 선택해 주세요." };
+  if (!input.expense_type) return { data, expenseId: "", error: "구분을 선택해 주세요." };
+  const createdAt = new Date().toISOString();
+  let recurringRule: TodayRecurringRule | null = null;
+  if (input.is_recurring) {
+    recurringRule = {
+      id: localId("today-recurring"),
+      business_id: input.business_id || "buyer-1",
+      record_type: "expense",
+      title: `${input.expense_type} 반복 지출`,
+      amount: Math.round(input.amount),
+      category: input.expense_type,
+      payment_method: input.payment_method,
+      repeat_type: "monthly",
+      day_of_month: Number(input.expense_date.slice(-2)),
+      start_date: input.expense_date,
+      is_active: true,
+      created_by: input.created_by ?? input.business_id ?? "buyer-1",
+      created_at: createdAt,
+      updated_at: createdAt,
+    };
+  }
+  const record: TodayExpenseRecord = {
+    id: localId("today-expense"),
+    business_id: input.business_id || "buyer-1",
+    expense_type: input.expense_type,
+    payment_method: input.payment_method,
+    vendor_name: input.vendor_name?.trim() ?? "",
+    amount: Math.round(input.amount),
+    expense_date: input.expense_date,
+    memo: input.memo?.trim() ?? "",
+    evidence_status: input.evidence_status ?? "missing",
+    evidence_files_json: input.evidence_files_json ?? "[]",
+    is_recurring: Boolean(input.is_recurring),
+    recurring_rule_id: recurringRule?.id ?? input.recurring_rule_id,
+    created_by: input.created_by ?? input.business_id ?? "buyer-1",
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+  const nextData = {
+    ...data,
+    expense_records: [record, ...data.expense_records],
+    recurring_rules: recurringRule ? [recurringRule, ...data.recurring_rules] : data.recurring_rules,
+  };
+  saveData(nextData);
+  return { data: nextData, expenseId: record.id };
+}
+
+export function updateExpenseRecord(data: AppData, expenseId: string, patch: Partial<TodayExpenseRecordInput>): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData = {
+    ...data,
+    expense_records: data.expense_records.map((record) =>
+      record.id === expenseId
+        ? {
+            ...record,
+            ...patch,
+            amount: patch.amount === undefined ? record.amount : Math.max(0, Math.round(patch.amount)),
+            memo: patch.memo ?? record.memo,
+            vendor_name: patch.vendor_name ?? record.vendor_name,
+            updated_at: updatedAt,
+          }
+        : record,
+    ),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function deleteExpenseRecord(data: AppData, expenseId: string): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData = {
+    ...data,
+    expense_records: data.expense_records.map((record) => record.id === expenseId ? { ...record, deleted_at: updatedAt, updated_at: updatedAt } : record),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function deleteManualPurchaseRecord(data: AppData, purchaseId: string): AppData {
+  const record = data.purchase_records.find((entry) => entry.id === purchaseId);
+  if (!record || record.source === "ssawa" || record.ssawa_deal_id) return data;
+  const updatedAt = new Date().toISOString();
+  const nextData = {
+    ...data,
+    purchase_records: data.purchase_records.map((entry) => entry.id === purchaseId ? { ...entry, deleted_at: updatedAt, updated_at: updatedAt } : entry),
+  };
+  saveData(nextData);
+  return nextData;
 }
 
 export function createAnalysisJob(data: AppData, input: AnalysisJobInput): { data: AppData; analysisId: string } {
@@ -4371,6 +7205,250 @@ export function updateNotificationSettings(data: AppData, userId: string, patch:
   const nextData: AppData = {
     ...data,
     notification_settings: nextSettings.map((entry) => (entry.user_id === userId ? { ...entry, ...patch, updated_at: updatedAt } : entry)),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export const todayNotificationAudienceLabels: Record<TodayNotificationAudience, string> = {
+  buyer: "구매자",
+  supplier: "공급업체",
+  admin: "관리자",
+};
+
+export const todayNotificationStatusLabels: Record<TodayNotificationStatus, string> = {
+  unread: "읽지 않음",
+  read: "읽음",
+  done: "완료",
+  dismissed: "숨김",
+};
+
+export const todayNotificationCategoryLabels: Record<TodayNotificationCategory, string> = {
+  tax: "세무자료",
+  evidence: "증빙",
+  category: "카테고리",
+  cost: "원가",
+  requote: "재견적",
+  upload: "업로드",
+  ai: "AI",
+  sync: "연동",
+  quote: "견적",
+  deal: "거래",
+  settlement: "정산",
+  security: "보안",
+  env: "환경",
+  feedback: "피드백",
+};
+
+export const todayBacklogStatusLabels: Record<TodayBacklogStatus, string> = {
+  new: "신규",
+  triaged: "분류됨",
+  planned: "계획",
+  in_progress: "진행",
+  done: "완료",
+  wont_do: "보류",
+};
+
+export function getTodayNotifications(data: AppData, audience: TodayNotificationAudience, userId: string) {
+  return data.today_notifications
+    .filter((entry) => entry.audience === audience && entry.user_id === userId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export function getTodayUnreadNotificationCount(data: AppData, audience: TodayNotificationAudience, userId: string) {
+  return getTodayNotifications(data, audience, userId).filter((entry) => entry.status === "unread").length;
+}
+
+export function updateTodayNotificationStatus(data: AppData, notificationId: string, status: TodayNotificationStatus): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    today_notifications: data.today_notifications.map((entry) =>
+      entry.id === notificationId
+        ? {
+            ...entry,
+            status,
+            read_at: status === "read" || status === "done" ? entry.read_at ?? updatedAt : entry.read_at,
+            completed_at: status === "done" ? updatedAt : entry.completed_at,
+            dismissed_at: status === "dismissed" ? updatedAt : entry.dismissed_at,
+          }
+        : entry,
+    ),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function markAllTodayNotificationsRead(data: AppData, audience: TodayNotificationAudience, userId: string): AppData {
+  const readAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    today_notifications: data.today_notifications.map((entry) =>
+      entry.audience === audience && entry.user_id === userId && entry.status === "unread"
+        ? { ...entry, status: "read", read_at: readAt }
+        : entry,
+    ),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function updateTodayNotificationPreference(data: AppData, preferenceId: string, patch: Partial<TodayNotificationPreference>): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    today_notification_preferences: data.today_notification_preferences.map((entry) =>
+      entry.id === preferenceId ? { ...entry, ...patch, updated_at: updatedAt } : entry,
+    ),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function updateTodayOnboardingProgress(data: AppData, audience: TodayNotificationAudience, userId: string, stepId: string): AppData {
+  const updatedAt = new Date().toISOString();
+  const existing = data.today_onboarding_progress.find((entry) => entry.audience === audience && entry.user_id === userId);
+  const completed = existing?.completed_step_ids.includes(stepId)
+    ? existing.completed_step_ids.filter((id) => id !== stepId)
+    : [...(existing?.completed_step_ids ?? []), stepId];
+  const nextProgress: TodayOnboardingProgress = {
+    id: existing?.id ?? localId("today-onboarding"),
+    audience,
+    user_id: userId,
+    completed_step_ids: completed,
+    dismissed_guide_ids: existing?.dismissed_guide_ids ?? [],
+    last_opened_at: updatedAt,
+    completed_at: completed.length >= (audience === "admin" ? 4 : 3) ? updatedAt : undefined,
+    updated_at: updatedAt,
+  };
+  const nextData: AppData = {
+    ...data,
+    today_onboarding_progress: existing
+      ? data.today_onboarding_progress.map((entry) => (entry.id === existing.id ? nextProgress : entry))
+      : [nextProgress, ...data.today_onboarding_progress],
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function dismissTodayGuide(data: AppData, audience: TodayNotificationAudience, userId: string, guideId: string): AppData {
+  const updatedAt = new Date().toISOString();
+  const existing = data.today_onboarding_progress.find((entry) => entry.audience === audience && entry.user_id === userId);
+  const dismissed = Array.from(new Set([...(existing?.dismissed_guide_ids ?? []), guideId]));
+  const nextProgress: TodayOnboardingProgress = {
+    id: existing?.id ?? localId("today-onboarding"),
+    audience,
+    user_id: userId,
+    completed_step_ids: existing?.completed_step_ids ?? [],
+    dismissed_guide_ids: dismissed,
+    last_opened_at: updatedAt,
+    completed_at: existing?.completed_at,
+    updated_at: updatedAt,
+  };
+  const nextData: AppData = {
+    ...data,
+    today_onboarding_progress: existing
+      ? data.today_onboarding_progress.map((entry) => (entry.id === existing.id ? nextProgress : entry))
+      : [nextProgress, ...data.today_onboarding_progress],
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function createTodayBetaApplication(data: AppData, input: Omit<TodayBetaApplication, "id" | "status" | "created_at" | "updated_at">): AppData {
+  const createdAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    today_beta_applications: [{
+      ...input,
+      id: localId("today-beta-apply"),
+      status: "submitted",
+      created_at: createdAt,
+      updated_at: createdAt,
+    }, ...data.today_beta_applications],
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function createTodaySupportTicket(data: AppData, input: Omit<TodaySupportTicket, "id" | "status" | "created_at" | "updated_at">): AppData {
+  const createdAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    today_support_tickets: [{
+      ...input,
+      id: localId("today-support"),
+      status: "open",
+      created_at: createdAt,
+      updated_at: createdAt,
+    }, ...data.today_support_tickets],
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function trackTodayProductEvent(data: AppData, input: { user_id?: string; user_role: TodayProductEvent["user_role"]; event_name: TodayProductEventName; page_url: string; metadata?: Record<string, unknown> }): AppData {
+  const safeMetadata = Object.fromEntries(
+    Object.entries(input.metadata ?? {}).filter(([key]) => !/phone|email|token|key|secret|password/i.test(key)),
+  );
+  const nextData: AppData = {
+    ...data,
+    today_product_events: [{
+      id: localId("today-event"),
+      user_id: input.user_id,
+      user_role: input.user_role,
+      event_name: input.event_name,
+      page_url: input.page_url,
+      metadata_json: JSON.stringify(safeMetadata),
+      created_at: new Date().toISOString(),
+    }, ...data.today_product_events],
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function createTodayBetaSurveyResponse(data: AppData, input: Omit<TodayBetaSurveyResponse, "id" | "created_at">): AppData {
+  const createdAt = new Date().toISOString();
+  const surveyId = localId("today-survey");
+  const priority = Math.max(1, Math.round((6 - input.score) + (10 - input.nps_score) / 2));
+  const nextData: AppData = {
+    ...data,
+    today_beta_survey_responses: [{ ...input, id: surveyId, created_at: createdAt }, ...data.today_beta_survey_responses],
+    today_beta_backlog: [{
+      id: localId("today-backlog"),
+      source_type: "survey",
+      source_id: surveyId,
+      title: input.pain_point ? `${input.pain_point} 개선 요청` : "베타 피드백 개선 요청",
+      description: input.comment,
+      user_segment: input.user_role,
+      impact_score: priority,
+      effort_score: 2,
+      priority_score: priority * 2,
+      status: "new",
+      owner: "product",
+      created_at: createdAt,
+      updated_at: createdAt,
+    }, ...data.today_beta_backlog],
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function updateTodayBacklogItem(data: AppData, backlogId: string, patch: Partial<Pick<TodayBetaBacklogItem, "status" | "owner">>): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    today_beta_backlog: data.today_beta_backlog.map((entry) => (entry.id === backlogId ? { ...entry, ...patch, updated_at: updatedAt } : entry)),
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+export function updateTodayLaunchChecklist(data: AppData, itemId: string, status: TodayLaunchChecklistItem["status"]): AppData {
+  const updatedAt = new Date().toISOString();
+  const nextData: AppData = {
+    ...data,
+    today_launch_checklist: data.today_launch_checklist.map((entry) => (entry.id === itemId ? { ...entry, status, updated_at: updatedAt } : entry)),
   };
   saveData(nextData);
   return nextData;
@@ -8065,19 +11143,26 @@ export function createPurchaseRecordFromDeal(dealRecord: Deal, data: AppData, cr
   const supplierName = supplier?.business_name ?? "알 수 없는 업체";
   const dealItems = data.deal_items.filter((entry) => entry.deal_id === dealRecord.id);
   const savings = calculateEstimatedSavings(dealRecord.previous_amount, dealRecord.final_amount);
+  const evidenceStatus = getDealEvidenceStatus(dealRecord, data);
+  const taxStatus: TaxInvoiceStatus = dealRecord.tax_invoice_required ? "requested" : "not_needed";
 
-  return {
+  const record: PurchaseRecord = {
     id: `purchase-${Date.now()}`,
+    business_id: dealRecord.buyer_id,
+    source: "ssawa",
+    source_id: dealRecord.id,
     deal_id: dealRecord.id,
     quote_request_id: dealRecord.quote_request_id,
     buyer_id: dealRecord.buyer_id,
     supplier_id: dealRecord.supplier_id,
     supplier_name: supplierName,
+    supplier_business_id: supplier?.user_id,
     supplier_business_number: supplier?.business_number,
     purchase_title: dealRecord.title,
     purchase_date: createdAt.slice(0, 10),
-    category_name: dealRecord.category_name,
-    accounting_category: getAccountingCategoryFromDeal(dealRecord),
+    category_name: dealRecord.category_name || "미분류",
+    item_summary: summarizeDealItems(dealItems, dealRecord.title),
+    accounting_category: dealRecord.category_name || "미분류",
     sub_category: dealItems[0]?.item_name ?? "",
     item_count: Math.max(1, dealItems.length),
     total_amount: dealRecord.final_amount,
@@ -8089,17 +11174,303 @@ export function createPurchaseRecordFromDeal(dealRecord: Deal, data: AppData, cr
     estimated_savings_rate: savings.rate,
     previous_purchase_amount: dealRecord.previous_amount ?? 0,
     payment_method: dealRecord.payment_method,
-    tax_invoice_status: dealRecord.tax_invoice_required ? "requested" : "none",
+    tax_invoice_status: taxStatus,
     receipt_status: "none",
     delivery_note_status: "pending",
-    accounting_status: "pending",
+    evidence_status: evidenceStatus,
+    evidence_files_json: JSON.stringify(getDealEvidenceFiles(dealRecord, data)),
+    accounting_status: evidenceStatus === "complete" ? "pending" : "hold",
     sync_target: "today_jangsa",
-    memo: "싸와 거래 완료로 생성된 매입자료입니다.",
+    ssawa_deal_id: dealRecord.id,
+    ssawa_quote_request_id: dealRecord.quote_request_id,
+    ssawa_supplier_id: dealRecord.supplier_id,
+    memo: "싸와 거래에서 자동 반영됨",
     user_memo: "",
     admin_memo: "",
+    created_by: dealRecord.buyer_id,
     created_at: createdAt,
     updated_at: createdAt,
   };
+  return applyClassificationToRecord(data, record);
+}
+
+function mapDealToTodayPurchase(dealRecord: Deal, data: AppData, purchaseId: string, createdAt: string): PurchaseRecord {
+  return { ...createPurchaseRecordFromDeal(dealRecord, data, createdAt), id: purchaseId };
+}
+
+function findPurchaseRecordForDeal(data: AppData, dealId: string) {
+  return data.purchase_records.find((entry) => entry.ssawa_deal_id === dealId || entry.source_id === dealId || entry.deal_id === dealId);
+}
+
+function isDealEligibleForTodayPurchase(dealRecord: Deal) {
+  return dealRecord.status === "completed";
+}
+
+function appendSyncLog(data: AppData, logDraft: Omit<TodaySsawaSyncLog, "id">): AppData {
+  const logEntry: TodaySsawaSyncLog = {
+    id: `today-sync-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    ...logDraft,
+  };
+  return {
+    ...data,
+    today_ssawa_sync_logs: [logEntry, ...(data.today_ssawa_sync_logs ?? [])],
+  };
+}
+
+function appendSyncLogResult(
+  data: AppData,
+  input: {
+    businessId: string;
+    dealId: string;
+    purchaseRecordId?: string;
+    action: TodaySsawaSyncLog["action"];
+    logStatus: TodaySsawaSyncLog["status"];
+    resultStatus: SsawaPurchaseSyncStatus;
+    ok: boolean;
+    message: string;
+    errorCode?: string;
+    errorDetail?: string;
+    triggeredBy: TodaySsawaSyncTrigger;
+    triggeredUserId?: string;
+    payload?: Record<string, unknown>;
+    createdAt: string;
+  },
+): SsawaPurchaseSyncResult {
+  const nextData = appendSyncLog(data, {
+    business_id: input.businessId,
+    ssawa_deal_id: input.dealId,
+    purchase_record_id: input.purchaseRecordId,
+    action: input.action,
+    status: input.logStatus,
+    message: input.message,
+    error_code: input.errorCode,
+    error_detail: input.errorDetail,
+    triggered_by: input.triggeredBy,
+    triggered_user_id: input.triggeredUserId,
+    payload_snapshot_json: JSON.stringify(input.payload ?? { dealId: input.dealId }),
+    created_at: input.createdAt,
+  });
+  saveData(nextData);
+  return {
+    data: nextData,
+    ok: input.ok,
+    status: input.resultStatus,
+    purchaseRecordId: input.purchaseRecordId,
+    message: input.message,
+    errorCode: input.errorCode,
+  };
+}
+
+function syncFailure(
+  data: AppData,
+  dealId: string,
+  businessId: string,
+  action: TodaySsawaSyncLog["action"],
+  logStatus: TodaySsawaSyncLog["status"],
+  errorCode: string,
+  message: string,
+  triggeredBy: TodaySsawaSyncTrigger,
+  triggeredUserId: string | undefined,
+  createdAt: string,
+  payload?: Record<string, unknown>,
+): SsawaPurchaseSyncResult {
+  return appendSyncLogResult(data, {
+    businessId: businessId || "unknown",
+    dealId,
+    action,
+    logStatus,
+    resultStatus: "failed",
+    ok: false,
+    message,
+    errorCode,
+    triggeredBy,
+    triggeredUserId,
+    payload,
+    createdAt,
+  });
+}
+
+function snapshotDeal(dealRecord: Deal) {
+  return {
+    id: dealRecord.id,
+    buyer_id: dealRecord.buyer_id,
+    supplier_id: dealRecord.supplier_id,
+    quote_request_id: dealRecord.quote_request_id,
+    status: dealRecord.status,
+    final_amount: dealRecord.final_amount,
+    category_name: dealRecord.category_name,
+    completed_at: dealRecord.completed_at,
+  };
+}
+
+function summarizeDealItems(items: Array<{ item_name: string }>, fallback: string) {
+  if (!items.length) return fallback;
+  const first = items[0]?.item_name || fallback;
+  return items.length > 1 ? `${first} 외 ${items.length - 1}건` : first;
+}
+
+function getDealEvidenceFiles(dealRecord: Deal, data: AppData) {
+  return data.deal_attachments
+    .filter((entry) => entry.deal_id === dealRecord.id)
+    .map((entry) => ({
+      type: entry.attachment_type,
+      file_name: entry.file_name,
+      file_url: entry.file_url,
+      uploaded_by: entry.uploaded_by,
+    }));
+}
+
+function getDealEvidenceStatus(dealRecord: Deal, data: AppData): TodayEvidenceStatus {
+  const attachments = data.deal_attachments.filter((entry) => entry.deal_id === dealRecord.id);
+  if (!attachments.length) return dealRecord.tax_invoice_required ? "needs_review" : "missing";
+  if (attachments.some((entry) => entry.attachment_type === "tax_invoice" || entry.attachment_type === "receipt" || entry.attachment_type === "delivery_note" || entry.attachment_type === "invoice")) {
+    return dealRecord.tax_invoice_required && !attachments.some((entry) => entry.attachment_type === "tax_invoice") ? "needs_review" : "complete";
+  }
+  return "needs_review";
+}
+
+function mapDealToSupplierSale(dealRecord: Deal, data: AppData, recordId: string, createdAt: string): SupplierSalesRecord {
+  const dealItems = data.deal_items.filter((entry) => entry.deal_id === dealRecord.id);
+  const quote = data.quotes.find((entry) => entry.id === dealRecord.selected_quote_id);
+  const buyer = data.profiles.find((entry) => entry.id === dealRecord.buyer_id);
+  const { supplyAmount, vatAmount } = calculateVatAmount(dealRecord.final_amount);
+  return {
+    id: recordId,
+    supplier_business_id: dealRecord.supplier_id,
+    buyer_business_id: dealRecord.buyer_id,
+    buyer_display_name: buyer?.business_name ?? "구매처",
+    source: "ssawa",
+    source_id: dealRecord.id,
+    ssawa_deal_id: dealRecord.id,
+    ssawa_quote_request_id: dealRecord.quote_request_id,
+    ssawa_quote_id: quote?.id ?? dealRecord.selected_quote_id,
+    item_summary: summarizeDealItems(dealItems, dealRecord.title),
+    category: dealRecord.category_name || "기타",
+    total_amount: dealRecord.final_amount,
+    supply_amount: supplyAmount,
+    vat_amount: vatAmount,
+    payment_method: mapSupplierSalePaymentMethod(dealRecord.payment_method),
+    sale_status: mapSupplierSaleStatus(dealRecord.status),
+    settlement_status: mapSupplierSettlementStatus(dealRecord),
+    tax_invoice_status: mapSupplierTaxInvoiceStatus(dealRecord),
+    evidence_status: getDealEvidenceStatus(dealRecord, data),
+    sold_at: dealRecord.completed_at?.slice(0, 10) ?? dealRecord.confirmed_delivery_date ?? createdAt.slice(0, 10),
+    completed_at: dealRecord.completed_at ?? undefined,
+    settled_at: dealRecord.status === "completed" && dealRecord.payment_method !== "later" ? dealRecord.completed_at ?? createdAt : undefined,
+    memo: "싸와 거래에서 공급업체 매출로 정리했습니다.",
+    created_by: "system",
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+}
+
+function findSupplierSalesRecordForDeal(data: AppData, dealId: string, supplierBusinessId: string) {
+  return data.supplier_sales_records.find((entry) =>
+    entry.supplier_business_id === supplierBusinessId
+    && (entry.ssawa_deal_id === dealId || entry.source_id === dealId),
+  );
+}
+
+function isDealEligibleForSupplierSale(dealRecord: Deal) {
+  return dealRecord.status === "confirmed" || dealRecord.status === "preparing" || dealRecord.status === "delivering" || dealRecord.status === "delivered" || dealRecord.status === "completed";
+}
+
+function mapSupplierSaleStatus(status: DealStatus): SupplierSalesRecord["sale_status"] {
+  if (status === "completed" || status === "closed") return "completed";
+  if (status === "disputed") return "disputed";
+  if (status.includes("cancelled")) return "cancelled";
+  if (status === "pending_confirmation") return "pending";
+  if (status === "confirmed" || status === "preparing" || status === "delivering" || status === "delivered") return "confirmed";
+  return "needs_review";
+}
+
+function mapSupplierSettlementStatus(dealRecord: Deal): SupplierSalesRecord["settlement_status"] {
+  if (dealRecord.status === "disputed" || dealRecord.status.includes("cancelled")) return "needs_review";
+  if (dealRecord.payment_method === "bank_transfer" || dealRecord.payment_method === "cash") return "not_applicable";
+  if (dealRecord.status === "completed" && dealRecord.payment_method !== "later") return "paid";
+  if (dealRecord.status === "completed") return "scheduled";
+  if (dealRecord.payment_method === "later") return "pending";
+  return "scheduled";
+}
+
+function mapSupplierSalePaymentMethod(paymentMethod: PaymentMethod): SupplierSalesRecord["payment_method"] {
+  if (paymentMethod === "bank_transfer") return "bank_transfer";
+  if (paymentMethod === "card") return "card";
+  if (paymentMethod === "cash") return "direct";
+  if (paymentMethod === "later") return "direct";
+  return "unknown";
+}
+
+function mapSupplierTaxInvoiceStatus(dealRecord: Deal): SupplierTaxInvoiceStatus {
+  if (!dealRecord.tax_invoice_required) return "not_needed";
+  if (dealRecord.status === "completed" && dealRecord.tax_invoice_available) return "issued";
+  if (dealRecord.tax_invoice_available) return "required";
+  return "unknown";
+}
+
+function appendSupplierSyncLog(data: AppData, logDraft: Omit<TodaySupplierSyncLog, "id">): AppData {
+  const logEntry: TodaySupplierSyncLog = {
+    id: `supplier-sync-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    ...logDraft,
+  };
+  return {
+    ...data,
+    today_supplier_sync_logs: [logEntry, ...(data.today_supplier_sync_logs ?? [])],
+  };
+}
+
+function appendSupplierSyncLogResult(
+  data: AppData,
+  input: {
+    supplierBusinessId: string;
+    buyerBusinessId?: string;
+    dealId?: string;
+    supplierSaleRecordId?: string;
+    action: TodaySupplierSyncLog["action"];
+    logStatus: TodaySupplierSyncLog["status"];
+    resultStatus: SupplierSaleSyncStatus;
+    ok: boolean;
+    message: string;
+    errorCode?: string;
+    errorDetail?: string;
+    triggeredBy: TodaySupplierSyncTrigger;
+    triggeredUserId?: string;
+    payload?: Record<string, unknown>;
+    createdAt: string;
+  },
+): SupplierSaleSyncResult {
+  const nextData = appendSupplierSyncLog(data, {
+    supplier_business_id: input.supplierBusinessId,
+    buyer_business_id: input.buyerBusinessId,
+    ssawa_deal_id: input.dealId,
+    supplier_sales_record_id: input.supplierSaleRecordId,
+    action: input.action,
+    status: input.logStatus,
+    message: input.message,
+    error_code: input.errorCode,
+    error_detail: input.errorDetail,
+    triggered_by: input.triggeredBy,
+    triggered_user_id: input.triggeredUserId,
+    payload_snapshot_json: JSON.stringify(input.payload ?? { dealId: input.dealId }),
+    created_at: input.createdAt,
+  });
+  saveData(nextData);
+  return {
+    data: nextData,
+    ok: input.ok,
+    status: input.resultStatus,
+    supplierSaleRecordId: input.supplierSaleRecordId,
+    message: input.message,
+    errorCode: input.errorCode,
+  };
+}
+
+export function categorizeSsawaPurchase(items: string[], requestCategory = "", supplier?: SupplierProfile) {
+  const source = normalizeCategoryText(`${requestCategory} ${items.join(" ")} ${(supplier?.categories ?? []).join(" ")}`);
+  const direct = directCategoryMatch(source);
+  if (direct && direct !== "미분류") return direct;
+  const rule = defaultTodayCategoryRules.find((entry) => splitRulePattern(entry.pattern).some((pattern) => source.includes(pattern)));
+  return rule?.category_name ?? "미분류";
 }
 
 function createPurchaseRecordItemsFromDeal(dealRecord: Deal, data: AppData, purchaseId: string, createdAt: string): PurchaseRecordItem[] {
@@ -8171,90 +11542,136 @@ function createAccountingEntryFromPurchaseRecord(record: PurchaseRecord, created
 }
 
 function normalizeData(data: Partial<AppData>): AppData {
+  const fallbackData = baseInitialData();
+  const requiredProfiles = appConfig.enableDemoData ? testProfiles : [];
+  const requiredSupplierProfiles = appConfig.enableDemoData ? testSupplierProfiles : [];
   const merged: AppData = {
-    ...initialData,
+    ...fallbackData,
     ...data,
-    environment: data.environment ?? initialData.environment,
-    is_demo: data.is_demo ?? initialData.is_demo,
-    demo_label: data.demo_label ?? initialData.demo_label,
-    onboarding_completed: data.onboarding_completed ?? initialData.onboarding_completed,
-    onboarding_completed_at: data.onboarding_completed_at ?? initialData.onboarding_completed_at,
-    profiles: mergeRequiredRecords(data.profiles ?? initialData.profiles, testProfiles),
-    categories: data.categories ?? initialData.categories,
-    quote_requests: normalizeQuoteRequests(data.quote_requests ?? initialData.quote_requests, data.categories ?? initialData.categories),
-    quote_request_items: data.quote_request_items ?? initialData.quote_request_items,
-    supplier_profiles: mergeRequiredRecords(data.supplier_profiles ?? initialData.supplier_profiles, testSupplierProfiles),
-    supplier_documents: data.supplier_documents ?? initialData.supplier_documents,
-    supplier_stats: data.supplier_stats ?? initialData.supplier_stats,
-    supplier_reviews: data.supplier_reviews ?? initialData.supplier_reviews,
-    product_categories: data.product_categories ?? initialData.product_categories,
-    supplier_store_profiles: data.supplier_store_profiles ?? initialData.supplier_store_profiles,
-    supplier_products: data.supplier_products ?? initialData.supplier_products,
-    product_inquiries: data.product_inquiries ?? initialData.product_inquiries,
-    product_order_requests: data.product_order_requests ?? initialData.product_order_requests,
-    product_favorites: data.product_favorites ?? initialData.product_favorites,
-    product_quote_items: data.product_quote_items ?? initialData.product_quote_items,
-    product_reports: data.product_reports ?? initialData.product_reports,
-    quotes: data.quotes ?? initialData.quotes,
-    quote_attachments: data.quote_attachments ?? initialData.quote_attachments,
-    deals: data.deals ?? initialData.deals,
-    deal_items: data.deal_items ?? initialData.deal_items,
-    deal_attachments: data.deal_attachments ?? initialData.deal_attachments,
-    purchase_records: (data.purchase_records ?? initialData.purchase_records).map(normalizePurchaseRecord),
-    purchase_record_items: data.purchase_record_items ?? initialData.purchase_record_items,
-    purchase_documents: data.purchase_documents ?? initialData.purchase_documents,
-    accounting_entries: data.accounting_entries ?? initialData.accounting_entries,
-    analysis_jobs: data.analysis_jobs ?? initialData.analysis_jobs,
-    analysis_items: data.analysis_items ?? initialData.analysis_items,
-    analysis_attachments: data.analysis_attachments ?? initialData.analysis_attachments,
-    analysis_raw_results: data.analysis_raw_results ?? initialData.analysis_raw_results,
-    analysis_conversions: data.analysis_conversions ?? initialData.analysis_conversions,
-    notifications: data.notifications ?? initialData.notifications,
-    notification_events: data.notification_events ?? initialData.notification_events,
-    notification_settings: data.notification_settings ?? initialData.notification_settings,
-    message_threads: data.message_threads ?? initialData.message_threads,
-    messages: data.messages ?? initialData.messages,
-    message_read_states: data.message_read_states ?? initialData.message_read_states,
-    message_reports: data.message_reports ?? initialData.message_reports,
-    commission_policies: data.commission_policies ?? initialData.commission_policies,
-    platform_fees: data.platform_fees ?? initialData.platform_fees,
-    supplier_plans: data.supplier_plans ?? initialData.supplier_plans,
-    supplier_subscriptions: data.supplier_subscriptions ?? initialData.supplier_subscriptions,
-    supplier_usage: data.supplier_usage ?? initialData.supplier_usage,
-    quote_participation_credits: data.quote_participation_credits ?? initialData.quote_participation_credits,
-    settlements: data.settlements ?? initialData.settlements,
-    settlement_items: data.settlement_items ?? initialData.settlement_items,
-    billing_events: data.billing_events ?? initialData.billing_events,
-    billing_accounts: data.billing_accounts ?? initialData.billing_accounts,
-    reports: data.reports ?? initialData.reports,
-    report_attachments: data.report_attachments ?? initialData.report_attachments,
-    report_actions: data.report_actions ?? initialData.report_actions,
-    report_comments: data.report_comments ?? initialData.report_comments,
-    reviews: data.reviews ?? initialData.reviews,
-    review_replies: data.review_replies ?? initialData.review_replies,
-    review_reports: data.review_reports ?? initialData.review_reports,
-    supplier_reputation_scores: data.supplier_reputation_scores ?? initialData.supplier_reputation_scores,
-    user_sanctions: data.user_sanctions ?? initialData.user_sanctions,
-    blacklist_entries: data.blacklist_entries ?? initialData.blacklist_entries,
-    business_verifications: data.business_verifications ?? initialData.business_verifications,
-    business_manual_review_requests: data.business_manual_review_requests ?? initialData.business_manual_review_requests,
-    feedbacks: data.feedbacks ?? initialData.feedbacks,
-    qa_checklists: data.qa_checklists ?? initialData.qa_checklists,
-    beta_targets: data.beta_targets ?? initialData.beta_targets,
-    beta_participants: data.beta_participants ?? initialData.beta_participants,
-    sales_leads: data.sales_leads ?? initialData.sales_leads,
-    sales_activities: data.sales_activities ?? initialData.sales_activities,
-    beta_experiments: data.beta_experiments ?? initialData.beta_experiments,
-    beta_feedback_insights: data.beta_feedback_insights ?? initialData.beta_feedback_insights,
-    operator_tasks: data.operator_tasks ?? initialData.operator_tasks,
-    business_validation_reports: data.business_validation_reports ?? initialData.business_validation_reports,
-    focus_settings: data.focus_settings ?? initialData.focus_settings,
-    feature_flags: data.feature_flags ?? initialData.feature_flags,
-    favorite_item_groups: data.favorite_item_groups ?? initialData.favorite_item_groups,
-    favorite_items: data.favorite_items ?? initialData.favorite_items,
-    category_playbooks: data.category_playbooks ?? initialData.category_playbooks,
-    roadmap_items: data.roadmap_items ?? initialData.roadmap_items,
-    deal_status_logs: data.deal_status_logs ?? initialData.deal_status_logs,
+    environment: data.environment ?? fallbackData.environment,
+    is_demo: data.is_demo ?? fallbackData.is_demo,
+    demo_label: data.demo_label ?? fallbackData.demo_label,
+    onboarding_completed: data.onboarding_completed ?? fallbackData.onboarding_completed,
+    onboarding_completed_at: data.onboarding_completed_at ?? fallbackData.onboarding_completed_at,
+    profiles: mergeRequiredRecords(data.profiles ?? fallbackData.profiles, requiredProfiles),
+    categories: data.categories ?? fallbackData.categories,
+    quote_requests: normalizeQuoteRequests(data.quote_requests ?? fallbackData.quote_requests, data.categories ?? fallbackData.categories),
+    quote_request_items: data.quote_request_items ?? fallbackData.quote_request_items,
+    supplier_profiles: mergeRequiredRecords(data.supplier_profiles ?? fallbackData.supplier_profiles, requiredSupplierProfiles),
+    supplier_documents: data.supplier_documents ?? fallbackData.supplier_documents,
+    supplier_stats: data.supplier_stats ?? fallbackData.supplier_stats,
+    supplier_reviews: data.supplier_reviews ?? fallbackData.supplier_reviews,
+    product_categories: data.product_categories ?? fallbackData.product_categories,
+    supplier_store_profiles: data.supplier_store_profiles ?? fallbackData.supplier_store_profiles,
+    supplier_products: data.supplier_products ?? fallbackData.supplier_products,
+    product_inquiries: data.product_inquiries ?? fallbackData.product_inquiries,
+    product_order_requests: data.product_order_requests ?? fallbackData.product_order_requests,
+    product_favorites: data.product_favorites ?? fallbackData.product_favorites,
+    product_quote_items: data.product_quote_items ?? fallbackData.product_quote_items,
+    product_reports: data.product_reports ?? fallbackData.product_reports,
+    quotes: data.quotes ?? fallbackData.quotes,
+    quote_attachments: data.quote_attachments ?? fallbackData.quote_attachments,
+    deals: data.deals ?? fallbackData.deals,
+    deal_items: data.deal_items ?? fallbackData.deal_items,
+    deal_attachments: data.deal_attachments ?? fallbackData.deal_attachments,
+    purchase_records: (data.purchase_records ?? fallbackData.purchase_records).map(normalizePurchaseRecord),
+    purchase_record_items: data.purchase_record_items ?? fallbackData.purchase_record_items,
+    purchase_documents: data.purchase_documents ?? fallbackData.purchase_documents,
+    tax_documents: (data.tax_documents ?? fallbackData.tax_documents).map(normalizeTaxDocument),
+    tax_document_checks: data.tax_document_checks ?? fallbackData.tax_document_checks,
+    tax_export_requests: data.tax_export_requests ?? fallbackData.tax_export_requests,
+    supplier_sales_records: (data.supplier_sales_records ?? fallbackData.supplier_sales_records).map(normalizeSupplierSalesRecord),
+    today_supplier_sync_logs: data.today_supplier_sync_logs ?? fallbackData.today_supplier_sync_logs,
+    sales_records: (data.sales_records ?? fallbackData.sales_records).map(normalizeTodaySalesRecord),
+    expense_records: (data.expense_records ?? fallbackData.expense_records).map(normalizeTodayExpenseRecord),
+    recurring_rules: data.recurring_rules ?? fallbackData.recurring_rules,
+    today_categories: data.today_categories ?? fallbackData.today_categories,
+    today_category_rules: data.today_category_rules ?? fallbackData.today_category_rules,
+    today_category_classification_logs: data.today_category_classification_logs ?? fallbackData.today_category_classification_logs,
+    today_ssawa_sync_logs: data.today_ssawa_sync_logs ?? fallbackData.today_ssawa_sync_logs,
+    accounting_entries: data.accounting_entries ?? fallbackData.accounting_entries,
+    analysis_jobs: data.analysis_jobs ?? fallbackData.analysis_jobs,
+    analysis_items: data.analysis_items ?? fallbackData.analysis_items,
+    analysis_attachments: data.analysis_attachments ?? fallbackData.analysis_attachments,
+    analysis_raw_results: data.analysis_raw_results ?? fallbackData.analysis_raw_results,
+    analysis_conversions: data.analysis_conversions ?? fallbackData.analysis_conversions,
+    notifications: data.notifications ?? fallbackData.notifications,
+    notification_events: data.notification_events ?? fallbackData.notification_events,
+    notification_settings: data.notification_settings ?? fallbackData.notification_settings,
+    message_threads: data.message_threads ?? fallbackData.message_threads,
+    messages: data.messages ?? fallbackData.messages,
+    message_read_states: data.message_read_states ?? fallbackData.message_read_states,
+    message_reports: data.message_reports ?? fallbackData.message_reports,
+    commission_policies: data.commission_policies ?? fallbackData.commission_policies,
+    platform_fees: data.platform_fees ?? fallbackData.platform_fees,
+    supplier_plans: data.supplier_plans ?? fallbackData.supplier_plans,
+    supplier_subscriptions: data.supplier_subscriptions ?? fallbackData.supplier_subscriptions,
+    supplier_usage: data.supplier_usage ?? fallbackData.supplier_usage,
+    quote_participation_credits: data.quote_participation_credits ?? fallbackData.quote_participation_credits,
+    settlements: data.settlements ?? fallbackData.settlements,
+    settlement_items: data.settlement_items ?? fallbackData.settlement_items,
+    billing_events: data.billing_events ?? fallbackData.billing_events,
+    billing_accounts: data.billing_accounts ?? fallbackData.billing_accounts,
+    reports: data.reports ?? fallbackData.reports,
+    report_attachments: data.report_attachments ?? fallbackData.report_attachments,
+    report_actions: data.report_actions ?? fallbackData.report_actions,
+    report_comments: data.report_comments ?? fallbackData.report_comments,
+    reviews: data.reviews ?? fallbackData.reviews,
+    review_replies: data.review_replies ?? fallbackData.review_replies,
+    review_reports: data.review_reports ?? fallbackData.review_reports,
+    supplier_reputation_scores: data.supplier_reputation_scores ?? fallbackData.supplier_reputation_scores,
+    user_sanctions: data.user_sanctions ?? fallbackData.user_sanctions,
+    blacklist_entries: data.blacklist_entries ?? fallbackData.blacklist_entries,
+    business_verifications: data.business_verifications ?? fallbackData.business_verifications,
+    business_manual_review_requests: data.business_manual_review_requests ?? fallbackData.business_manual_review_requests,
+    feedbacks: data.feedbacks ?? fallbackData.feedbacks,
+    qa_checklists: data.qa_checklists ?? fallbackData.qa_checklists,
+    beta_targets: data.beta_targets ?? fallbackData.beta_targets,
+    beta_participants: data.beta_participants ?? fallbackData.beta_participants,
+    sales_leads: data.sales_leads ?? fallbackData.sales_leads,
+    sales_activities: data.sales_activities ?? fallbackData.sales_activities,
+    beta_experiments: data.beta_experiments ?? fallbackData.beta_experiments,
+    beta_feedback_insights: data.beta_feedback_insights ?? fallbackData.beta_feedback_insights,
+    operator_tasks: data.operator_tasks ?? fallbackData.operator_tasks,
+    business_validation_reports: data.business_validation_reports ?? fallbackData.business_validation_reports,
+    focus_settings: data.focus_settings ?? fallbackData.focus_settings,
+    feature_flags: data.feature_flags ?? fallbackData.feature_flags,
+    favorite_item_groups: data.favorite_item_groups ?? fallbackData.favorite_item_groups,
+    favorite_items: data.favorite_items ?? fallbackData.favorite_items,
+    category_playbooks: data.category_playbooks ?? fallbackData.category_playbooks,
+    roadmap_items: data.roadmap_items ?? fallbackData.roadmap_items,
+    deal_status_logs: data.deal_status_logs ?? fallbackData.deal_status_logs,
+    today_requote_recommendations: data.today_requote_recommendations ?? fallbackData.today_requote_recommendations,
+    today_ssawa_quote_drafts: data.today_ssawa_quote_drafts ?? fallbackData.today_ssawa_quote_drafts,
+    today_requote_logs: data.today_requote_logs ?? fallbackData.today_requote_logs,
+    today_upload_batches: data.today_upload_batches ?? fallbackData.today_upload_batches,
+    today_upload_rows: data.today_upload_rows ?? fallbackData.today_upload_rows,
+    today_upload_column_mappings: data.today_upload_column_mappings ?? fallbackData.today_upload_column_mappings,
+    today_upload_logs: data.today_upload_logs ?? fallbackData.today_upload_logs,
+    supplier_product_events: data.supplier_product_events ?? fallbackData.supplier_product_events,
+    supplier_today_insights: data.supplier_today_insights ?? fallbackData.supplier_today_insights,
+    supplier_tasks: data.supplier_tasks ?? fallbackData.supplier_tasks,
+    today_ai_conversations: data.today_ai_conversations ?? fallbackData.today_ai_conversations,
+    today_ai_messages: data.today_ai_messages ?? fallbackData.today_ai_messages,
+    today_ai_insights: data.today_ai_insights ?? fallbackData.today_ai_insights,
+    today_ai_usage: data.today_ai_usage ?? fallbackData.today_ai_usage,
+    today_security_events: data.today_security_events ?? fallbackData.today_security_events,
+    admin_today_actions: data.admin_today_actions ?? fallbackData.admin_today_actions,
+    today_admin_settings: data.today_admin_settings ?? fallbackData.today_admin_settings,
+    today_notifications: data.today_notifications ?? fallbackData.today_notifications,
+    today_notification_preferences: data.today_notification_preferences ?? fallbackData.today_notification_preferences,
+    today_reminder_rules: data.today_reminder_rules ?? fallbackData.today_reminder_rules,
+    today_notification_delivery_logs: data.today_notification_delivery_logs ?? fallbackData.today_notification_delivery_logs,
+    today_onboarding_progress: data.today_onboarding_progress ?? fallbackData.today_onboarding_progress,
+    today_help_articles: data.today_help_articles ?? fallbackData.today_help_articles,
+    today_launch_checklist: data.today_launch_checklist ?? fallbackData.today_launch_checklist,
+    today_pricing_plans: data.today_pricing_plans ?? fallbackData.today_pricing_plans,
+    today_beta_applications: data.today_beta_applications ?? fallbackData.today_beta_applications,
+    today_support_tickets: data.today_support_tickets ?? fallbackData.today_support_tickets,
+    today_product_events: data.today_product_events ?? fallbackData.today_product_events,
+    today_beta_survey_responses: data.today_beta_survey_responses ?? fallbackData.today_beta_survey_responses,
+    today_beta_backlog: data.today_beta_backlog ?? fallbackData.today_beta_backlog,
+    today_beta_segments: data.today_beta_segments ?? fallbackData.today_beta_segments,
   };
 
   saveData(merged);
@@ -8279,13 +11696,89 @@ function normalizeQuoteRequests(records: QuoteRequest[], categoryRecords: Catego
   });
 }
 
+function normalizeTaxDocument(record: TaxDocument): TaxDocument {
+  return {
+    ...record,
+    document_type: record.document_type ?? "etc",
+    document_name: record.document_name ?? "증빙자료",
+    status: record.status ?? "needs_review",
+    file_path: record.file_path ?? `tax-documents/${record.business_id}/unknown/${record.id}`,
+    memo: record.memo ?? "",
+    updated_at: record.updated_at ?? record.created_at,
+  };
+}
+
+function normalizeSupplierSalesRecord(record: SupplierSalesRecord): SupplierSalesRecord {
+  const vat = calculateVatAmount(record.total_amount ?? 0);
+  return {
+    ...record,
+    source: record.source ?? "ssawa",
+    source_id: record.source_id ?? record.ssawa_deal_id ?? record.id,
+    buyer_display_name: record.buyer_display_name ?? "구매처",
+    item_summary: record.item_summary ?? "판매 내역",
+    category: record.category ?? "기타",
+    total_amount: Math.max(0, Math.round(record.total_amount ?? 0)),
+    supply_amount: record.supply_amount ?? vat.supplyAmount,
+    vat_amount: record.vat_amount ?? vat.vatAmount,
+    payment_method: record.payment_method ?? "unknown",
+    sale_status: record.sale_status ?? "needs_review",
+    settlement_status: record.settlement_status ?? "pending",
+    tax_invoice_status: record.tax_invoice_status ?? "unknown",
+    evidence_status: record.evidence_status ?? "needs_review",
+    sold_at: record.sold_at ?? record.created_at?.slice(0, 10) ?? "2026-07-06",
+    memo: record.memo ?? "",
+    created_at: record.created_at ?? new Date().toISOString(),
+    updated_at: record.updated_at ?? record.created_at ?? new Date().toISOString(),
+  };
+}
+
+function normalizeTodaySalesRecord(record: TodaySalesRecord): TodaySalesRecord {
+  return {
+    ...record,
+    source: record.source ?? "manual",
+    payment_method: record.payment_method ?? "unknown",
+    sales_channel: record.sales_channel ?? "store",
+    amount: Math.max(0, Math.round(record.amount ?? 0)),
+    memo: record.memo ?? "",
+    evidence_status: record.evidence_status ?? "not_required",
+    evidence_files_json: record.evidence_files_json ?? "[]",
+    created_by: record.created_by ?? record.business_id,
+  };
+}
+
+function normalizeTodayExpenseRecord(record: TodayExpenseRecord): TodayExpenseRecord {
+  return {
+    ...record,
+    payment_method: record.payment_method ?? "unknown",
+    vendor_name: record.vendor_name ?? "",
+    amount: Math.max(0, Math.round(record.amount ?? 0)),
+    memo: record.memo ?? "",
+    evidence_status: record.evidence_status ?? "missing",
+    evidence_files_json: record.evidence_files_json ?? "[]",
+    is_recurring: record.is_recurring ?? false,
+    created_by: record.created_by ?? record.business_id,
+  };
+}
+
 function normalizePurchaseRecord(record: PurchaseRecord): PurchaseRecord {
   const fallbackVat = calculateVatAmount(record.total_amount);
   return {
     ...record,
+    business_id: record.business_id ?? record.buyer_id,
+    source: record.source ?? (record.deal_id ? "ssawa" : "manual"),
+    source_id: record.source_id ?? record.deal_id ?? record.id,
+    supplier_business_id: record.supplier_business_id ?? record.supplier_id,
     purchase_title: record.purchase_title ?? record.memo ?? "구매내역",
     category_name: record.category_name ?? "기타",
     accounting_category: record.accounting_category ?? record.category_name ?? "자재구매",
+    item_summary: record.item_summary ?? record.sub_category ?? record.purchase_title ?? "매입 내역",
+    auto_category: record.auto_category ?? record.accounting_category ?? record.category_name ?? "미분류",
+    category_confidence: record.category_confidence ?? (record.accounting_category === "미분류" ? 0.45 : 0.72),
+    category_reason: record.category_reason ?? "기존 매입 데이터를 기준으로 기본 분류했습니다.",
+    category_needs_review: record.category_needs_review ?? (record.accounting_category === "미분류" || record.category_name === "기타"),
+    category_confirmed_by_user: record.category_confirmed_by_user ?? false,
+    category_confirmed_at: record.category_confirmed_at,
+    category_rule_id: record.category_rule_id,
     item_count: record.item_count ?? 1,
     supply_amount: record.supply_amount ?? fallbackVat.supplyAmount,
     vat_amount: record.vat_amount ?? fallbackVat.vatAmount,
@@ -8295,7 +11788,13 @@ function normalizePurchaseRecord(record: PurchaseRecord): PurchaseRecord {
     estimated_savings_rate: record.estimated_savings_rate ?? 0,
     receipt_status: record.receipt_status ?? "none",
     delivery_note_status: record.delivery_note_status ?? "none",
+    evidence_status: record.evidence_status ?? (record.receipt_status === "none" && record.delivery_note_status === "none" ? "missing" : "needs_review"),
+    evidence_files_json: record.evidence_files_json ?? "[]",
     sync_target: record.sync_target ?? "today_jangsa",
+    ssawa_deal_id: record.ssawa_deal_id ?? record.deal_id,
+    ssawa_quote_request_id: record.ssawa_quote_request_id ?? record.quote_request_id,
+    ssawa_supplier_id: record.ssawa_supplier_id ?? record.supplier_id,
+    created_by: record.created_by ?? record.buyer_id,
     user_memo: record.user_memo ?? "",
     admin_memo: record.admin_memo ?? "",
   };

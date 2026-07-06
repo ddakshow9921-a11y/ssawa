@@ -2463,6 +2463,947 @@ code {
   white-space: nowrap;
 }
 
+.miniRow.static {
+  cursor: default;
+}
+
+.miniRow small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.todayShell {
+  display: grid;
+  gap: 20px;
+}
+
+.todayHero,
+.todayLinkPanel,
+.todayFormulaPanel {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(16, 32, 51, 0.05);
+}
+
+.todayHero {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-color: var(--orange-line);
+  background: linear-gradient(135deg, #fff7f2, #ffffff);
+}
+
+.todayHero h1,
+.todayLinkPanel h2,
+.todayFormulaPanel h2 {
+  margin: 0;
+  color: var(--navy);
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.todayHero h1 {
+  font-size: 32px;
+}
+
+.todayHero p,
+.todayLinkPanel p,
+.todayFormulaPanel p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.58;
+}
+
+.todayHeroActions,
+.todayLinkPanel .formActions {
+  justify-content: flex-end;
+}
+
+.todayNav {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.todayNavButton {
+  min-width: 0;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--charcoal);
+  font-weight: 850;
+}
+
+.todayNavButton span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todayNavButton.active {
+  color: var(--orange);
+  border-color: var(--orange-line);
+  background: var(--orange-soft);
+}
+
+.todayLinkPanel {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.todayFormulaPanel {
+  margin-top: 4px;
+}
+
+.todayFormulaGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.todayFormulaGrid span,
+.todayFormulaGrid strong {
+  min-height: 58px;
+  display: grid;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--navy);
+  font-weight: 900;
+}
+
+.todayFormulaGrid strong {
+  color: #ffffff;
+  background: var(--navy);
+}
+
+.todayPeriodPicker {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.todayCustomRange {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.todayCustomRange label {
+  display: grid;
+  gap: 5px;
+  min-width: 160px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.todayCustomRange input {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  font: inherit;
+}
+
+.todayProfitHero {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 24px;
+  border: 1px solid var(--orange-line);
+  border-radius: 8px;
+  background: #fff7f2;
+}
+
+.todayProfitHero strong {
+  color: var(--navy);
+  font-size: 36px;
+  line-height: 1.08;
+}
+
+.todayProfitHero p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.compactMetrics {
+  margin-top: 18px;
+}
+
+.todayComparisonGrid,
+.todayInsightGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.todayInsightGrid.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.todayDeltaCard,
+.todayInsightCard {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.todayDeltaCard span,
+.todayInsightCard span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.todayDeltaCard strong {
+  color: var(--navy);
+  font-size: 20px;
+}
+
+.todayDeltaCard small,
+.todayInsightCard p {
+  margin: 0;
+  color: var(--charcoal);
+  line-height: 1.45;
+}
+
+.todayDeltaCard.negative,
+.todayInsightCard.high {
+  border-color: rgba(190, 72, 52, 0.28);
+  background: #fff8f6;
+}
+
+.todayDeltaCard.positive,
+.todayInsightCard.low {
+  border-color: rgba(18, 128, 92, 0.24);
+  background: #f6fffb;
+}
+
+.todayInsightCard.medium {
+  border-color: var(--orange-line);
+  background: var(--orange-soft);
+}
+
+.todayInsightHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.uploadDropPanel {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  min-height: 190px;
+  margin-top: 16px;
+  padding: 24px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.uploadDropPanel h3,
+.uploadDropPanel p {
+  margin: 0;
+}
+
+.uploadMappingGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.uploadMappingGrid label {
+  min-width: 0;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: var(--charcoal);
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.statusPill.valid,
+.statusPill.ready_to_import,
+.statusPill.imported {
+  background: #e7f8ef;
+  color: #11613f;
+}
+
+.statusPill.warning,
+.statusPill.mapping_needed,
+.statusPill.partially_imported {
+  background: #fff4d8;
+  color: #7a4b00;
+}
+
+.statusPill.invalid,
+.statusPill.duplicate,
+.statusPill.failed {
+  background: #ffe8e3;
+  color: #96351f;
+}
+
+.statusPill.cancelled,
+.statusPill.skipped {
+  background: #f1f5f9;
+  color: var(--muted);
+}
+
+.uploadPreviewTable select {
+  min-width: 104px;
+}
+
+.taskList {
+  display: grid;
+  gap: 10px;
+}
+
+.taskRow {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.taskRow:hover {
+  border-color: var(--navy);
+  background: #f8fafc;
+}
+
+.taskRow span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.aiSummaryCard {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(36, 99, 235, 0.18);
+  border-radius: 8px;
+  background: #f8fbff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.aiSummaryCard.compact {
+  gap: 12px;
+}
+
+.aiSummaryHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aiSummaryHead strong {
+  color: var(--navy);
+  font-size: 18px;
+}
+
+.aiSummaryCard p {
+  margin: 0;
+  color: var(--charcoal);
+  line-height: 1.55;
+}
+
+.aiSummaryCard small,
+.aiAnswerCard small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.aiEvidenceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.aiEvidenceGrid span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--charcoal);
+  font-size: 13px;
+}
+
+.aiEvidenceGrid b {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.aiHeroPanel {
+  align-items: center;
+  border-color: rgba(36, 99, 235, 0.16);
+  background: #f8fbff;
+}
+
+.aiModeBadge {
+  display: grid;
+  gap: 4px;
+  min-width: 128px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  text-align: right;
+}
+
+.aiModeBadge strong {
+  color: var(--navy);
+  text-transform: uppercase;
+}
+
+.aiModeBadge span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.aiChatPanel {
+  display: grid;
+  gap: 14px;
+}
+
+.aiQuestionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.aiQuestionChips button {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--charcoal);
+  font-weight: 800;
+}
+
+.aiQuestionChips button:hover {
+  border-color: rgba(36, 99, 235, 0.35);
+  color: var(--navy);
+}
+
+.aiAskForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.aiAskForm input {
+  min-width: 0;
+}
+
+.aiAnswerList {
+  display: grid;
+  gap: 12px;
+}
+
+.aiAnswerCard {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.aiAnswerCard.blocked {
+  border-color: rgba(190, 72, 52, 0.28);
+  background: #fff8f6;
+}
+
+.aiAnswerMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.aiAnswerCard p {
+  margin: 0;
+  color: var(--charcoal);
+  line-height: 1.55;
+}
+
+.todayAdminNav {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 6px 0 10px;
+}
+
+.todayAdminNav button {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--charcoal);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-weight: 800;
+}
+
+.todayAdminNav button.active {
+  border-color: var(--orange-line);
+  background: var(--orange-soft);
+  color: var(--orange);
+}
+
+.todayAdminStatusPanel,
+.todayAdminPagePanel,
+.todayAdminAlert,
+.todayAdminSettingCard {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.todayAdminStatusPanel {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px;
+}
+
+.todayAdminStatusPanel h2,
+.todayAdminPagePanel h2 {
+  margin: 4px 0 6px;
+  color: var(--navy);
+}
+
+.todayAdminStatusPanel p,
+.todayAdminPagePanel p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.todayAdminAlertGrid,
+.todayAdminTwoColumn,
+.todayAdminSettingsGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.todayAdminAlertGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.todayAdminAlert {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  min-height: 126px;
+  padding: 14px;
+  text-align: left;
+}
+
+.todayAdminAlert strong {
+  color: var(--navy);
+}
+
+.todayAdminAlert span:not(.statusBadge) {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.todayAdminAlert em {
+  color: var(--orange);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.todayAdminTwoColumn {
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+}
+
+.todayAdminEnvList,
+.todayAdminMiniList {
+  display: grid;
+  gap: 8px;
+}
+
+.todayAdminEnvRow,
+.todayAdminMiniRow {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.todayAdminEnvRow {
+  grid-template-columns: minmax(120px, 0.8fr) minmax(0, 1fr) auto;
+}
+
+.todayAdminEnvRow strong {
+  min-width: 0;
+  color: var(--navy);
+  overflow-wrap: anywhere;
+}
+
+.todayAdminMiniRow {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.todayAdminMiniRow span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.todayAdminMiniRow small {
+  color: var(--muted);
+}
+
+.todayAdminPagePanel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.todayAdminPanelHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.todayAdminPanelHead > span {
+  color: var(--orange);
+  font-weight: 900;
+}
+
+.todayAdminFilter {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.todayAdminSettingsGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.todayAdminSettingCard {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.todayAdminSettingCard span {
+  color: var(--navy);
+  font-weight: 900;
+}
+
+.todayAdminSettingCard small {
+  min-height: 34px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.todayAdminSettingCard input,
+.todayAdminSettingCard select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfcfd;
+}
+
+@media (max-width: 760px) {
+  .todayAdminStatusPanel,
+  .todayAdminPanelHead {
+    display: grid;
+  }
+
+  .todayAdminAlertGrid,
+  .todayAdminTwoColumn,
+  .todayAdminSettingsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .todayAdminEnvRow,
+  .todayAdminMiniRow {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+}
+
+.todayQualityList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todayQualityList span {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--charcoal);
+  font-weight: 800;
+}
+
+.todayCostRow {
+  align-items: center;
+}
+
+.todayRecommendationNotice {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  border: 1px solid var(--orange-line);
+  border-radius: 8px;
+  background: var(--orange-soft);
+}
+
+.todayRecommendationNotice strong {
+  color: var(--navy);
+}
+
+.todayRecommendationNotice span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.requoteHeroPanel,
+.requoteSelectionPanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.requoteHeroPanel h2,
+.requoteSelectionPanel strong {
+  margin: 0 0 6px;
+  color: var(--navy);
+}
+
+.requoteHeroPanel p,
+.requoteSelectionPanel p {
+  margin: 0;
+}
+
+.requoteGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.requoteCard {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.requoteCardHeader,
+.requoteFacts,
+.requoteMeta,
+.compactActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.requoteCard h3 {
+  margin: 0;
+  color: var(--navy);
+}
+
+.requoteCard p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.requoteFacts span,
+.requoteMeta span {
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--charcoal);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.requoteSelect {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.requoteSelect input {
+  width: 16px;
+  height: 16px;
+}
+
+.todayTaxChecklist,
+.todayTaxTable {
+  display: grid;
+  gap: 12px;
+}
+
+.todayTaxChecklist {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.todayChecklistItem,
+.todayTaxRow {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.todayChecklistItem strong,
+.todayTaxRow strong {
+  color: var(--navy);
+  line-height: 1.25;
+}
+
+.todayChecklistItem small,
+.todayTaxRow small,
+.todayTaxRow p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.todayChecklistItem.warn,
+.todayTaxRow.missing {
+  border-color: rgba(190, 72, 52, 0.28);
+  background: #fff8f6;
+}
+
+.todayChecklistItem.soft,
+.todayTaxRow.needs_review {
+  border-color: var(--orange-line);
+  background: var(--orange-soft);
+}
+
+.todayChecklistItem.good,
+.todayTaxRow.organized {
+  border-color: rgba(18, 128, 92, 0.24);
+  background: #f6fffb;
+}
+
+.todayTaxRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.todayTaxActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.todayTaxActions select {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 8px;
+  background: #ffffff;
+  font: inherit;
+}
+
+.todaySupplierShell .todayHero.supplier {
+  background:
+    linear-gradient(135deg, rgba(21, 128, 61, 0.12), rgba(2, 132, 199, 0.10)),
+    var(--panel);
+  border: 1px solid var(--line);
+}
+
+.todaySupplierNav {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.todaySupplierShell .dataTable select {
+  min-width: 132px;
+}
+
+.todaySupplierShell .muted {
+  margin: 0 0 14px;
+}
+
+.todaySsawaTaxSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.todaySummaryText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--charcoal);
+  line-height: 1.6;
+}
+
 .savingsCard {
   border-color: rgba(18, 128, 92, 0.28);
 }
@@ -5619,10 +6560,262 @@ tr.selectedRow {
     grid-template-columns: 1fr;
   }
 
+  .todayHero,
+  .todayLinkPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .todayHeroActions,
+  .todayLinkPanel .formActions {
+    justify-content: flex-start;
+  }
+
+  .todayNav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .qualityPreview,
   .adminSupplierDetail {
     position: static;
   }
+}
+
+.categoryToolbar {
+  align-items: center;
+  gap: 10px;
+}
+
+.categoryToolbar select {
+  min-height: 40px;
+  min-width: 150px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--charcoal);
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.todayPurchaseCard {
+  align-items: start;
+}
+
+.categoryEditorPanel,
+.categoryReasonBox {
+  display: grid;
+  gap: 12px;
+}
+
+.categoryReasonBox {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.categoryReasonBox p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.checkField {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--charcoal);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.checkField input {
+  width: 16px;
+  height: 16px;
+}
+
+.categorySummaryGrid,
+.categorySettingsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.categorySummaryItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.categorySummaryItem div {
+  display: grid;
+  gap: 4px;
+}
+
+.categorySummaryItem span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.categorySummaryItem b {
+  white-space: nowrap;
+  color: var(--navy);
+}
+
+.categoryList.compact {
+  gap: 8px;
+}
+
+.todayHero.v4 {
+  margin-bottom: 0;
+}
+
+.todayQuickPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.todayQuickPanel h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.todayQuickPanel p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.ledgerEntryList {
+  display: grid;
+  gap: 8px;
+}
+
+.ledgerEntryRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  text-align: left;
+}
+
+.ledgerEntryRow span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ledgerEntryRow b,
+.ledgerEntryRow small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ledgerEntryRow strong {
+  color: var(--navy);
+}
+
+.ledgerEntryRow em {
+  font-style: normal;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.ledgerEntryRow em.positive {
+  color: #12805c;
+}
+
+.ledgerEntryRow em.negative {
+  color: var(--charcoal);
+}
+
+.todayRecordRow {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+}
+
+.todaySheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: end center;
+  padding: 18px;
+  background: rgba(16, 32, 51, 0.28);
+}
+
+.todayQuickSheet {
+  width: min(640px, 100%);
+  max-height: min(86vh, 760px);
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(16, 32, 51, 0.24);
+}
+
+.amountField input {
+  min-height: 56px;
+  font-size: 26px;
+  font-weight: 950;
+}
+
+.todaySegmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todaySegmented button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--charcoal);
+  font-weight: 850;
+}
+
+.todaySegmented button.active {
+  color: var(--orange);
+  border-color: var(--orange-line);
+  background: var(--orange-soft);
+}
+
+.todayFloatingActions {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 12;
+  display: flex;
+  gap: 8px;
+}
+
+.todayFloatingActions button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--orange-line);
+  border-radius: 8px;
+  background: var(--orange);
+  color: #ffffff;
+  font-weight: 900;
 }
 
 @media (max-width: 760px) {
@@ -6143,9 +7336,10 @@ tr.selectedRow {
     background: var(--orange-soft);
   }
 
-  .chatShortcutButton {
-    display: none;
-  }
+.chatShortcutButton {
+  display: none;
+}
+
 }
 
 @media (max-width: 760px) {
@@ -6172,6 +7366,104 @@ tr.selectedRow {
 
   .purchaseCard {
     grid-template-columns: 1fr;
+  }
+
+  .requoteHeroPanel,
+  .requoteSelectionPanel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .requoteGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .todayHero {
+    padding: 18px;
+  }
+
+  .todayHero h1 {
+    font-size: 26px;
+  }
+
+  .todayHeroActions,
+  .todayLinkPanel .formActions {
+    flex-direction: column;
+  }
+
+  .todayHeroActions > button,
+  .todayLinkPanel .formActions > button {
+    width: 100%;
+  }
+
+  .todayNav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .todaySupplierNav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .todayFormulaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .todayProfitHero {
+    padding: 18px;
+  }
+
+  .todayProfitHero strong {
+    font-size: 30px;
+  }
+
+  .todayComparisonGrid,
+  .todayInsightGrid,
+  .todayInsightGrid.compact,
+  .todayTaxChecklist,
+  .todaySsawaTaxSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .todayCustomRange {
+    display: grid;
+  }
+
+  .todayCustomRange label {
+    min-width: 0;
+  }
+
+  .todayCostRow {
+    gap: 10px;
+  }
+
+  .todayTaxRow {
+    grid-template-columns: 1fr;
+  }
+
+  .todayTaxActions {
+    justify-content: stretch;
+  }
+
+  .todayTaxActions > button,
+  .todayTaxActions > select {
+    flex: 1 1 140px;
+  }
+
+  .todayQuickPanel,
+  .ledgerEntryRow,
+  .todayRecordRow {
+    grid-template-columns: 1fr;
+  }
+
+  .todayFloatingActions {
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .todayFloatingActions button {
+    flex: 1 1 0;
+    padding-inline: 8px;
   }
 
   .notificationCard,

@@ -12,6 +12,7 @@ import {
   analysisSourceTypeLabels,
   analysisStatusLabels,
   accountingStatusLabels,
+  applyPurchaseClassification,
   applyUserSanction,
   betaExperimentStatusLabels,
   betaExperimentTargetGroupLabels,
@@ -40,14 +41,21 @@ import {
   canSubmitQuoteByPlan,
   categoryFocusStatusLabels,
   categoryDescriptions,
+  changePurchaseCategory,
   chatQuickTemplates,
   commissionFeeTypeLabels,
+  confirmPurchaseCategory,
   convertAnalysisToPurchaseRecord,
   convertAnalysisToQuoteRequest,
   createAnalysisJob,
   createBetaFeedback,
   createDealReview,
   createManualPurchaseRecord,
+  createTaxDocument,
+  createTaxExportRequest,
+  createSupplierManualSalesRecord,
+  createExpenseRecord,
+  createSalesRecord,
   createReport,
   createQuote,
   createDealFromQuote,
@@ -56,9 +64,16 @@ import {
   createProductReport,
   createQuoteRequestFromProduct,
   createQuoteRequest,
+  createRequoteDraftFromPurchaseRecords,
+  createRequoteDraftFromRecommendation,
   createSupplierApplication,
   createSupplierProduct,
+  createUploadPreview,
   deleteSupplierProduct,
+  deleteExpenseRecord,
+  deleteManualPurchaseRecord,
+  deleteSalesRecord,
+  dismissRequoteRecommendation,
   dealStatusLabels,
   detectSuspiciousMessage,
   deliveryNoteStatusLabels,
@@ -81,6 +96,7 @@ import {
   getOperationsSummary,
   getPlatformFeesBySupplier,
   getProductCategoryName,
+  getPurchaseCategorySummary,
   getQuoteRequestOpsInsights,
   getRepeatUsageInsights,
   getRevenueSummary,
@@ -90,6 +106,7 @@ import {
   getSupplierProducts,
   getSupplierProductSummary,
   getSupplierReputation,
+  getSsawaPurchaseSyncStatus,
   getSupplierResponseOps,
   getSupplierStoreProfile,
   getSupplierCurrentPlan,
@@ -107,12 +124,19 @@ import {
   featureFlagKeyLabels,
   groupPurchasesByCategory,
   groupPurchasesBySupplier,
+  generateRequoteRecommendations,
+  getTodayQuoteDraft,
+  getTodayNotifications,
+  getTodayUnreadNotificationCount,
   isDemoMode,
   loadData,
+  linkRequoteDraftToQuoteRequest,
   markOnboardingCompleted,
   markAllNotificationsAsRead,
   markNotificationAsRead,
+  markAllTodayNotificationsRead,
   markThreadAsRead,
+  markTodayQuoteDraftOpened,
   messageThreadStatusLabels,
   messageThreadTypeLabels,
   notificationEntityLabels,
@@ -124,6 +148,7 @@ import {
   paymentMethodLabels,
   paymentMethodStatusLabels,
   parseItemsFromText,
+  parseCsvText,
   platformFeeStatusLabels,
   productApprovalStatusLabels,
   productDeliveryFeeTypeLabels,
@@ -147,6 +172,7 @@ import {
   requestTemplates,
   resetData,
   resetDemoData,
+  rebuildTodayPurchaseFromSsawaDeal,
   reportActionTypeLabels,
   reportEntityTypeLabels,
   reportMessage,
@@ -165,6 +191,10 @@ import {
   sendThreadMessage,
   settlementModeLabels,
   settlementStatusLabels,
+  syncCompletedSsawaDealsToToday,
+  syncCompletedSsawaDealsToSupplierSales,
+  syncSsawaDealToTodayPurchase,
+  syncSsawaDealToSupplierSale,
   sanctionStatusLabels,
   sanctionTypeLabels,
   supplierGradeLabels,
@@ -176,6 +206,20 @@ import {
   supplierSubCategoryOptions,
   taxInvoiceStatusLabels,
   testLoginAccounts,
+  todayUploadBatchStatusLabels,
+  todayUploadRecordTypeLabels,
+  todayUploadTargetFieldLabels,
+  todayUploadTargetFields,
+  todayUploadTypeLabels,
+  todayUploadValidationStatusLabels,
+  todayRequoteRecommendationLevelLabels,
+  todayRequoteRecommendationStatusLabels,
+  todayBacklogStatusLabels,
+  todayNotificationAudienceLabels,
+  todayNotificationCategoryLabels,
+  todayNotificationStatusLabels,
+  todayPurchaseCategoryNames,
+  trackTodayProductEvent,
   commonServiceRegions,
   updateBillingAccount,
   updateBlacklistStatus,
@@ -193,6 +237,15 @@ import {
   updateProductReportStatus,
   updatePurchaseAccountingStatus,
   updatePurchaseRecord,
+  updatePurchaseTaxInvoiceStatus,
+  updateSupplierSaleTaxInvoiceStatus,
+  updateTaxDocumentStatus,
+  updateUploadColumnMapping,
+  updateUploadRow,
+  importUploadRows,
+  cancelUploadBatch,
+  getTodayUploadTemplateRows,
+  updateExpenseRecord,
   updateReportStatus,
   updateReviewStatus,
   updateSanctionStatus,
@@ -203,18 +256,28 @@ import {
   updateSupplierPlan,
   updateSupplierSubscriptionPlan,
   updateSupplierProfile,
+  updateSalesRecord,
+  updateTodayBacklogItem,
+  updateTodayLaunchChecklist,
+  updateTodayNotificationPreference,
+  updateTodayNotificationStatus,
+  updateTodayOnboardingProgress,
   toggleProductFavorite,
   vatPolicyLabels,
   waivePlatformFee,
+  createTodayBetaApplication,
+  createTodayBetaSurveyResponse,
+  createTodaySupportTicket,
+  dismissTodayGuide,
 } from "./data/sawaData";
-import type { AccountingStatus, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, BusinessManualReviewRequest, BusinessManualReviewStatus, BusinessOperatingStatus, BusinessVerification, BusinessVerificationStatus, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, ProductInquiryDraft, ProductOrderRequestDraft, ProductStockStatus, Profile, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProduct, SupplierProductDraft, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, UserRole } from "./types";
+import type { AccountingStatus, AdminTodayActionResultStatus, AdminTodayActionType, AdminTodayTargetType, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, BusinessManualReviewRequest, BusinessManualReviewStatus, BusinessOperatingStatus, BusinessVerification, BusinessVerificationStatus, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, ProductInquiryDraft, ProductOrderRequestDraft, ProductStockStatus, Profile, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProduct, SupplierProductDraft, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, TodayAdminSettingKey, TodayEvidenceStatus, TodayNotificationAudience, TodayNotificationStatus, TodayRequoteRecommendation, TodaySecurityEventType, TodaySecuritySeverity, TodaySsawaQuoteDraft, TodayUploadFinalRecordType, TodayUploadTargetField, TodayUploadType, UserRole } from "./types";
 import { appConfig, environmentLabel, isLiveModeReady } from "./lib/env";
 import { getSupabaseClient, isSupabaseConfigured, SUPABASE_PROJECT_URL } from "./lib/supabase/client";
 import { ensureProfile, getCurrentProfile, signOut as signOutSupabase } from "./lib/supabase/auth";
 import { storageBuckets, uploadAppFile, validateUploadFile } from "./lib/supabase/storage";
 import { liveFeatureMatrix } from "./services/liveDataService";
 
-const today = "2026-07-04";
+const today = "2026-07-06";
 const NOTIFICATION_SOUND_SRC = "/sounds/ssawa_quote_arrived_notification.wav";
 
 function apiEndpoint(path: string) {
@@ -237,6 +300,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "업체 상품", mobileLabel: "상품", path: "/app/products", icon: Boxes },
     { label: "거래", path: "/app/deals", icon: ReceiptText },
     { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
+    { label: "오늘장사", mobileLabel: "장부", path: "/app/today", icon: Landmark },
     { label: "내 사업장", mobileLabel: "사업장", path: "/app/buyer/profile", icon: ShieldCheck },
   ],
   supplier: [
@@ -259,6 +323,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "거래 관리", path: "/app/admin/deals", icon: ReceiptText },
     { label: "정산", path: "/app/admin/settlements", icon: Landmark },
     { label: "문의", path: "/app/admin/chats", icon: MessageCircle },
+    { label: "오늘장사", mobileLabel: "장부", path: "/app/today", icon: Landmark },
     { label: "운영 KPI", path: "/app/admin/beta/kpi", icon: BadgeCheck },
     { label: "환경", path: "/app/admin/supabase", icon: ShieldCheck },
   ],
@@ -268,7 +333,7 @@ const mobileNavItemsByRole: Record<UserRole, NavItem[]> = {
   buyer: [
     navItemsByRole.buyer[0],
     navItemsByRole.buyer[1],
-    navItemsByRole.buyer[2],
+    navItemsByRole.buyer[5],
     navItemsByRole.buyer[3],
   ],
   supplier: [
@@ -315,6 +380,7 @@ type AppAuthSession = {
 
 function getRouteRole(path: string): UserRole | null {
   if (path.startsWith("/app/admin")) return "admin";
+  if (path === "/app/today/supplier" || path.startsWith("/app/today/supplier/")) return "supplier";
   if (path.startsWith("/app/supplier") || path === "/partners" || path === "/supplier/apply") return "supplier";
   if (path.startsWith("/app/chats")) return "buyer";
   return null;
@@ -497,7 +563,7 @@ type BusinessCheckResult = {
   rawStatusCode?: string;
 };
 
-const AUTH_STORAGE_KEY = "ssawa-auth-session-v1";
+const AUTH_STORAGE_KEY = "ssawa-auth-session-v2";
 const LAUNCH_SCREEN_MIN_MS = 700;
 const EXIT_CONFIRM_MESSAGE = "싸와! 앱을 종료하시겠습니까?";
 
@@ -993,7 +1059,8 @@ function LaunchScreen() {
 }
 
 function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (data: AppData) => void, authSession: AppAuthSession | null, onAuthChange: (session: AppAuthSession | null) => void, shellRole: UserRole, onSignOut: () => void | Promise<void>) {
-  if (path === "/health" || path === "/status" || path === "/beta-status") return <PublicDeploymentStatusPage navigate={navigate} />;
+  const routePath = path.split("?")[0];
+  if (routePath === "/health" || routePath === "/status" || routePath === "/beta-status") return <PublicDeploymentStatusPage navigate={navigate} />;
   if (path === "/login") return <LoginPage data={data} navigate={navigate} onAuthChange={onAuthChange} />;
   if (path === "/signup") return <SignupPage data={data} navigate={navigate} setData={setData} onAuthChange={onAuthChange} />;
   if (path === "/signup/manual-review") return <ManualReviewInfoPage data={data} navigate={navigate} authSession={authSession} />;
@@ -1008,7 +1075,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path.startsWith("/app") && !authSession) return <LoginPage data={data} navigate={navigate} onAuthChange={onAuthChange} />;
   const restrictedRole = getRouteRole(path);
   if (isProtectedAppPath(path) && authSession && restrictedRole && restrictedRole !== authSession.role) {
-    return <RoleAccessDenied role={authSession.role} attemptedRole={restrictedRole} navigate={navigate} />;
+    return <RoleAccessDeniedWithSecurityLog data={data} setData={setData} role={authSession.role} attemptedRole={restrictedRole} navigate={navigate} routePath={routePath} userId={authSession.id} />;
   }
   if (path === "/app" || path === "/") {
     if (shellRole === "admin") return <AdminDashboard data={data} navigate={navigate} />;
@@ -1020,8 +1087,37 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/supplier/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="supplier" onSignOut={onSignOut} />;
   if (path === "/app/beta") return <BetaNoticePage navigate={navigate} appMode />;
   if (path === "/app/beta-guide") return <BuyerBetaGuidePage navigate={navigate} />;
+  if (path === "/landing" || path === "/buyer" || path === "/supplier" || path === "/today") return <TodayPublicLandingPage data={data} navigate={navigate} audience={path === "/supplier" ? "supplier" : "buyer"} />;
+  if (path === "/pricing") return <TodayPricingPage data={data} navigate={navigate} />;
+  if (path === "/support") return <TodaySupportPage data={data} setData={setData} navigate={navigate} role="common" />;
+  if (path === "/beta/apply") return <TodayBetaApplyPage data={data} setData={setData} navigate={navigate} applicationType="buyer" />;
+  if (path === "/supplier/apply") return <TodayBetaApplyPage data={data} setData={setData} navigate={navigate} applicationType="supplier" />;
+  if (path === "/notices/tax-settlement" || path === "/notices/tax" || path === "/notices/ai" || path === "/notices/settlement") return <TodayNoticePage navigate={navigate} path={path} />;
+  if (path === "/app/help" || path === "/app/help/today" || path === "/app/help/ssawa" || path === "/app/help/faq") return <TodayHelpPage data={data} setData={setData} navigate={navigate} audience="common" userId={authSession?.id ?? "guest"} />;
+  if (path === "/app/today/onboarding") return <TodayOnboardingPage data={data} setData={setData} navigate={navigate} audience="buyer" userId="buyer-1" />;
+  if (path === "/app/today/help" || path === "/app/today/help/buyer") return <TodayHelpPage data={data} setData={setData} navigate={navigate} audience="buyer" userId="buyer-1" />;
+  if (path === "/app/today/settings/notifications") return <TodayNotificationSettingsPage data={data} setData={setData} navigate={navigate} audience="buyer" userId="buyer-1" />;
+  if (path === "/app/today/supplier/onboarding") return <TodayOnboardingPage data={data} setData={setData} navigate={navigate} audience="supplier" userId="sup-1-user" />;
+  if (path === "/app/today/supplier/help" || path === "/app/today/help/supplier") return <TodayHelpPage data={data} setData={setData} navigate={navigate} audience="supplier" userId="sup-1-user" />;
+  if (path === "/app/today/supplier/settings/notifications") return <TodayNotificationSettingsPage data={data} setData={setData} navigate={navigate} audience="supplier" userId="sup-1-user" />;
+  if (path === "/app/admin/today/onboarding") return <TodayOnboardingPage data={data} setData={setData} navigate={navigate} audience="admin" userId="admin-1" />;
+  if (path === "/app/admin/today/help" || path === "/app/today/help/admin") return <TodayHelpPage data={data} setData={setData} navigate={navigate} audience="admin" userId="admin-1" />;
+  if (path === "/app/admin/today/settings/notifications") return <TodayNotificationSettingsPage data={data} setData={setData} navigate={navigate} audience="admin" userId="admin-1" />;
   if (path === "/app/quick-reorder") return <QuickReorderPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/favorites/items") return <FavoriteItemsPage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/today/supplier" || path.startsWith("/app/today/supplier/")) {
+    const currentRole = authSession?.role ?? shellRole;
+    if (currentRole === "buyer") {
+      return <RoleAccessDenied role={currentRole} attemptedRole="supplier" navigate={navigate} />;
+    }
+    return <TodaySupplierPage data={data} navigate={navigate} setData={setData} routePath={path} role={currentRole} />;
+  }
+  if (path === "/app/today" || path.startsWith("/app/today/")) {
+    if (authSession?.role === "supplier") {
+      return <TodaySupplierPage data={data} navigate={navigate} setData={setData} routePath="/app/today/supplier" role="supplier" />;
+    }
+    return <TodayJangsaV4Page data={data} navigate={navigate} setData={setData} routePath={path} section={getTodaySection(path)} role={authSession?.role ?? shellRole} />;
+  }
   if (path === "/app/products") return <ProductsPage data={data} navigate={navigate} setData={setData} />;
   if (path.startsWith("/app/products/")) return <ProductDetailPage data={data} navigate={navigate} setData={setData} productId={path.split("/").pop() ?? ""} />;
   if (path === "/app/feedback") return <FeedbackPage data={data} navigate={navigate} setData={setData} />;
@@ -1033,7 +1129,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/analyze/history") return <AnalysisHistoryPage data={data} navigate={navigate} />;
   if (path.startsWith("/app/analyze/")) return <AnalysisDetailPage data={data} navigate={navigate} setData={setData} analysisId={path.split("/").pop() ?? ""} />;
   if (path.startsWith("/app/requests/new/from-analysis/")) return <AnalysisToRequestPage data={data} navigate={navigate} setData={setData} analysisId={path.split("/").pop() ?? ""} />;
-  if (path === "/app/requests/new") return <NewRequestPage data={data} navigate={navigate} setData={setData} />;
+  if (routePath === "/app/requests/new") return <NewRequestPage data={data} navigate={navigate} setData={setData} routePath={path} />;
   if (path === "/app/requests") return <RequestsPage data={data} navigate={navigate} />;
   if (path.startsWith("/app/requests/") && path.endsWith("/messages")) return <RequestMessagesPage data={data} navigate={navigate} setData={setData} requestId={path.split("/")[3] ?? ""} role="buyer" />;
   if (path.startsWith("/app/requests/")) return <RequestDetailPage data={data} navigate={navigate} setData={setData} requestId={path.split("/").pop() ?? ""} />;
@@ -1078,6 +1174,9 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path.startsWith("/app/supplier/requests/") && path.endsWith("/messages")) return <RequestMessagesPage data={data} navigate={navigate} setData={setData} requestId={path.split("/")[4] ?? ""} role="supplier" />;
   if (path.startsWith("/app/supplier/requests/")) return <SupplierRequestDetailPage data={data} navigate={navigate} setData={setData} requestId={path.split("/").pop() ?? ""} />;
   if (path === "/app/supplier/quotes") return <SupplierQuotesPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/today" || path.startsWith("/app/admin/today/") || ((path === "/app/today" || path.startsWith("/app/today/")) && authSession?.role === "admin")) {
+    return <TodayAdminPage data={data} navigate={navigate} setData={setData} routePath={path} authSession={authSession} />;
+  }
   if (path === "/app/admin") return <AdminDashboard data={data} navigate={navigate} />;
   if (path === "/app/admin/product-focus") return <AdminProductFocusPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/admin/products") return <AdminProductsPage data={data} navigate={navigate} setData={setData} />;
@@ -1089,6 +1188,10 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/admin/mvp-cleanup") return <AdminMvpCleanupPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/admin/playbooks") return <AdminPlaybooksPage data={data} navigate={navigate} />;
   if (path === "/app/admin/beta") return <AdminBetaDashboardPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta/analytics") return <AdminTodayBetaAnalyticsPage data={data} navigate={navigate} />;
+  if (path === "/app/admin/beta/feedback") return <AdminTodayBetaFeedbackPage data={data} setData={setData} navigate={navigate} />;
+  if (path === "/app/admin/beta/backlog") return <AdminTodayBetaBacklogPage data={data} setData={setData} navigate={navigate} />;
+  if (path === "/app/admin/beta/users") return <AdminTodayBetaUsersPage data={data} navigate={navigate} />;
   if (path === "/app/admin/beta/kpi") return <AdminBetaKpiPage data={data} navigate={navigate} />;
   if (path === "/app/admin/beta/buyers") return <AdminBetaParticipantsPage data={data} navigate={navigate} type="buyer" />;
   if (path === "/app/admin/beta/suppliers") return <AdminBetaParticipantsPage data={data} navigate={navigate} type="supplier" />;
@@ -1145,6 +1248,3793 @@ function RoleAccessDenied({ role, attemptedRole, navigate }: { role: UserRole; a
       />
     </Page>
   );
+}
+
+function RoleAccessDeniedWithSecurityLog({ data, setData, role, attemptedRole, navigate, routePath, userId }: { data: AppData; setData: (data: AppData) => void; role: UserRole; attemptedRole: UserRole; navigate: Navigate; routePath: string; userId: string }) {
+  const loggedRef = useRef(false);
+  useEffect(() => {
+    if (loggedRef.current || attemptedRole !== "admin") return;
+    loggedRef.current = true;
+    const alreadyLogged = data.today_security_events.some((event) =>
+      event.user_id === userId
+      && event.route === routePath
+      && event.event_type === "admin_route_denied"
+      && event.created_at.slice(0, 10) === today,
+    );
+    if (alreadyLogged) return;
+    setData({
+      ...data,
+      today_security_events: [{
+        id: makeId("today-security"),
+        user_id: userId,
+        role,
+        business_id: role === "buyer" ? userId : undefined,
+        supplier_business_id: role === "supplier" ? userId : undefined,
+        event_type: "admin_route_denied",
+        severity: "high",
+        route: routePath,
+        resource_type: "admin_route",
+        message: `${getRoleLabel(role)} 계정의 관리자 운영 화면 접근이 차단되었습니다.`,
+        created_at: new Date().toISOString(),
+      }, ...data.today_security_events],
+    });
+  }, [attemptedRole, data, role, routePath, setData, userId]);
+  return <RoleAccessDenied role={role} attemptedRole={attemptedRole} navigate={navigate} />;
+}
+
+type TodaySection = "home" | "ledger" | "sales" | "purchases" | "expenses" | "profit" | "tax" | "ssawa" | "requotes" | "uploads" | "ai" | "notifications" | "settings";
+
+type TodaySalesRecord = {
+  id: string;
+  business_id: string;
+  source: "manual" | "upload" | "card" | "delivery_app" | "pos";
+  sales_type: string;
+  amount: number;
+  sales_date: string;
+  memo: string;
+  evidence_status: "complete" | "missing" | "needs_review" | "not_required";
+};
+
+type TodayExpenseRecord = {
+  id: string;
+  business_id: string;
+  expense_type: string;
+  amount: number;
+  expense_date: string;
+  memo: string;
+  evidence_status: "complete" | "missing" | "needs_review" | "not_required";
+};
+
+const todaySectionLabels: Record<string, string> = {
+  home: "홈",
+  ledger: "장부",
+  sales: "매출",
+  purchases: "매입",
+  expenses: "지출",
+  profit: "순이익",
+  tax: "세무자료",
+  ssawa: "싸와 구매",
+  uploads: "파일 업로드",
+  ai: "AI 도우미",
+  settings: "설정",
+};
+
+const todayNavItems: Array<{ section: TodaySection; path: string; icon: (props: IconProps) => ReactNode }> = [
+  { section: "home", path: "/app/today", icon: Home },
+  { section: "ledger", path: "/app/today/ledger", icon: ClipboardList },
+  { section: "sales", path: "/app/today/sales", icon: ReceiptText },
+  { section: "purchases", path: "/app/today/purchases", icon: PackageCheck },
+  { section: "expenses", path: "/app/today/expenses", icon: FilePlus2 },
+  { section: "profit", path: "/app/today/profit", icon: Landmark },
+  { section: "tax", path: "/app/today/tax", icon: ShieldCheck },
+  { section: "ssawa", path: "/app/today/ssawa", icon: Boxes },
+  { section: "requotes", path: "/app/today/requotes", icon: RefreshCcw },
+  { section: "uploads", path: "/app/today/uploads", icon: Upload },
+  { section: "ai", path: "/app/today/ai", icon: MessageCircle },
+  { section: "notifications", path: "/app/today/notifications", icon: Bell },
+  { section: "settings", path: "/app/today/settings", icon: Building2 },
+];
+
+const todaySalesRecords: TodaySalesRecord[] = [
+  { id: "today-sale-1", business_id: "buyer-1", source: "manual", sales_type: "매장 매출", amount: 680000, sales_date: "2026-07-04", memo: "점심/저녁 매장 매출 샘플", evidence_status: "not_required" },
+  { id: "today-sale-2", business_id: "buyer-1", source: "manual", sales_type: "배달앱 매출", amount: 420000, sales_date: "2026-07-04", memo: "배달앱 정산 전 참고 금액", evidence_status: "needs_review" },
+  { id: "today-sale-3", business_id: "buyer-1", source: "manual", sales_type: "카드 매출", amount: 3360000, sales_date: "2026-07-01", memo: "이번 달 카드 매출 샘플", evidence_status: "complete" },
+  { id: "today-sale-4", business_id: "buyer-2", source: "manual", sales_type: "매장 매출", amount: 1380000, sales_date: "2026-07-04", memo: "관리자 확인용 다른 사업장 샘플", evidence_status: "complete" },
+];
+
+const todayExpenseRecords: TodayExpenseRecord[] = [
+  { id: "today-expense-1", business_id: "buyer-1", expense_type: "임대료", amount: 1200000, expense_date: "2026-07-01", memo: "월 고정비 샘플", evidence_status: "complete" },
+  { id: "today-expense-2", business_id: "buyer-1", expense_type: "인건비", amount: 980000, expense_date: "2026-07-03", memo: "주간 인건비 샘플", evidence_status: "needs_review" },
+  { id: "today-expense-3", business_id: "buyer-1", expense_type: "공과금", amount: 210000, expense_date: "2026-07-04", memo: "전기/가스비 참고", evidence_status: "missing" },
+  { id: "today-expense-4", business_id: "buyer-2", expense_type: "광고비", amount: 350000, expense_date: "2026-07-02", memo: "관리자 확인용 다른 사업장 샘플", evidence_status: "needs_review" },
+];
+
+function getTodaySection(path: string): TodaySection {
+  const slug = path.split("?")[0].split("/")[3] ?? "";
+  if (slug === "ledger") return "ledger";
+  if (slug === "sales") return "sales";
+  if (slug === "purchases") return "purchases";
+  if (slug === "expenses") return "expenses";
+  if (slug === "profit") return "profit";
+  if (slug === "tax") return "tax";
+  if (slug === "ssawa") return "ssawa";
+  if (slug === "requotes") return "requotes";
+  if (slug === "uploads") return "uploads";
+  if (slug === "ai") return "ai";
+  if (slug === "notifications") return "notifications";
+  if (slug === "settings") return "settings";
+  return "home";
+}
+
+function TodayJangsaPage({ data, navigate, setData, section, role }: MutatingPageProps & { section: TodaySection; role: UserRole }) {
+  const businessId = "buyer-1";
+  const profile = data.profiles.find((entry) => entry.id === businessId) ?? data.profiles.find((entry) => entry.role === "buyer");
+  const isAdmin = role === "admin";
+  const purchaseRecords = data.purchase_records.filter((record) => isAdmin || record.buyer_id === businessId);
+  const salesRecords = todaySalesRecords.filter((record) => isAdmin || record.business_id === businessId);
+  const expenseRecords = todayExpenseRecords.filter((record) => isAdmin || record.business_id === businessId);
+  const summary = getTodaySummary(purchaseRecords, salesRecords, expenseRecords);
+
+  return (
+    <Page>
+      <TodayFrame section={section} navigate={navigate} businessName={profile?.business_name ?? "내 사업장"} admin={isAdmin}>
+        {section === "home" && <TodayHome purchases={purchaseRecords} summary={summary} navigate={navigate} />}
+        {section === "ledger" && <TodayLedger data={data} purchases={purchaseRecords} sales={salesRecords} expenses={expenseRecords} summary={summary} navigate={navigate} />}
+        {section === "sales" && <TodaySalesPage records={salesRecords} summary={summary} navigate={navigate} />}
+        {section === "purchases" && <TodayPurchasesPage data={data} records={purchaseRecords} navigate={navigate} setData={setData} />}
+        {section === "expenses" && <TodayExpensesPage records={expenseRecords} summary={summary} />}
+        {section === "profit" && <TodayProfitPage purchases={purchaseRecords} summary={summary} />}
+        {section === "tax" && <TodayLegacyTaxPage purchases={purchaseRecords} expenses={expenseRecords} />}
+        {section === "ssawa" && <TodaySsawaPage purchases={purchaseRecords} navigate={navigate} />}
+        {section === "settings" && <TodaySettingsPage data={data} profile={profile} admin={isAdmin} navigate={navigate} />}
+      </TodayFrame>
+    </Page>
+  );
+}
+
+function TodayFrame({ section, navigate, businessName, admin, children }: { section: TodaySection; navigate: Navigate; businessName: string; admin: boolean; children: ReactNode }) {
+  return (
+    <div className="todayShell">
+      <section className="todayHero">
+        <div>
+          <span className="eyebrow">오늘장사 {admin ? "운영 보기" : businessName}</span>
+          <h1>오늘 장사가 얼마나 남았는지 확인하세요.</h1>
+          <p>싸와 구매내역은 매입으로 자동 정리됩니다. 이번 단계에서는 장부 구조와 화면을 먼저 준비했습니다.</p>
+        </div>
+        <div className="todayHeroActions">
+          <button className="primaryButton" type="button" onClick={() => navigate("/app/requests/new")}>
+            <Plus size={16} />
+            싸와에서 자재 견적받기
+          </button>
+          <button className="secondaryButton" type="button" onClick={() => navigate("/app/today/ssawa")}>
+            <PackageCheck size={16} />
+            싸와 구매내역 확인
+          </button>
+        </div>
+      </section>
+
+      <nav className="todayNav" aria-label="오늘장사 메뉴">
+        {todayNavItems.map((item) => {
+          const Icon = item.icon;
+          const active = item.section === section;
+          return (
+            <button className={active ? "todayNavButton active" : "todayNavButton"} type="button" onClick={() => navigate(item.path)} key={item.section}>
+              <Icon size={17} />
+              <span>{todaySectionLabels[item.section]}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {children}
+    </div>
+  );
+}
+
+function TodayHome({ purchases, summary, navigate }: { purchases: PurchaseRecord[]; summary: TodaySummary; navigate: Navigate }) {
+  const hasData = summary.monthSales + summary.monthPurchases + summary.monthExpenses > 0;
+  const categorySummary = getPurchaseCategorySummary(purchases).slice(0, 5);
+  const categoryReviewCount = purchases.filter((record) => record.category_needs_review || record.accounting_category === "미분류").length;
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="오늘 매출" value={money(summary.todaySales)} icon={<ReceiptText />} desc="수동 입력 샘플 기준" />
+        <Metric label="오늘 매입" value={money(summary.todayPurchases)} icon={<PackageCheck />} desc="싸와 구매내역 포함" />
+        <Metric label="오늘 지출" value={money(summary.todayExpenses)} icon={<FilePlus2 />} desc="고정비/기타 지출" />
+        <Metric label="오늘 예상 순이익" value={money(summary.todayProfit)} icon={<Landmark />} desc="세금 신고용 확정 금액은 아닙니다." />
+      </div>
+
+      <div className="dashboardGrid">
+        <Metric label="이번 달 매출" value={money(summary.monthSales)} icon={<ReceiptText />} />
+        <Metric label="이번 달 싸와 구매" value={money(summary.monthSsawaPurchases)} icon={<Boxes />} desc={`오늘 싸와 매입 ${money(summary.todaySsawaPurchases)}`} />
+        <Metric label="확인 필요한 매입" value={`${summary.evidenceNeedsReview}건`} icon={<ShieldCheck />} />
+        <Metric label="이번 달 예상 순이익" value={money(summary.monthProfit)} icon={<Landmark />} desc="예상 순이익입니다." />
+      </div>
+
+      <SectionHeader title="확인 필요" />
+      <div className="problemGrid">
+        <ProblemCard title="증빙 확인 필요" count={summary.evidenceNeedsReview} desc="영수증 또는 자료 확인이 필요합니다." icon={<ShieldCheck />} onClick={() => navigate("/app/today/tax")} />
+        <ProblemCard title="세금계산서 확인 필요" count={summary.taxInvoiceNeedsReview} desc="발행 또는 수취 상태를 확인하세요." icon={<ReceiptText />} onClick={() => navigate("/app/today/tax")} />
+        <ProblemCard title="미분류 매입" count={summary.uncategorizedPurchases} desc="매입 분류를 확인하세요." icon={<ClipboardList />} onClick={() => navigate("/app/today/purchases")} />
+        <ProblemCard title="싸와 연동 대기" count={summary.pendingSsawaSync} desc="매입 반영 상태를 확인하세요." icon={<RefreshCcw />} onClick={() => navigate("/app/today/ssawa")} />
+      </div>
+
+      <section className="toolPanel">
+        <SectionHeader title="매입 카테고리 요약" action="분류 관리" onAction={() => navigate("/app/today/settings/categories")} />
+        <div className="categorySummaryGrid">
+          {categorySummary.map((entry) => (
+            <article className="categorySummaryItem" key={entry.category}>
+              <div>
+                <strong>{entry.category}</strong>
+                <span>{entry.count}건 · 확인 필요 {entry.reviewCount}건</span>
+              </div>
+              <b>{money(entry.amount)}</b>
+            </article>
+          ))}
+        </div>
+        <p className="mutedText">분류 확인 필요 {categoryReviewCount}건은 매입 화면에서 바로 수정할 수 있습니다.</p>
+      </section>
+
+      {!hasData && (
+        <EmptyState
+          icon={<Landmark />}
+          title="아직 장부 데이터가 없습니다."
+          desc="싸와 구매내역을 가져오거나 매출/지출을 입력해보세요."
+          actionLabel="싸와 구매내역 확인"
+          onAction={() => navigate("/app/today/ssawa")}
+        />
+      )}
+
+      <section className="todayLinkPanel">
+        <div>
+          <h2>자재비가 높다면 싸와에서 견적을 받아보세요.</h2>
+          <p>싸와에서 구매확정된 거래는 오늘장사 매입으로 정리되는 구조를 준비했습니다.</p>
+        </div>
+        <button className="primaryButton" type="button" onClick={() => navigate("/app/requests/new")}>
+          <Plus size={16} />
+          싸와에서 자재 견적받기
+        </button>
+      </section>
+    </>
+  );
+}
+
+function TodayLedger({ data, purchases, sales, expenses, summary, navigate }: { data: AppData; purchases: PurchaseRecord[]; sales: TodaySalesRecord[]; expenses: TodayExpenseRecord[]; summary: TodaySummary; navigate: Navigate }) {
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="매출" value={money(summary.monthSales)} icon={<ReceiptText />} />
+        <Metric label="매입" value={money(summary.monthPurchases)} icon={<PackageCheck />} />
+        <Metric label="지출" value={money(summary.monthExpenses)} icon={<FilePlus2 />} />
+        <Metric label="예상 순이익" value={money(summary.monthProfit)} icon={<Landmark />} desc="매출 - 매입 - 지출" />
+      </div>
+      <section className="twoColumn">
+        <TodaySimpleRows title="최근 매출" rows={sales.slice(0, 4).map((record) => ({ id: record.id, title: record.sales_type, desc: record.sales_date, amount: record.amount }))} />
+        <TodaySimpleRows title="최근 지출" rows={expenses.slice(0, 4).map((record) => ({ id: record.id, title: record.expense_type, desc: record.expense_date, amount: record.amount }))} />
+      </section>
+      <SectionHeader title="싸와 매입 장부" action="매입 보기" onAction={() => navigate("/app/today/purchases")} />
+      <PurchaseList data={data} records={purchases} navigate={navigate} />
+    </>
+  );
+}
+
+function TodaySalesPage({ records, summary, navigate }: { records: TodaySalesRecord[]; summary: TodaySummary; navigate: Navigate }) {
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="오늘 매출" value={money(summary.todaySales)} icon={<ReceiptText />} />
+        <Metric label="이번 달 매출" value={money(summary.monthSales)} icon={<CalendarDays />} />
+        <Metric label="확인 필요" value={`${records.filter((record) => record.evidence_status === "needs_review").length}건`} icon={<ShieldCheck />} />
+        <Metric label="수동 입력 구조" value="준비됨" icon={<FilePlus2 />} desc="실제 입력 고도화는 다음 단계입니다." />
+      </div>
+      <SectionHeader title="매출 내역" />
+      <TodaySimpleRows rows={records.map((record) => ({ id: record.id, title: record.sales_type, desc: `${record.sales_date} · ${sourceLabel(record.source)} · ${record.memo}`, amount: record.amount }))} emptyTitle="아직 매출 내역이 없습니다." />
+      <div className="formActions">
+        <button className="primaryButton" type="button" onClick={() => navigate("/app/today/sales")}>
+          <Plus size={16} />
+          매출 입력하기
+        </button>
+      </div>
+    </>
+  );
+}
+
+function TodayPurchasesPage({ data, records, navigate, setData }: { data: AppData; records: PurchaseRecord[]; navigate: Navigate; setData: (data: AppData) => void }) {
+  const [filter, setFilter] = useState("전체");
+  const [categoryFilter, setCategoryFilter] = useState("전체");
+  const [sortMode, setSortMode] = useState("date_desc");
+  const [editingId, setEditingId] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>(todayPurchaseCategoryNames[0]);
+  const [learnSimilar, setLearnSimilar] = useState(true);
+  const selectedRecord = records.find((record) => record.id === editingId);
+  const reviewCount = records.filter((record) => record.category_needs_review || record.accounting_category === "미분류").length;
+  const visibleRecords = filterPurchaseRecords(records, filter)
+    .filter((record) => categoryFilter === "전체" || (record.accounting_category || record.category_name) === categoryFilter)
+    .sort((a, b) => {
+      if (sortMode === "amount_desc") return b.total_amount - a.total_amount;
+      if (sortMode === "review_first") return Number(Boolean(b.category_needs_review)) - Number(Boolean(a.category_needs_review)) || b.purchase_date.localeCompare(a.purchase_date);
+      return b.purchase_date.localeCompare(a.purchase_date);
+    });
+
+  function openCategoryEditor(record: PurchaseRecord) {
+    setEditingId(record.id);
+    setSelectedCategory((record.accounting_category as (typeof todayPurchaseCategoryNames)[number]) || "미분류");
+    setLearnSimilar(true);
+  }
+
+  function saveCategoryChange() {
+    if (!selectedRecord) return;
+    setData(changePurchaseCategory(data, selectedRecord.id, selectedCategory, { learnSimilar, actorUserId: "buyer-1" }));
+    setEditingId("");
+  }
+
+  function confirmCategory(record: PurchaseRecord) {
+    setData(confirmPurchaseCategory(data, record.id, "buyer-1"));
+  }
+
+  function reclassify(record: PurchaseRecord) {
+    setData(applyPurchaseClassification(data, record.id, { force: true, actorUserId: "buyer-1" }));
+  }
+
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="이번 달 매입" value={money(records.reduce((sum, record) => sum + (record.purchase_date.startsWith(today.slice(0, 7)) ? record.total_amount : 0), 0))} icon={<PackageCheck />} />
+        <Metric label="싸와 매입" value={money(records.filter((record) => record.deal_id).reduce((sum, record) => sum + record.total_amount, 0))} icon={<Boxes />} />
+        <Metric label="분류 확인 필요" value={`${reviewCount}건`} icon={<SearchCheck />} />
+        <Metric label="미분류" value={`${records.filter((record) => record.accounting_category === "미분류").length}건`} icon={<ClipboardList />} />
+      </div>
+      <SectionHeader title="매입 내역" action="수동 매입 입력" onAction={() => navigate("/app/purchases/new")} />
+      <div className="purchaseToolbar categoryToolbar">
+        <FilterTabs options={["전체", "싸와 구매", "수동 입력", "확인 필요", "세금계산서 대기"]} active={filter} onChange={setFilter} />
+        <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+          <option>전체</option>
+          {todayPurchaseCategoryNames.map((category) => <option key={category}>{category}</option>)}
+        </select>
+        <select value={sortMode} onChange={(event) => setSortMode(event.target.value)}>
+          <option value="date_desc">최근순</option>
+          <option value="amount_desc">금액 높은순</option>
+          <option value="review_first">확인 필요 먼저</option>
+        </select>
+      </div>
+      {visibleRecords.length ? (
+        <div className="purchaseList">
+          {visibleRecords.map((record) => (
+            <article className="purchaseCard todayPurchaseCard" key={record.id}>
+              <div onClick={() => navigate(`/app/purchases/${record.id}`)}>
+                <span className="eyebrow">{record.supplier_name} · {record.purchase_date}</span>
+                <h3>{record.purchase_title}</h3>
+                <p>{record.item_summary || record.memo}</p>
+              </div>
+              <strong>{money(record.total_amount)}</strong>
+              <div className="purchaseStatusLine">
+                <StatusBadge tone={categoryStatusTone(record)}>{record.accounting_category || record.category_name}</StatusBadge>
+                <StatusBadge tone={record.category_needs_review ? "orange" : "green"}>{categoryConfidenceLabel(record)}</StatusBadge>
+                <StatusBadge tone={purchaseStatusTone(record.accounting_status)}>{accountingStatusLabels[record.accounting_status]}</StatusBadge>
+                {(record.source === "ssawa" || record.deal_id) && <StatusBadge tone="blue">싸와 매입</StatusBadge>}
+              </div>
+              <div className="toolbar">
+                <button className="secondaryButton compact" type="button" onClick={() => openCategoryEditor(record)}>카테고리 변경</button>
+                <button className="ghostButton compact" type="button" onClick={() => confirmCategory(record)}>이 분류 맞아요</button>
+                <button className="ghostButton compact" type="button" onClick={() => reclassify(record)}>다시 자동분류</button>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          icon={<PackageCheck />}
+          title="아직 매입 내역이 없습니다."
+          desc="싸와에서 구매한 내역이 있으면 이곳에 정리됩니다."
+          actionLabel="싸와에서 자재 견적받기"
+          onAction={() => navigate("/app/requests/new")}
+        />
+      )}
+      {selectedRecord && (
+        <section className="toolPanel categoryEditorPanel">
+          <SectionHeader title="카테고리 변경" />
+          <div className="formGrid">
+            <label className="field">
+              선택 카테고리
+              <select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value as (typeof todayPurchaseCategoryNames)[number])}>
+                {todayPurchaseCategoryNames.map((category) => <option key={category}>{category}</option>)}
+              </select>
+            </label>
+            <label className="checkField">
+              <input type="checkbox" checked={learnSimilar} onChange={(event) => setLearnSimilar(event.target.checked)} />
+              비슷한 품목도 다음부터 적용
+            </label>
+          </div>
+          <p className="mutedText">{selectedRecord.purchase_title} · 현재 {selectedRecord.accounting_category}</p>
+          <div className="formActions">
+            <button className="primaryButton" type="button" onClick={saveCategoryChange}>저장</button>
+            <button className="ghostButton" type="button" onClick={() => setEditingId("")}>취소</button>
+          </div>
+        </section>
+      )}
+      <div className="formActions">
+        <button className="secondaryButton" type="button" onClick={() => navigate("/app/requests/new")}>지금 구매 다시 견적</button>
+        <button className="ghostButton" type="button" onClick={() => navigate("/app/today/ssawa")}>싸와 구매 연동 현황</button>
+      </div>
+    </>
+  );
+}
+function TodayExpensesPage({ records, summary }: { records: TodayExpenseRecord[]; summary: TodaySummary }) {
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="오늘 지출" value={money(summary.todayExpenses)} icon={<FilePlus2 />} />
+        <Metric label="이번 달 지출" value={money(summary.monthExpenses)} icon={<CalendarDays />} />
+        <Metric label="증빙 확인" value={`${records.filter((record) => record.evidence_status !== "complete").length}건`} icon={<ShieldCheck />} />
+        <Metric label="수동 입력 구조" value="준비됨" icon={<Plus />} />
+      </div>
+      <SectionHeader title="지출 내역" />
+      <TodaySimpleRows rows={records.map((record) => ({ id: record.id, title: record.expense_type, desc: `${record.expense_date} · ${record.memo}`, amount: record.amount }))} emptyTitle="아직 지출 내역이 없습니다." />
+      <div className="formActions">
+        <button className="primaryButton" type="button">
+          <Plus size={16} />
+          지출 입력
+        </button>
+      </div>
+    </>
+  );
+}
+
+function TodayProfitPage({ purchases, summary }: { purchases: PurchaseRecord[]; summary: TodaySummary }) {
+  const ssawaShare = summary.monthPurchases > 0 ? Math.round((summary.ssawaPurchases / summary.monthPurchases) * 100) : 0;
+  const categorySummary = getPurchaseCategorySummary(purchases).filter((entry) => entry.category !== "미분류").slice(0, 4);
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="오늘 예상 순이익" value={money(summary.todayProfit)} icon={<Landmark />} desc="예상 순이익입니다." />
+        <Metric label="이번 달 예상 순이익" value={money(summary.monthProfit)} icon={<CalendarDays />} desc="세금 신고용 확정 금액은 아닙니다." />
+        <Metric label="싸와 매입 비중" value={`${ssawaShare}%`} icon={<Boxes />} />
+        <Metric label="확인 필요 항목" value={`${summary.evidenceNeedsReview + summary.taxInvoiceNeedsReview}건`} icon={<ShieldCheck />} />
+      </div>
+      <section className="todayFormulaPanel">
+        <h2>예상 순이익 계산</h2>
+        <p>총매출 - 싸와 매입 - 기타 매입 - 고정비 - 인건비 - 기타 지출 = 예상 순이익</p>
+        <div className="todayFormulaGrid">
+          <span>매출 {money(summary.monthSales)}</span>
+          <span>매입 {money(summary.monthPurchases)}</span>
+          <span>지출 {money(summary.monthExpenses)}</span>
+          <strong>{money(summary.monthProfit)}</strong>
+        </div>
+      </section>
+      <CategorySpendBars
+        title="카테고리별 매입 요약"
+        groups={categorySummary.map((entry) => ({ label: entry.category, count: entry.count, totalAmount: entry.amount, savingsAmount: 0 }))}
+        total={summary.monthPurchases}
+      />
+    </>
+  );
+}
+
+function TodayLegacyTaxPage({ purchases, expenses }: { purchases: PurchaseRecord[]; expenses: TodayExpenseRecord[] }) {
+  return (
+    <section className="statusNotice approved">
+      <ShieldCheck size={22} />
+      <div>
+        <strong>세무자료 정리</strong>
+        <p>증빙 확인 필요 {purchases.filter((record) => record.evidence_status === "missing" || record.receipt_status === "none").length + expenses.filter((record) => record.evidence_status !== "complete").length}건을 확인하세요.</p>
+      </div>
+    </section>
+  );
+}
+
+function TodayTaxV6Page({ data, setData, aiAnswer, purchases, sales, expenses, documents, period, setPeriod, customRange, setCustomRange, navigate }: { data: AppData; setData: (data: AppData) => void; aiAnswer: TodayAIAnswer; purchases: PurchaseRecord[]; sales: TodaySaleRecord[]; expenses: TodayExpenseRecordV4[]; documents: TodayTaxDocument[]; period: TodayV4Period; setPeriod: (period: TodayV4Period) => void; customRange: TodayV4Range; setCustomRange: (range: TodayV4Range) => void; navigate: Navigate }) {
+  const [uploadTarget, setUploadTarget] = useState<TodayTaxTarget | null>(null);
+  const taxState = getTodayTaxState(purchases, sales, expenses, documents);
+  const ssawaPurchases = purchases.filter(isSsawaPurchase);
+
+  function downloadTaxCsv() {
+    const csv = buildTaxStatusCsv(taxState.rows);
+    downloadTextFile(`today-tax-status-${today}.csv`, csv, "text/csv;charset=utf-8");
+  }
+
+  return (
+    <>
+      <PeriodTabs period={period} onChange={setPeriod} customRange={customRange} onCustomRangeChange={setCustomRange} />
+      <section className="statusNotice approved">
+        <ShieldCheck size={22} />
+        <div>
+          <strong>세무자료 정리</strong>
+          <p>세금 신고 전 필요한 증빙을 확인해보세요. 최종 신고 전 세무사 또는 전문가 확인을 권장합니다.</p>
+        </div>
+      </section>
+      <div className="dashboardGrid">
+        <Metric label="전체 자료" value={`${taxState.rows.length}건`} icon={<ClipboardList />} />
+        <Metric label="정리 완료" value={`${taxState.verifiedCount}건`} icon={<Check />} />
+        <Metric label="확인 필요" value={`${taxState.reviewCount}건`} icon={<ShieldCheck />} />
+        <Metric label="증빙 누락" value={`${taxState.missingCount}건`} icon={<FilePlus2 />} />
+      </div>
+      <TodayAIInsightSummaryCard title="AI 증빙 체크" answer={validateAIResponse({ ...aiAnswer, answerText: `세무자료 정리 전 증빙 누락 ${taxState.missingCount}건과 확인 필요 ${taxState.reviewCount}건을 먼저 확인해보세요. 이 내용은 참고용이며 최종 신고 전 전문가 확인을 권장합니다.`, summary: "세무자료 확인", evidenceItems: [{ label: "증빙 누락", value: `${taxState.missingCount}건` }, { label: "확인 필요", value: `${taxState.reviewCount}건` }, { label: "세금계산서 확인", value: `${aiAnswer.evidenceItems.find((item) => item.label.includes("증빙"))?.value ?? "확인 필요"}` }], actions: [{ label: "증빙 누락 확인", url: "/app/today/tax", type: "evidence" }, { label: "세무사 요약", url: "/app/today/tax/accountant-summary", type: "accountant" }], warnings: ["세금 신고나 세무 판단은 세무사 또는 전문가 확인을 권장합니다."] })} navigate={navigate} compact />
+      <section className="todayQuickPanel">
+        <div>
+          <h2>싸와 거래자료와 입력한 증빙을 한곳에 모았습니다.</h2>
+          <p>세금계산서 수령 여부와 영수증 누락 항목을 먼저 확인하세요.</p>
+        </div>
+        <div className="formActions">
+          <button className="primaryButton" type="button" onClick={() => setUploadTarget({ sourceType: "manual", sourceId: "manual", title: "직접 등록 자료", amount: 0 })}>증빙 추가</button>
+          <button className="secondaryButton" type="button" onClick={() => navigate("/app/today/tax/accountant-summary")}>세무사 전달용 요약</button>
+          <button className="ghostButton" type="button" onClick={downloadTaxCsv}>CSV 다운로드</button>
+        </div>
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="세무자료 확인 체크리스트" />
+        <div className="todayTaxChecklist">
+          {taxState.checklist.map((item) => (
+            <article className={`todayChecklistItem ${item.tone}`} key={item.title}>
+              <span>{item.status}</span>
+              <strong>{item.title}</strong>
+              <small>{item.desc}</small>
+              <button className="ghostButton compact" type="button" onClick={() => item.href ? navigate(item.href) : undefined}>{item.action}</button>
+            </article>
+          ))}
+        </div>
+      </section>
+      <div className="twoColumn">
+        <section className="toolPanel">
+          <SectionHeader title="지금 확인할 항목" action="전체 장부 보기" onAction={() => navigate("/app/today/ledger")} />
+          <div className="miniList">
+            {taxState.priorityRows.slice(0, 7).map((row) => (
+              <TodayTaxRowCard key={row.id} row={row} onUpload={() => setUploadTarget(row)} onTaxStatusChange={(status) => row.sourceType === "purchase" ? setData(updatePurchaseTaxInvoiceStatus(data, row.sourceId, status)) : undefined} navigate={navigate} />
+            ))}
+            {!taxState.priorityRows.length && <p className="mutedText">이번 기간에는 바로 확인할 항목이 없습니다.</p>}
+          </div>
+        </section>
+        <section className="toolPanel">
+          <SectionHeader title="싸와 거래자료" action="싸와 구매 보기" onAction={() => navigate("/app/today/ssawa")} />
+          <div className="todaySsawaTaxSummary">
+            <Metric label="싸와 구매" value={`${ssawaPurchases.length}건`} icon={<Boxes />} />
+            <Metric label="싸와 매입 총액" value={money(ssawaPurchases.reduce((sum, record) => sum + record.total_amount, 0))} icon={<PackageCheck />} />
+          </div>
+          <div className="miniList">
+            {ssawaPurchases.slice(0, 5).map((record) => (
+              <div className="miniRow static" key={record.id}>
+                <span>{record.item_summary || record.purchase_title}<small>{record.purchase_date} · {record.supplier_name} · {taxInvoiceStatusLabels[record.tax_invoice_status]}</small></span>
+                <strong>{money(record.total_amount)}</strong>
+                <button className="ghostButton compact" type="button" onClick={() => setUploadTarget({ sourceType: "purchase", sourceId: record.id, title: record.item_summary || record.purchase_title, amount: record.total_amount, supplierName: record.supplier_name })}>증빙 추가</button>
+              </div>
+            ))}
+            {!ssawaPurchases.length && <p className="mutedText">이번 기간의 싸와 구매자료가 없습니다.</p>}
+          </div>
+          <p className="mutedText">싸와에서 구매한 내역은 이곳에 자동으로 모입니다. 세금계산서 수령 여부는 꼭 확인해주세요.</p>
+        </section>
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="전체 세무자료 상태" />
+        <div className="todayTaxTable">
+          {taxState.rows.map((row) => <TodayTaxRowCard key={row.id} row={row} onUpload={() => setUploadTarget(row)} onTaxStatusChange={(status) => row.sourceType === "purchase" ? setData(updatePurchaseTaxInvoiceStatus(data, row.sourceId, status)) : undefined} navigate={navigate} />)}
+        </div>
+      </section>
+      {uploadTarget && <TodayTaxUploadSheet data={data} setData={setData} target={uploadTarget} onClose={() => setUploadTarget(null)} />}
+    </>
+  );
+}
+
+function TodayAccountantSummaryPage({ data, setData, profile, purchases, sales, expenses, documents, period, setPeriod, customRange, setCustomRange, navigate }: { data: AppData; setData: (data: AppData) => void; profile?: Profile; purchases: PurchaseRecord[]; sales: TodaySaleRecord[]; expenses: TodayExpenseRecordV4[]; documents: TodayTaxDocument[]; period: TodayV4Period; setPeriod: (period: TodayV4Period) => void; customRange: TodayV4Range; setCustomRange: (range: TodayV4Range) => void; navigate: Navigate }) {
+  const taxState = getTodayTaxState(purchases, sales, expenses, documents);
+  const summary = getTodayV4Summary(purchases, sales, expenses);
+  const ssawaPurchases = purchases.filter(isSsawaPurchase);
+  const categoryRows = groupAmountRows(purchases, (record) => record.accounting_category || record.category_name, (record) => record.total_amount);
+  const expenseRows = groupAmountRows(expenses, (record) => record.expense_type, (record) => record.amount);
+  const salesRows = groupAmountRows(sales, (record) => record.sales_type, (record) => record.amount);
+  const summaryText = buildAccountantSummaryText(profile, period, customRange, summary, taxState, ssawaPurchases, categoryRows, expenseRows, salesRows);
+
+  function copySummary() {
+    navigator.clipboard?.writeText(summaryText).catch(() => undefined);
+  }
+
+  function downloadSummaryCsv() {
+    const csv = buildAccountantSummaryCsv(summary, taxState, categoryRows, expenseRows, salesRows);
+    const result = createTaxExportRequest(data, { business_id: profile?.id ?? "buyer-1", period_start: getTodayV4PeriodRange(period, customRange).start, period_end: getTodayV4PeriodRange(period, customRange).end, export_type: "accountant_package", file_url: "#", created_by: profile?.id ?? "buyer-1" });
+    setData(result.data);
+    downloadTextFile(`today-accountant-summary-${today}.csv`, csv, "text/csv;charset=utf-8");
+  }
+
+  return (
+    <>
+      <PeriodTabs period={period} onChange={setPeriod} customRange={customRange} onCustomRangeChange={setCustomRange} />
+      <section className="todayProfitHero">
+        <span className="eyebrow">세무사 전달용 요약</span>
+        <strong>{profile?.business_name ?? "내 사업장"}</strong>
+        <p>신고 전 확인을 돕기 위한 참고자료입니다. 최종 신고 전 세무사 또는 전문가 확인을 권장합니다.</p>
+      </section>
+      <div className="dashboardGrid">
+        <Metric label="총매출" value={money(summary.sales)} icon={<ReceiptText />} />
+        <Metric label="총매입" value={money(summary.purchases)} icon={<PackageCheck />} />
+        <Metric label="총지출" value={money(summary.expenses)} icon={<FilePlus2 />} />
+        <Metric label="확인 필요" value={`${taxState.reviewCount + taxState.missingCount}건`} icon={<ShieldCheck />} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="요약 자료" />
+        <pre className="todaySummaryText">{summaryText}</pre>
+        <div className="formActions">
+          <button className="primaryButton" type="button" onClick={copySummary}>요약 복사</button>
+          <button className="secondaryButton" type="button" onClick={downloadSummaryCsv}>CSV 다운로드</button>
+          <button className="ghostButton" type="button" onClick={() => navigate("/app/today/tax")}>세무자료 화면으로 돌아가기</button>
+        </div>
+      </section>
+      <div className="twoColumn">
+        <CategorySpendBars title="매출 구분별 합계" groups={salesRows} total={summary.sales} />
+        <CategorySpendBars title="매입 카테고리별 합계" groups={categoryRows} total={summary.purchases} />
+      </div>
+      <CategorySpendBars title="지출 구분별 합계" groups={expenseRows} total={summary.expenses} />
+    </>
+  );
+}
+
+type TodayTaxTarget = {
+  sourceType: TodayTaxSourceType;
+  sourceId: string;
+  title: string;
+  amount: number;
+  supplierName?: string;
+};
+
+type TodayTaxRow = TodayTaxTarget & {
+  id: string;
+  date: string;
+  kindLabel: string;
+  evidenceStatus: TodayEvidenceStatus;
+  taxInvoiceStatus?: TaxInvoiceStatus;
+  documentCount: number;
+  status: "organized" | "needs_review" | "missing";
+  severity: "low" | "medium" | "high";
+  messages: string[];
+  href?: string;
+};
+
+const todayTaxDocumentTypeOptions: Array<{ value: TodayTaxDocumentType; label: string }> = [
+  { value: "tax_invoice", label: "세금계산서" },
+  { value: "receipt", label: "영수증" },
+  { value: "card_receipt", label: "카드전표" },
+  { value: "cash_receipt", label: "현금영수증" },
+  { value: "transaction_statement", label: "거래명세서" },
+  { value: "quote", label: "견적서" },
+  { value: "delivery_confirmation", label: "납품확인서" },
+  { value: "bank_transfer", label: "계좌이체 내역" },
+  { value: "invoice", label: "청구서" },
+  { value: "contract", label: "계약서" },
+  { value: "etc", label: "기타" },
+];
+
+function TodayTaxRowCard({ row, onUpload, onTaxStatusChange, navigate }: { row: TodayTaxRow; onUpload: () => void; onTaxStatusChange?: (status: TaxInvoiceStatus) => void; navigate: Navigate }) {
+  const tone = row.status === "organized" ? "green" : row.severity === "high" ? "orange" : "blue";
+  return (
+    <article className={`todayTaxRow ${row.status}`}>
+      <div>
+        <StatusBadge tone={tone}>{todayTaxStatusLabel(row.status)}</StatusBadge>
+        <strong>{row.title}</strong>
+        <small>{row.date} · {row.kindLabel} · {money(row.amount)} · 증빙 {row.documentCount}건</small>
+        {row.messages.length > 0 && <p>{row.messages.join(" / ")}</p>}
+      </div>
+      <div className="todayTaxActions">
+        {row.taxInvoiceStatus && (
+          <select value={row.taxInvoiceStatus} onChange={(event) => onTaxStatusChange?.(event.target.value as TaxInvoiceStatus)}>
+            {["required", "requested", "received", "not_needed", "unknown"].map((status) => <option value={status} key={status}>{taxInvoiceStatusLabels[status as TaxInvoiceStatus]}</option>)}
+          </select>
+        )}
+        <button className="secondaryButton compact" type="button" onClick={onUpload}>증빙 추가</button>
+        {row.href && <button className="ghostButton compact" type="button" onClick={() => navigate(row.href || "/app/today/tax")}>보기</button>}
+      </div>
+    </article>
+  );
+}
+
+function TodayTaxUploadSheet({ data, setData, target, onClose }: { data: AppData; setData: (data: AppData) => void; target: TodayTaxTarget; onClose: () => void }) {
+  const [documentType, setDocumentType] = useState<TodayTaxDocumentType>("receipt");
+  const [fileName, setFileName] = useState(`${target.title.replace(/[\\/:*?"<>|]/g, "_")}_증빙.pdf`);
+  const [issuedAt, setIssuedAt] = useState(today);
+  const [amount, setAmount] = useState(target.amount);
+  const [memo, setMemo] = useState("");
+  const [error, setError] = useState("");
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const result = createTaxDocument(data, {
+      business_id: "buyer-1",
+      source_type: target.sourceType,
+      source_id: target.sourceId,
+      document_type: documentType,
+      document_name: fileName,
+      amount,
+      issued_at: issuedAt,
+      supplier_name: target.supplierName,
+      memo,
+      status: "attached",
+      uploaded_by: "buyer-1",
+    });
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setData(result.data);
+    onClose();
+  }
+
+  return (
+    <div className="todaySheetBackdrop" role="dialog" aria-modal="true">
+      <form className="todayQuickSheet" onSubmit={submit}>
+        <SectionHeader title="증빙 추가" action="닫기" onAction={onClose} />
+        <p className="mutedText">{target.title}에 자료를 연결합니다. 민감한 파일은 private bucket 경로로 저장하는 구조입니다.</p>
+        <label className="field">자료 유형<select value={documentType} onChange={(event) => setDocumentType(event.target.value as TodayTaxDocumentType)}>{todayTaxDocumentTypeOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
+        <label className="field">파일명<input value={fileName} onChange={(event) => setFileName(event.target.value)} placeholder="영수증.pdf" /></label>
+        <label className="field">발행일<input type="date" value={issuedAt} onChange={(event) => setIssuedAt(event.target.value)} /></label>
+        <label className="field amountField">금액<input type="number" value={amount} onChange={(event) => setAmount(Number(event.target.value))} /></label>
+        <label className="field">메모<textarea value={memo} onChange={(event) => setMemo(event.target.value)} /></label>
+        {error && <p className="formError">{error}</p>}
+        <button className="primaryButton full" type="submit">저장하기</button>
+      </form>
+    </div>
+  );
+}
+
+function getTodayTaxState(purchases: PurchaseRecord[], sales: TodaySaleRecord[], expenses: TodayExpenseRecordV4[], documents: TodayTaxDocument[]) {
+  const rows: TodayTaxRow[] = [
+    ...purchases.map((record) => buildPurchaseTaxRow(record, documents)),
+    ...sales.map((record) => buildSalesTaxRow(record, documents)),
+    ...expenses.map((record) => buildExpenseTaxRow(record, documents)),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+  const priorityRows = rows.filter((row) => row.status !== "organized").sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
+  const checklist = [
+    checklistItem("매입 증빙 확인", rows.filter((row) => row.sourceType === "purchase" && row.status !== "organized").length, "/app/today/tax"),
+    checklistItem("지출 영수증 확인", rows.filter((row) => row.sourceType === "expense" && row.status !== "organized").length, "/app/today/tax"),
+    checklistItem("세금계산서 확인", rows.filter((row) => row.taxInvoiceStatus && ["required", "requested", "pending", "unknown"].includes(row.taxInvoiceStatus)).length, "/app/today/tax"),
+    checklistItem("미분류 매입 정리", purchases.filter((record) => record.category_needs_review || record.accounting_category === "미분류").length, "/app/today/purchases"),
+    checklistItem("싸와 거래자료 확인", purchases.filter(isSsawaPurchase).filter((record) => record.evidence_status !== "complete" || ["requested", "pending", "unknown", "required"].includes(record.tax_invoice_status)).length, "/app/today/ssawa"),
+    checklistItem("세무사 전달용 요약 확인", rows.length ? 0 : 1, "/app/today/tax/accountant-summary"),
+  ];
+  return {
+    rows,
+    priorityRows,
+    checklist,
+    verifiedCount: rows.filter((row) => row.status === "organized").length,
+    reviewCount: rows.filter((row) => row.status === "needs_review").length,
+    missingCount: rows.filter((row) => row.status === "missing").length,
+  };
+}
+
+function buildPurchaseTaxRow(record: PurchaseRecord, documents: TodayTaxDocument[]): TodayTaxRow {
+  const linkedDocs = documents.filter((document) => (document.source_type === "purchase" || document.source_type === "ssawa_deal") && (document.source_id === record.id || document.source_id === record.ssawa_deal_id || document.source_id === record.deal_id));
+  const messages: string[] = [];
+  if (isSsawaPurchase(record) && linkedDocs.length === 0) messages.push("싸와 거래자료 확인 필요");
+  if (["required", "requested", "pending", "unknown"].includes(record.tax_invoice_status)) messages.push("세금계산서 확인 필요");
+  if (record.evidence_status === "missing" || record.receipt_status === "none") messages.push("증빙 없음");
+  if (record.category_needs_review || record.accounting_category === "미분류") messages.push("분류 확인 필요");
+  if (safePositiveAmount(record.total_amount) === 0) messages.push("금액 확인 필요");
+  if (/취소|환불|분쟁/.test(`${record.memo} ${record.user_memo ?? ""} ${record.admin_memo ?? ""}`)) messages.push("거래 상태 확인 필요");
+  const severity = getTaxSeverity(record.total_amount, messages);
+  return {
+    id: `purchase-${record.id}`,
+    sourceType: "purchase",
+    sourceId: record.id,
+    title: record.item_summary || record.purchase_title,
+    amount: safePositiveAmount(record.total_amount),
+    supplierName: record.supplier_name,
+    date: record.purchase_date,
+    kindLabel: isSsawaPurchase(record) ? "싸와 매입" : "수동 매입",
+    evidenceStatus: record.evidence_status ?? "needs_review",
+    taxInvoiceStatus: record.tax_invoice_status,
+    documentCount: linkedDocs.length,
+    status: messages.length === 0 || (linkedDocs.length > 0 && record.evidence_status === "complete" && !["required", "requested", "pending", "unknown"].includes(record.tax_invoice_status)) ? "organized" : messages.some((message) => message.includes("없음")) ? "missing" : "needs_review",
+    severity,
+    messages,
+    href: `/app/purchases/${record.id}`,
+  };
+}
+
+function buildSalesTaxRow(record: TodaySaleRecord, documents: TodayTaxDocument[]): TodayTaxRow {
+  const linkedDocs = documents.filter((document) => document.source_type === "sales" && document.source_id === record.id);
+  const messages: string[] = [];
+  if (record.evidence_status === "missing" || record.evidence_status === "needs_review") messages.push("매출 자료 확인 필요");
+  if (!record.sales_type) messages.push("매출 구분 확인 필요");
+  if (safePositiveAmount(record.amount) === 0) messages.push("금액 확인 필요");
+  return {
+    id: `sales-${record.id}`,
+    sourceType: "sales",
+    sourceId: record.id,
+    title: record.sales_type || "매출 자료",
+    amount: safePositiveAmount(record.amount),
+    date: record.sales_date,
+    kindLabel: "매출 자료",
+    evidenceStatus: record.evidence_status,
+    documentCount: linkedDocs.length,
+    status: messages.length === 0 || record.evidence_status === "not_required" ? "organized" : record.evidence_status === "missing" ? "missing" : "needs_review",
+    severity: getTaxSeverity(record.amount, messages),
+    messages,
+  };
+}
+
+function buildExpenseTaxRow(record: TodayExpenseRecordV4, documents: TodayTaxDocument[]): TodayTaxRow {
+  const linkedDocs = documents.filter((document) => document.source_type === "expense" && document.source_id === record.id);
+  const messages: string[] = [];
+  if (record.evidence_status === "missing") messages.push("영수증/증빙 없음");
+  if (record.evidence_status === "needs_review") messages.push("자료 확인 필요");
+  if (!record.expense_type) messages.push("지출 구분 확인 필요");
+  if (safePositiveAmount(record.amount) === 0) messages.push("금액 확인 필요");
+  return {
+    id: `expense-${record.id}`,
+    sourceType: "expense",
+    sourceId: record.id,
+    title: record.expense_type || "지출 자료",
+    amount: safePositiveAmount(record.amount),
+    supplierName: record.vendor_name,
+    date: record.expense_date,
+    kindLabel: "지출",
+    evidenceStatus: record.evidence_status,
+    documentCount: linkedDocs.length,
+    status: messages.length === 0 ? "organized" : record.evidence_status === "missing" ? "missing" : "needs_review",
+    severity: getTaxSeverity(record.amount, messages),
+    messages,
+  };
+}
+
+function checklistItem(title: string, count: number, href: string) {
+  return {
+    title,
+    status: count === 0 ? "완료" : count >= 3 ? "확인 필요" : "선택 확인",
+    tone: count === 0 ? "good" : count >= 3 ? "warn" : "soft",
+    desc: count === 0 ? "이번 기간 기준으로 정리되어 있습니다." : `${count}건을 확인해주세요.`,
+    action: count === 0 ? "보기" : "확인하기",
+    href,
+  };
+}
+
+function getTaxSeverity(amount: number, messages: string[]): TodayTaxRow["severity"] {
+  if (!messages.length) return "low";
+  if (amount >= 100000 && messages.some((message) => message.includes("없음") || message.includes("세금계산서"))) return "high";
+  if (amount >= 30000) return "medium";
+  return "low";
+}
+
+function severityRank(severity: TodayTaxRow["severity"]) {
+  if (severity === "high") return 3;
+  if (severity === "medium") return 2;
+  return 1;
+}
+
+function todayTaxStatusLabel(status: TodayTaxRow["status"]) {
+  if (status === "organized") return "정리됨";
+  if (status === "missing") return "증빙 없음";
+  return "확인 필요";
+}
+
+function taxDocumentTypeLabel(type: TodayTaxDocumentType) {
+  return todayTaxDocumentTypeOptions.find((option) => option.value === type)?.label ?? "기타";
+}
+
+function buildTaxStatusCsv(rows: TodayTaxRow[]) {
+  const header = ["구분", "날짜", "제목", "금액", "증빙 상태", "세금계산서 상태", "확인 메시지"];
+  return toCsv([header, ...rows.map((row) => [
+    row.kindLabel,
+    row.date,
+    row.title,
+    String(row.amount),
+    todayTaxStatusLabel(row.status),
+    row.taxInvoiceStatus ? taxInvoiceStatusLabels[row.taxInvoiceStatus] : "",
+    row.messages.join(" / "),
+  ])]);
+}
+
+function buildAccountantSummaryCsv(summary: ReturnType<typeof getTodayV4Summary>, taxState: ReturnType<typeof getTodayTaxState>, categoryRows: ReturnType<typeof groupAmountRows<PurchaseRecord>>, expenseRows: ReturnType<typeof groupAmountRows<TodayExpenseRecordV4>>, salesRows: ReturnType<typeof groupAmountRows<TodaySaleRecord>>) {
+  return toCsv([
+    ["항목", "구분", "금액", "건수", "메모"],
+    ["요약", "총매출", String(summary.sales), "", ""],
+    ["요약", "총매입", String(summary.purchases), "", ""],
+    ["요약", "총지출", String(summary.expenses), "", ""],
+    ["증빙", "정리 완료", String(taxState.verifiedCount), "", ""],
+    ["증빙", "확인 필요", String(taxState.reviewCount), "", ""],
+    ["증빙", "증빙 없음", String(taxState.missingCount), "", ""],
+    ...salesRows.map((row) => ["매출", row.label, String(row.totalAmount), String(row.count), ""]),
+    ...categoryRows.map((row) => ["매입", row.label, String(row.totalAmount), String(row.count), ""]),
+    ...expenseRows.map((row) => ["지출", row.label, String(row.totalAmount), String(row.count), ""]),
+  ]);
+}
+
+function buildAccountantSummaryText(profile: Profile | undefined, period: TodayV4Period, customRange: TodayV4Range, summary: ReturnType<typeof getTodayV4Summary>, taxState: ReturnType<typeof getTodayTaxState>, ssawaPurchases: PurchaseRecord[], categoryRows: ReturnType<typeof groupAmountRows<PurchaseRecord>>, expenseRows: ReturnType<typeof groupAmountRows<TodayExpenseRecordV4>>, salesRows: ReturnType<typeof groupAmountRows<TodaySaleRecord>>) {
+  const range = getTodayV4PeriodRange(period, customRange);
+  return [
+    `[세무사 전달용 요약]`,
+    `사업장: ${profile?.business_name ?? "내 사업장"}`,
+    `사업자번호: ${profile?.business_number ?? "확인 필요"}`,
+    `기간: ${range.start} ~ ${range.end}`,
+    ``,
+    `매출: ${money(summary.sales)} (${salesRows.map((row) => `${row.label} ${money(row.totalAmount)}`).join(", ") || "자료 없음"})`,
+    `매입: ${money(summary.purchases)} / 싸와 매입 ${money(ssawaPurchases.reduce((sum, record) => sum + record.total_amount, 0))}`,
+    `매입 카테고리: ${categoryRows.map((row) => `${row.label} ${money(row.totalAmount)}`).join(", ") || "자료 없음"}`,
+    `지출: ${money(summary.expenses)} (${expenseRows.map((row) => `${row.label} ${money(row.totalAmount)}`).join(", ") || "자료 없음"})`,
+    ``,
+    `증빙 상태: 정리 완료 ${taxState.verifiedCount}건, 확인 필요 ${taxState.reviewCount}건, 증빙 없음 ${taxState.missingCount}건`,
+    `싸와 거래자료: ${ssawaPurchases.length}건`,
+    ``,
+    `본 자료는 장부 정리와 세무 검토를 돕기 위한 참고자료입니다.`,
+    `최종 신고 전 세무사 또는 전문가 확인을 권장합니다.`,
+  ].join("\n");
+}
+
+function toCsv(rows: string[][]) {
+  return `\uFEFF${rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n")}`;
+}
+
+function downloadTextFile(fileName: string, content: string, type: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function TodaySsawaPage({ purchases, navigate }: { purchases: PurchaseRecord[]; navigate: Navigate }) {
+  const ssawaPurchases = purchases.filter((record) => record.deal_id || record.source === "ssawa");
+  const pending = ssawaPurchases.filter((record) => record.accounting_status === "pending" || record.accounting_status === "hold");
+  const synced = ssawaPurchases.filter((record) => record.accounting_status === "synced");
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="싸와 연동 상태" value="연결됨" icon={<Check />} desc="같은 사업자 기준으로 표시됩니다." />
+        <Metric label="이번 달 싸와 구매금액" value={money(ssawaPurchases.reduce((sum, record) => sum + record.total_amount, 0))} icon={<Boxes />} />
+        <Metric label="반영 완료" value={`${synced.length}건`} icon={<BadgeCheck />} />
+        <Metric label="확인 필요" value={`${pending.length}건`} icon={<ShieldCheck />} />
+      </div>
+      <section className="todayLinkPanel">
+        <div>
+          <h2>싸와에서 구매확정된 거래는 오늘장사 매입으로 정리됩니다.</h2>
+          <p>이번 1단계에서는 전체 자동 동기화 대신 구조와 화면을 준비했습니다.</p>
+        </div>
+        <div className="formActions">
+          <button className="secondaryButton" type="button" onClick={() => navigate("/app/purchases")}>싸와 구매내역 보기</button>
+          <button className="primaryButton" type="button" onClick={() => navigate("/app/requests/new")}>싸와에서 자재 견적받기</button>
+          <button className="ghostButton" type="button" onClick={() => navigate("/app/today/purchases")}>반영 상태 확인</button>
+        </div>
+      </section>
+      <TodaySimpleRows title="최근 싸와 구매내역" rows={ssawaPurchases.map((record) => ({ id: record.id, title: record.item_summary || record.purchase_title, desc: `${record.supplier_name} · ${accountingStatusLabels[record.accounting_status]} · ${todayEvidenceStatusLabel(record.evidence_status)}`, amount: record.total_amount }))} />
+    </>
+  );
+}
+
+function TodaySettingsPage({ data, profile, admin, navigate }: { data: AppData; profile?: Profile; admin: boolean; navigate: Navigate }) {
+  const activeCategories = data.today_categories.filter((category) => category.is_active);
+  const businessRules = data.today_category_rules.filter((rule) => rule.source === "user");
+  return (
+    <section className="toolPanel">
+      <SectionHeader title="공통 사업자 기준" action="카테고리 설정" onAction={() => navigate("/app/today/settings/categories")} />
+      <div className="detailMeta">
+        <span>사업자: {profile?.business_name ?? "확인 필요"}</span>
+        <span>사업자번호: {profile?.business_number ?? "확인 필요"}</span>
+        <span>business_id: {admin ? "관리자 전체 보기" : profile?.id ?? "buyer-1"}</span>
+        <span>권한: {admin ? "관리자" : "구매자 사업자"}</span>
+      </div>
+      <p className="mutedText">카테고리와 학습 규칙은 사업자 단위로 분리됩니다. 사용자 규칙은 같은 business_id의 다음 매입 분류에만 적용됩니다.</p>
+      <div className="categorySettingsGrid">
+        <div>
+          <h3>기본 카테고리</h3>
+          <div className="categoryList compact">
+            {activeCategories.map((category) => (
+              <div className="categoryRow" key={category.id}>
+                <span>{category.sort_order}</span>
+                <strong>{category.name}</strong>
+                <StatusBadge tone={category.is_default ? "blue" : "green"}>{category.is_default ? "기본" : "사업자"}</StatusBadge>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h3>학습 규칙</h3>
+          <div className="miniList">
+            {businessRules.slice(0, 8).map((rule) => (
+              <div className="miniRow static" key={rule.id}>
+                <span>{rule.pattern}<small>{rule.category_name} · {Math.round(rule.confidence * 100)}%</small></span>
+                <strong>{rule.use_count}회</strong>
+              </div>
+            ))}
+            {businessRules.length === 0 && <p className="mutedText">아직 사용자 학습 규칙이 없습니다.</p>}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+function TodaySimpleRows({ title, rows, emptyTitle = "표시할 내역이 없습니다." }: { title?: string; rows: Array<{ id: string; title: string; desc: string; amount: number }>; emptyTitle?: string }) {
+  return (
+    <section className="toolPanel">
+      {title && <SectionHeader title={title} />}
+      <div className="miniList">
+        {rows.map((row) => (
+          <div className="miniRow static" key={row.id}>
+            <span>{row.title}<small>{row.desc}</small></span>
+            <strong>{money(row.amount)}</strong>
+          </div>
+        ))}
+        {rows.length === 0 && <p className="mutedText">{emptyTitle}</p>}
+      </div>
+    </section>
+  );
+}
+
+type TodaySummary = ReturnType<typeof getTodaySummary>;
+
+function getTodaySummary(purchases: PurchaseRecord[], sales: TodaySalesRecord[], expenses: TodayExpenseRecord[]) {
+  const month = today.slice(0, 7);
+  const todayPurchases = purchases.filter((record) => record.purchase_date === today);
+  const monthPurchases = purchases.filter((record) => record.purchase_date.startsWith(month));
+  const todaySales = sales.filter((record) => record.sales_date === today);
+  const monthSales = sales.filter((record) => record.sales_date.startsWith(month));
+  const todayExpenses = expenses.filter((record) => record.expense_date === today);
+  const monthExpenses = expenses.filter((record) => record.expense_date.startsWith(month));
+  const todaySalesAmount = sumTodayAmounts(todaySales);
+  const monthSalesAmount = sumTodayAmounts(monthSales);
+  const todayPurchaseAmount = sumPurchases(todayPurchases);
+  const monthPurchaseAmount = sumPurchases(monthPurchases);
+  const todayExpenseAmount = sumTodayAmounts(todayExpenses);
+  const monthExpenseAmount = sumTodayAmounts(monthExpenses);
+  return {
+    todaySales: todaySalesAmount,
+    monthSales: monthSalesAmount,
+    todayPurchases: todayPurchaseAmount,
+    monthPurchases: monthPurchaseAmount,
+    todayExpenses: todayExpenseAmount,
+    monthExpenses: monthExpenseAmount,
+    todayProfit: todaySalesAmount - todayPurchaseAmount - todayExpenseAmount,
+    monthProfit: monthSalesAmount - monthPurchaseAmount - monthExpenseAmount,
+    ssawaPurchases: sumPurchases(purchases.filter((record) => record.deal_id)),
+    todaySsawaPurchases: sumPurchases(todayPurchases.filter((record) => record.deal_id || record.source === "ssawa")),
+    monthSsawaPurchases: sumPurchases(monthPurchases.filter((record) => record.deal_id || record.source === "ssawa")),
+    evidenceNeedsReview: purchases.filter((record) => record.receipt_status === "none" || record.receipt_status === "pending").length + expenses.filter((record) => record.evidence_status !== "complete").length,
+    taxInvoiceNeedsReview: purchases.filter((record) => record.tax_invoice_status === "pending" || record.tax_invoice_status === "requested").length,
+    uncategorizedPurchases: purchases.filter((record) => record.accounting_category === "미분류" || record.category_needs_review).length,
+    pendingSsawaSync: purchases.filter((record) => record.deal_id && (record.accounting_status === "pending" || record.accounting_status === "hold")).length,
+  };
+}
+
+function sumPurchases(records: PurchaseRecord[]) {
+  return records.reduce((sum, record) => sum + record.total_amount, 0);
+}
+
+function sumTodayAmounts(records: Array<{ amount: number }>) {
+  return records.reduce((sum, record) => sum + record.amount, 0);
+}
+
+function sourceLabel(source: TodaySalesRecord["source"]) {
+  if (source === "manual") return "수동";
+  if (source === "upload") return "업로드";
+  if (source === "card") return "카드";
+  if (source === "delivery_app") return "배달앱";
+  return "POS";
+}
+
+type TodayV4Period = "today" | "week" | "month" | "year" | "custom";
+type TodayV4EntryType = "all" | "sales" | "purchase" | "expense" | "ssawa" | "needs_review" | "missing_evidence";
+type TodayQuickMode = "sales" | "expense" | "purchase";
+type TodaySaleRecord = AppData["sales_records"][number];
+type TodayExpenseRecordV4 = AppData["expense_records"][number];
+type TodayTaxDocument = AppData["tax_documents"][number];
+type TodayTaxDocumentType = TodayTaxDocument["document_type"];
+type TodayTaxSourceType = TodayTaxDocument["source_type"];
+type TodayV4Range = { start: string; end: string };
+type TodayV4DataQualityStatus = "good" | "needs_sales" | "needs_expense" | "needs_category_review" | "needs_evidence_review" | "not_enough_history";
+type TodayV5Insight = {
+  id: string;
+  type: "profit_drop" | "sales_up_profit_down" | "purchase_increase" | "category_increase" | "expense_increase" | "missing_data" | "tax_evidence_missing" | "ssawa_opportunity" | "positive";
+  severity: "low" | "medium" | "high";
+  title: string;
+  message: string;
+  actionLabel?: string;
+  actionUrl?: string;
+  relatedCategory?: string;
+  relatedAmount?: number;
+  createdAt: string;
+};
+type TodayV5CostAlert = {
+  id: string;
+  alertType: "category_increase" | "supplier_increase" | "expense_increase" | "profit_drop" | "data_missing";
+  targetType: "purchase_category" | "expense_type" | "supplier" | "item_keyword";
+  targetKey: string;
+  currentAmount: number;
+  previousAmount: number;
+  deltaAmount: number;
+  deltaRate: number | null;
+  severity: "low" | "medium" | "high";
+  message: string;
+  recommendedAction: string;
+  ssawaActionAvailable: boolean;
+};
+type TodayV5BreakdownRow = {
+  key: string;
+  label: string;
+  amount: number;
+  previousAmount: number;
+  deltaAmount: number;
+  deltaRate: number | null;
+  count: number;
+  share: number | null;
+  ssawaActionAvailable: boolean;
+  actionUrl: string;
+};
+type TodayV5ProfitAnalysis = {
+  period: TodayV4Period;
+  currentRange: TodayV4Range;
+  previousRange: TodayV4Range;
+  summary: ReturnType<typeof getTodayV4Summary>;
+  previousSummary: ReturnType<typeof getTodayV4Summary>;
+  salesDelta: number;
+  purchaseDelta: number;
+  expenseDelta: number;
+  profitDelta: number;
+  salesDeltaRate: number | null;
+  purchaseDeltaRate: number | null;
+  expenseDeltaRate: number | null;
+  profitDeltaRate: number | null;
+  purchaseRatio: number | null;
+  expenseRatio: number | null;
+  profitMargin: number | null;
+  ssawaPurchases: number;
+  manualPurchases: number;
+  ssawaPurchaseShare: number | null;
+  dataQualityStatus: TodayV4DataQualityStatus;
+  dataQualityMessages: string[];
+  categoryBreakdown: TodayV5BreakdownRow[];
+  expenseBreakdown: TodayV5BreakdownRow[];
+  supplierBreakdown: TodayV5BreakdownRow[];
+  costAlerts: TodayV5CostAlert[];
+  insights: TodayV5Insight[];
+};
+
+function StatusPill({ status, children }: { status: string; children: ReactNode }) {
+  return <span className={`statusPill ${status}`}>{children}</span>;
+}
+
+const todaySalesTypeOptions: TodaySaleRecord["sales_type"][] = ["매장 매출", "배달앱 매출", "카드 매출", "현금 매출", "기타 매출"];
+const todaySalesPaymentOptions: TodaySaleRecord["payment_method"][] = ["card", "cash", "transfer", "delivery_app", "mixed", "unknown"];
+const todaySalesChannelOptions: TodaySaleRecord["sales_channel"][] = ["store", "baemin", "yogiyo", "coupang_eats", "naver", "phone_order", "etc"];
+const todayExpenseTypeOptions: TodayExpenseRecordV4["expense_type"][] = ["임대료", "인건비", "공과금", "배달수수료", "광고비", "소모품", "통신비", "보험료", "수리비", "기타"];
+const todayExpensePaymentOptions: TodayExpenseRecordV4["payment_method"][] = ["card", "cash", "transfer", "auto_withdrawal", "unknown"];
+
+type TodayAIModeLocal = "buyer" | "supplier";
+type TodayAIAction = { label: string; url: string; type: string };
+type TodayAIEvidenceItem = { label: string; value: string };
+type TodayAIAnswer = {
+  answerText: string;
+  summary: string;
+  evidenceItems: TodayAIEvidenceItem[];
+  actions: TodayAIAction[];
+  warnings: string[];
+  confidence: number;
+  blocked?: boolean;
+  createdAt: string;
+};
+type TodayBuyerAIContext = {
+  mode: "buyer";
+  businessId: string;
+  periodLabel: string;
+  analysis: TodayV5ProfitAnalysis;
+  missingEvidenceCount: number;
+  taxInvoiceCheckCount: number;
+  uncategorizedPurchaseCount: number;
+  recentTransactions: Array<{ title: string; amount: number; date: string }>;
+};
+type TodaySupplierAIContext = {
+  mode: "supplier";
+  supplierBusinessId: string;
+  periodLabel: string;
+  summary: ReturnType<typeof getSupplierTodaySummary>;
+  quoteMetrics: TodaySupplierQuoteMetrics;
+  productRows: TodaySupplierProductRow[];
+  customerRows: TodaySupplierCustomerRow[];
+  tasks: ReturnType<typeof getSupplierTasks>;
+};
+
+const buyerAIQuickQuestions = [
+  "이번 달 순이익이 왜 줄었어?",
+  "어떤 비용이 가장 많이 올랐어?",
+  "싸와에서 다시 견적받을 품목 추천해줘.",
+  "세금계산서 확인 필요한 거래 알려줘.",
+  "증빙 누락된 지출 알려줘.",
+  "오늘 먼저 확인해야 할 것 알려줘.",
+  "공급업체 전체 매출 알려줘.",
+];
+
+const supplierAIQuickQuestions = [
+  "이번 달 싸와 매출이 왜 변했어?",
+  "견적 성사율이 낮은 이유가 뭐야?",
+  "어떤 상품이 잘 팔렸어?",
+  "정산 확인 필요한 거래 알려줘.",
+  "세금계산서 발행 필요한 거래 알려줘.",
+  "오늘 처리해야 할 일 알려줘.",
+  "이 구매자의 순이익 알려줘.",
+];
+
+const aiForbiddenTerms = ["절세 보장", "세금 확정", "자동 신고 완료", "정산 보장", "최저가 보장", "무조건 비용 절감", "100% 정확", "입금 보장"];
+
+function buildBuyerTodayAIContext(data: AppData, businessId: string, period: TodayV4Period, customRange: TodayV4Range): TodayBuyerAIContext {
+  const purchases = data.purchase_records.filter((record) => !record.deleted_at && (record.buyer_id === businessId || record.business_id === businessId));
+  const sales = data.sales_records.filter((record) => !record.deleted_at && record.business_id === businessId);
+  const expenses = data.expense_records.filter((record) => !record.deleted_at && record.business_id === businessId);
+  const range = getTodayV4PeriodRange(period, customRange);
+  const periodPurchases = purchases.filter((record) => isDateInRange(record.purchase_date, range));
+  const periodExpenses = expenses.filter((record) => isDateInRange(record.expense_date, range));
+  const analysis = getTodayV5ProfitAnalysis(purchases, sales, expenses, period, customRange);
+  const recentTransactions = [
+    ...periodPurchases.map((record) => ({ title: record.item_summary || record.purchase_title, amount: record.total_amount, date: record.purchase_date })),
+    ...periodExpenses.map((record) => ({ title: record.expense_type, amount: record.amount, date: record.expense_date })),
+  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
+  return {
+    mode: "buyer",
+    businessId,
+    periodLabel: periodLabel(period),
+    analysis,
+    missingEvidenceCount: periodPurchases.filter((record) => record.evidence_status === "missing" || record.receipt_status === "none").length + periodExpenses.filter((record) => record.evidence_status === "missing").length,
+    taxInvoiceCheckCount: periodPurchases.filter((record) => record.tax_invoice_status === "pending" || record.tax_invoice_status === "requested").length,
+    uncategorizedPurchaseCount: periodPurchases.filter((record) => record.accounting_category === "미분류" || record.category_needs_review).length,
+    recentTransactions,
+  };
+}
+
+function buildSupplierTodayAIContext(data: AppData, supplierBusinessId: string, period: TodayV4Period, customRange: TodayV4Range): TodaySupplierAIContext {
+  const range = getTodayV4PeriodRange(period, customRange);
+  const previousRange = getTodayV4PreviousRange(period, range);
+  const allSales = data.supplier_sales_records.filter((record) => !record.deleted_at && record.supplier_business_id === supplierBusinessId);
+  const sales = allSales.filter((record) => isDateInRange(record.sold_at, range));
+  const summary = getSupplierTodaySummary(allSales, range, previousRange);
+  const quoteMetrics = getSupplierQuoteConversion(data, supplierBusinessId, range);
+  const productRows = getSupplierProductMetrics(data, supplierBusinessId, range);
+  const customerRows = getSupplierCustomerMetrics(sales);
+  const tasks = getSupplierTasks(data, supplierBusinessId, range, sales, quoteMetrics, productRows);
+  return { mode: "supplier", supplierBusinessId, periodLabel: periodLabel(period), summary, quoteMetrics, productRows, customerRows, tasks };
+}
+
+function sanitizeAIText(text: string) {
+  return aiForbiddenTerms.reduce((current, term) => current.split(term).join("확인 필요"), text);
+}
+
+function validateAIQuestionScope(mode: TodayAIModeLocal, message: string) {
+  const normalized = message.replace(/\s/g, "");
+  const taxRisk = /(세금.*확정|절세.*보장|신고.*해줘|신고서.*제출|세무사없이)/.test(normalized);
+  const settlementRisk = /(정산.*보장|무조건.*입금|언제.*무조건)/.test(normalized);
+  const buyerAsksSupplierPrivate = mode === "buyer" && /(공급업체.*전체매출|공급업체.*정산|다른구매자|다른업체.*성사율)/.test(normalized);
+  const supplierAsksBuyerPrivate = mode === "supplier" && /(구매자.*순이익|구매자.*장부|구매자.*세무|구매자.*전체매입|다른업체에서얼마)/.test(normalized);
+  if (buyerAsksSupplierPrivate || supplierAsksBuyerPrivate) return "그 정보는 권한 범위 밖이라 제공할 수 없습니다. 오늘장사에 입력된 본인 사업장 데이터 기준으로만 안내할 수 있습니다.";
+  if (taxRisk) return "세금 신고와 절세 판단은 세무사 또는 전문가 확인이 필요합니다. 오늘장사 데이터 기준의 참고용 확인 항목만 안내할 수 있습니다.";
+  if (settlementRisk) return "정산 상태는 거래 방식과 실제 입금 확인에 따라 달라질 수 있습니다. 입력된 상태 기준으로 확인할 항목만 안내할 수 있습니다.";
+  return "";
+}
+
+function validateAIResponse(answer: TodayAIAnswer): TodayAIAnswer {
+  const taxQuestion = /세금|세무|증빙|계산서/.test(answer.answerText);
+  const warnings = [...answer.warnings];
+  if (taxQuestion && !warnings.some((warning) => warning.includes("세무"))) warnings.push("세금 신고나 세무 판단은 세무사 또는 전문가 확인을 권장합니다.");
+  return {
+    ...answer,
+    answerText: sanitizeAIText(answer.answerText),
+    summary: sanitizeAIText(answer.summary),
+    warnings: Array.from(new Set(warnings.map(sanitizeAIText))),
+  };
+}
+
+function generateBuyerTodayAIInsight(context: TodayBuyerAIContext): TodayAIAnswer {
+  const { analysis } = context;
+  const topCost = [...analysis.categoryBreakdown, ...analysis.expenseBreakdown].filter((row) => row.deltaAmount > 0).sort((a, b) => b.deltaAmount - a.deltaAmount)[0];
+  const hasData = analysis.summary.sales + analysis.summary.purchases + analysis.summary.expenses > 0;
+  if (!hasData) return validateAIResponse(buildAIDataShortageAnswer("buyer"));
+  const profitDown = (analysis.profitDeltaRate ?? 0) < 0;
+  return validateAIResponse({
+    answerText: profitDown
+      ? `데이터 기준으로 보면 ${context.periodLabel} 예상 순이익은 줄었고, 가장 큰 원인은 매입비와 지출 증가입니다. ${topCost ? `${topCost.label} 항목을 먼저 확인해보세요.` : "비용 내역을 먼저 확인해보세요."}`
+      : `데이터 기준으로 보면 ${context.periodLabel} 장사는 입력된 범위에서 안정적으로 보입니다. 다만 증빙과 세금계산서 확인 항목은 정리 전 점검해보세요.`,
+    summary: profitDown ? "예상 순이익 감소 원인 요약" : "이번 기간 장사 상태 요약",
+    evidenceItems: [
+      { label: "매출", value: `${money(analysis.summary.sales)} · ${formatDelta(analysis.salesDeltaRate)}` },
+      { label: "매입", value: `${money(analysis.summary.purchases)} · ${formatDelta(analysis.purchaseDeltaRate)}` },
+      { label: "지출", value: `${money(analysis.summary.expenses)} · ${formatDelta(analysis.expenseDeltaRate)}` },
+      { label: "예상 순이익", value: `${money(analysis.summary.profit)} · ${formatDelta(analysis.profitDeltaRate)}` },
+      { label: "증빙 확인", value: `${context.missingEvidenceCount}건` },
+    ],
+    actions: [
+      { label: "비용 오른 항목", url: "/app/today/profit", type: "view_profit" },
+      { label: "싸와 재견적 추천", url: "/app/today/requotes", type: "requote" },
+      { label: "증빙 확인", url: "/app/today/tax", type: "tax_check" },
+    ],
+    warnings: ["이 내용은 오늘장사에 입력된 데이터를 바탕으로 한 참고용 분석입니다."],
+    confidence: context.recentTransactions.length >= 3 ? 0.78 : 0.52,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+function generateSupplierTodayAIInsight(context: TodaySupplierAIContext): TodayAIAnswer {
+  const topProduct = context.productRows[0];
+  const hasData = context.summary.totalAmount > 0 || context.quoteMetrics.sentQuoteCount > 0;
+  if (!hasData) return validateAIResponse(buildAIDataShortageAnswer("supplier"));
+  return validateAIResponse({
+    answerText: context.summary.salesDelta >= 0
+      ? `데이터 기준으로 보면 ${context.periodLabel} 싸와 매출은 지난 기간보다 늘었습니다. 견적 성사율과 상품 정보를 함께 확인하면 다음 거래로 이어질 가능성을 높일 수 있어요.`
+      : `데이터 기준으로 보면 ${context.periodLabel} 싸와 매출은 줄었습니다. 견적 성사율과 정산 확인 필요 거래를 먼저 확인해보세요.`,
+    summary: "공급업체 매출과 견적 성사율 요약",
+    evidenceItems: [
+      { label: "싸와 매출", value: `${money(context.summary.totalAmount)} · ${formatDelta(context.summary.salesDeltaRate)}` },
+      { label: "보낸 견적", value: `${context.quoteMetrics.sentQuoteCount}건` },
+      { label: "선택된 견적", value: `${context.quoteMetrics.selectedQuoteCount}건` },
+      { label: "성사율", value: context.quoteMetrics.sentQuoteCount ? formatPercent(context.quoteMetrics.quoteWinRate) : "데이터 부족" },
+      { label: "정산 확인", value: `${context.summary.settlementReviewCount}건` },
+      { label: "세금계산서 확인", value: `${context.summary.taxRequiredCount}건` },
+      { label: "상위 상품", value: topProduct ? `${topProduct.label} · ${money(topProduct.amount)}` : "데이터 부족" },
+    ],
+    actions: [
+      { label: "견적 성사율", url: "/app/today/supplier/quotes", type: "quote_conversion" },
+      { label: "정산 확인", url: "/app/today/supplier/settlements", type: "settlement" },
+      { label: "세금계산서 확인", url: "/app/today/supplier/tax", type: "tax_invoice" },
+      { label: "상품 매출", url: "/app/today/supplier/products", type: "product" },
+    ],
+    warnings: ["정산 상태는 싸와 거래 상태와 입력된 정보를 기준으로 표시됩니다. 실제 입금 여부는 거래 방식에 따라 확인이 필요할 수 있습니다."],
+    confidence: context.summary.totalAmount > 0 && context.quoteMetrics.sentQuoteCount > 0 ? 0.8 : 0.55,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+function buildAIDataShortageAnswer(mode: TodayAIModeLocal): TodayAIAnswer {
+  return {
+    answerText: mode === "buyer"
+      ? "아직 매출·매입·지출 데이터가 부족해서 원인을 정확히 보기 어렵습니다. 매출을 입력하거나 엑셀 파일을 업로드해보세요."
+      : "아직 완료된 싸와 거래나 견적 데이터가 적어 매출 추이를 분석하기 어렵습니다. 거래가 더 쌓이면 성사율과 상품별 매출을 보여드릴 수 있습니다.",
+    summary: "데이터 부족 안내",
+    evidenceItems: [{ label: "데이터 상태", value: "추가 입력 필요" }],
+    actions: mode === "buyer"
+      ? [{ label: "파일 업로드", url: "/app/today/uploads", type: "upload" }, { label: "매출 입력", url: "/app/today/sales", type: "sales" }]
+      : [{ label: "요청견적 보기", url: "/app/supplier/requests", type: "requests" }, { label: "상품 정보 보완", url: "/app/supplier/products", type: "products" }],
+    warnings: ["이 내용은 오늘장사에 입력된 데이터를 바탕으로 한 참고용 분석입니다."],
+    confidence: 0.35,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function sendBuyerAIChatMessage(data: AppData, businessId: string, userId: string, message: string, period: TodayV4Period, customRange: TodayV4Range) {
+  const blocked = validateAIQuestionScope("buyer", message);
+  const context = buildBuyerTodayAIContext(data, businessId, period, customRange);
+  const answer = blocked ? buildBlockedAIAnswer(blocked) : generateBuyerAIAnswerForQuestion(context, message);
+  return appendTodayAIExchange(data, { mode: "buyer", businessId, userId, message, contextSummary: summarizeBuyerAIContext(context), answer });
+}
+
+function sendSupplierAIChatMessage(data: AppData, supplierBusinessId: string, userId: string, message: string, period: TodayV4Period, customRange: TodayV4Range) {
+  const blocked = validateAIQuestionScope("supplier", message);
+  const context = buildSupplierTodayAIContext(data, supplierBusinessId, period, customRange);
+  const answer = blocked ? buildBlockedAIAnswer(blocked) : generateSupplierAIAnswerForQuestion(context, message);
+  return appendTodayAIExchange(data, { mode: "supplier", supplierBusinessId, userId, message, contextSummary: summarizeSupplierAIContext(context), answer });
+}
+
+function generateBuyerAIAnswerForQuestion(context: TodayBuyerAIContext, message: string) {
+  const lower = message.toLowerCase();
+  const answer = generateBuyerTodayAIInsight(context);
+  if (/견적|재견적|싸와/.test(lower)) {
+    return validateAIResponse({ ...answer, answerText: "비용이 오른 매입 카테고리는 싸와에서 다시 견적받아볼 수 있어요. 증가 금액이 큰 항목부터 확인하는 것을 추천합니다.", summary: "재견적 추천", actions: [{ label: "재견적 추천 보기", url: "/app/today/requotes", type: "requote" }, { label: "싸와에서 견적받기", url: "/app/requests/new?source=today", type: "new_request" }] });
+  }
+  if (/세금|계산서|증빙|세무/.test(lower)) {
+    return validateAIResponse({ ...answer, answerText: `세무자료 정리 전 확인할 항목은 증빙 ${context.missingEvidenceCount}건, 세금계산서 확인 ${context.taxInvoiceCheckCount}건입니다. 이 내용은 참고용이며 최종 신고 전 전문가 확인을 권장합니다.`, summary: "세무자료 확인 항목", actions: [{ label: "세무자료 확인", url: "/app/today/tax", type: "tax" }] });
+  }
+  if (/비용|올랐|많이/.test(lower)) {
+    const top = [...context.analysis.categoryBreakdown, ...context.analysis.expenseBreakdown].sort((a, b) => b.deltaAmount - a.deltaAmount)[0];
+    return validateAIResponse({ ...answer, answerText: top ? `이번 기간 가장 눈에 띄는 비용 증가는 ${top.label}입니다. 지난 기간보다 ${money(Math.max(0, top.deltaAmount))} 늘었습니다.` : "비용 증가 항목을 보려면 이전 기간 데이터가 더 필요합니다.", summary: "비용 상승 항목", actions: [{ label: "순이익 보기", url: "/app/today/profit", type: "profit" }] });
+  }
+  return answer;
+}
+
+function generateSupplierAIAnswerForQuestion(context: TodaySupplierAIContext, message: string) {
+  const lower = message.toLowerCase();
+  const answer = generateSupplierTodayAIInsight(context);
+  if (/성사|견적/.test(lower)) {
+    return validateAIResponse({ ...answer, answerText: `견적 성사율은 ${context.quoteMetrics.sentQuoteCount ? formatPercent(context.quoteMetrics.quoteWinRate) : "데이터 부족"}입니다. 보낸 견적 ${context.quoteMetrics.sentQuoteCount}건 중 선택된 견적은 ${context.quoteMetrics.selectedQuoteCount}건입니다.`, summary: "견적 성사율 분석", actions: [{ label: "견적 성사율 보기", url: "/app/today/supplier/quotes", type: "quotes" }] });
+  }
+  if (/상품|팔렸|문의/.test(lower)) {
+    const top = context.productRows[0];
+    return validateAIResponse({ ...answer, answerText: top ? `${top.label} 상품이 현재 가장 눈에 띕니다. 매출 ${money(top.amount)}, 문의 ${top.inquiries}건, 주문요청 ${top.orderRequests}건을 기준으로 봅니다.` : "상품별 매출을 보려면 거래와 상품 이벤트 데이터가 더 필요합니다.", summary: "상품 성과", actions: [{ label: "상품 매출 보기", url: "/app/today/supplier/products", type: "products" }] });
+  }
+  if (/정산/.test(lower)) {
+    return validateAIResponse({ ...answer, answerText: `정산 확인이 필요한 거래는 ${context.summary.settlementReviewCount}건입니다. 실제 입금 여부는 거래 방식에 따라 별도 확인이 필요할 수 있습니다.`, summary: "정산 확인 항목", actions: [{ label: "정산 확인", url: "/app/today/supplier/settlements", type: "settlement" }] });
+  }
+  if (/세금|계산서/.test(lower)) {
+    return validateAIResponse({ ...answer, answerText: `세금계산서 발행 상태 확인이 필요한 거래는 ${context.summary.taxRequiredCount}건입니다. 표시 상태는 입력된 거래 정보를 기준으로 한 참고용입니다.`, summary: "세금계산서 확인 항목", actions: [{ label: "세금계산서 확인", url: "/app/today/supplier/tax", type: "tax" }] });
+  }
+  return answer;
+}
+
+function buildBlockedAIAnswer(message: string): TodayAIAnswer {
+  return validateAIResponse({
+    answerText: message,
+    summary: "질문 범위 차단",
+    evidenceItems: [{ label: "안전가드", value: "권한 또는 위험 표현 확인" }],
+    actions: [{ label: "오늘장사 홈", url: "/app/today", type: "home" }],
+    warnings: ["AI는 본인 사업장 데이터 기준으로만 안내합니다."],
+    confidence: 1,
+    blocked: true,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+function summarizeBuyerAIContext(context: TodayBuyerAIContext) {
+  return {
+    period: context.periodLabel,
+    sales: context.analysis.summary.sales,
+    purchases: context.analysis.summary.purchases,
+    expenses: context.analysis.summary.expenses,
+    profit: context.analysis.summary.profit,
+    missingEvidenceCount: context.missingEvidenceCount,
+    taxInvoiceCheckCount: context.taxInvoiceCheckCount,
+    uncategorizedPurchaseCount: context.uncategorizedPurchaseCount,
+  };
+}
+
+function summarizeSupplierAIContext(context: TodaySupplierAIContext) {
+  return {
+    period: context.periodLabel,
+    sales: context.summary.totalAmount,
+    sentQuoteCount: context.quoteMetrics.sentQuoteCount,
+    selectedQuoteCount: context.quoteMetrics.selectedQuoteCount,
+    quoteWinRate: context.quoteMetrics.quoteWinRate,
+    settlementReviewCount: context.summary.settlementReviewCount,
+    taxRequiredCount: context.summary.taxRequiredCount,
+  };
+}
+
+function appendTodayAIExchange(data: AppData, input: { mode: TodayAIModeLocal; businessId?: string; supplierBusinessId?: string; userId: string; message: string; contextSummary: Record<string, unknown>; answer: TodayAIAnswer }) {
+  const createdAt = new Date().toISOString();
+  const conversationId = `ai-conv-${input.mode}-${Date.now()}`;
+  const usageKey = `${input.mode}-${input.userId}-${today}`;
+  const currentUsage = data.today_ai_usage.find((entry) => entry.id === usageKey);
+  const conversation = {
+    id: conversationId,
+    business_id: input.businessId,
+    supplier_business_id: input.supplierBusinessId,
+    user_id: input.userId,
+    mode: input.mode,
+    title: input.message.slice(0, 40) || "AI 질문",
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+  const userMessage = {
+    id: `${conversationId}-user`,
+    conversation_id: conversationId,
+    business_id: input.businessId,
+    supplier_business_id: input.supplierBusinessId,
+    user_id: input.userId,
+    role: "user" as const,
+    message_text: input.message,
+    context_summary_json: "{}",
+    evidence_json: "[]",
+    actions_json: "[]",
+    safety_warnings_json: "[]",
+    model_name: "mock",
+    status: "success" as const,
+    created_at: createdAt,
+  };
+  const assistantMessage = {
+    id: `${conversationId}-assistant`,
+    conversation_id: conversationId,
+    business_id: input.businessId,
+    supplier_business_id: input.supplierBusinessId,
+    user_id: input.userId,
+    role: "assistant" as const,
+    message_text: input.answer.answerText,
+    context_summary_json: JSON.stringify(input.contextSummary),
+    evidence_json: JSON.stringify(input.answer.evidenceItems),
+    actions_json: JSON.stringify(input.answer.actions),
+    safety_warnings_json: JSON.stringify(input.answer.warnings),
+    model_name: "mock",
+    status: input.answer.blocked ? "blocked" as const : "success" as const,
+    created_at: createdAt,
+  };
+  const usage = currentUsage
+    ? { ...currentUsage, request_count: currentUsage.request_count + 1, updated_at: createdAt }
+    : { id: usageKey, business_id: input.businessId, supplier_business_id: input.supplierBusinessId, user_id: input.userId, mode: input.mode, request_count: 1, token_count: 0, date: today, created_at: createdAt, updated_at: createdAt };
+  const nextData = {
+    ...data,
+    today_ai_conversations: [conversation, ...data.today_ai_conversations],
+    today_ai_messages: [assistantMessage, userMessage, ...data.today_ai_messages],
+    today_ai_usage: currentUsage ? data.today_ai_usage.map((entry) => entry.id === usage.id ? usage : entry) : [usage, ...data.today_ai_usage],
+  };
+  saveData(nextData);
+  return { data: nextData, answer: input.answer };
+}
+
+function TodayAIInsightSummaryCard({ title, answer, navigate, compact = false }: { title: string; answer: TodayAIAnswer; navigate: Navigate; compact?: boolean }) {
+  return (
+    <section className={`aiSummaryCard${compact ? " compact" : ""}`}>
+      <div className="aiSummaryHead">
+        <span className="eyebrow">AI 도우미</span>
+        <strong>{title}</strong>
+      </div>
+      <p>{answer.answerText}</p>
+      <div className="aiEvidenceGrid">
+        {answer.evidenceItems.slice(0, compact ? 3 : 5).map((item) => (
+          <span key={`${item.label}-${item.value}`}><b>{item.label}</b>{item.value}</span>
+        ))}
+      </div>
+      <div className="formActions compactActions">
+        {answer.actions.slice(0, compact ? 2 : 4).map((action) => (
+          <button className="ghostButton compact" type="button" key={action.label} onClick={() => navigate(action.url)}>{action.label}</button>
+        ))}
+        <button className="secondaryButton compact" type="button" onClick={() => navigate(answer.actions[0]?.url.includes("/supplier") ? "/app/today/supplier/ai" : "/app/today/ai")}>자세히 보기</button>
+      </div>
+      {answer.warnings[0] && <small>{answer.warnings[0]}</small>}
+    </section>
+  );
+}
+
+function TodayBuyerAIPage({ data, setData, navigate, businessId, period, customRange }: MutatingPageProps & { businessId: string; period: TodayV4Period; customRange: TodayV4Range }) {
+  const context = buildBuyerTodayAIContext(data, businessId, period, customRange);
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState<TodayAIAnswer>(() => generateBuyerTodayAIInsight(context));
+  const usage = data.today_ai_usage.find((entry) => entry.mode === "buyer" && entry.user_id === businessId && entry.date === today);
+  const recentMessages = data.today_ai_messages.filter((message) => message.business_id === businessId && message.role === "assistant").slice(0, 4);
+
+  function ask(nextQuestion: string) {
+    const trimmed = nextQuestion.trim();
+    if (!trimmed) return;
+    const result = sendBuyerAIChatMessage(data, businessId, businessId, trimmed, period, customRange);
+    setData(result.data);
+    setAnswer(result.answer);
+    setQuestion("");
+  }
+
+  return (
+    <>
+      <TodayAIHeader mode="buyer" requestCount={usage?.request_count ?? 0} />
+      <TodayAIInsightSummaryCard title="AI가 본 이번 달 장사" answer={answer} navigate={navigate} />
+      <section className="toolPanel aiChatPanel">
+        <SectionHeader title="빠른 질문" />
+        <div className="aiQuestionChips">
+          {buyerAIQuickQuestions.map((item) => <button type="button" key={item} onClick={() => ask(item)}>{item}</button>)}
+        </div>
+        <form className="aiAskForm" onSubmit={(event) => { event.preventDefault(); ask(question); }}>
+          <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="예: 이번 달 순이익이 왜 줄었어?" />
+          <button className="primaryButton compact" type="submit">질문</button>
+        </form>
+      </section>
+      <TodayAIConversationLog messages={recentMessages} navigate={navigate} />
+    </>
+  );
+}
+
+function TodaySupplierAIPage({ data, setData, navigate, supplierBusinessId, userId, period, customRange }: MutatingPageProps & { supplierBusinessId: string; userId: string; period: TodayV4Period; customRange: TodayV4Range }) {
+  const context = buildSupplierTodayAIContext(data, supplierBusinessId, period, customRange);
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState<TodayAIAnswer>(() => generateSupplierTodayAIInsight(context));
+  const usage = data.today_ai_usage.find((entry) => entry.mode === "supplier" && entry.user_id === userId && entry.date === today);
+  const recentMessages = data.today_ai_messages.filter((message) => message.supplier_business_id === supplierBusinessId && message.role === "assistant").slice(0, 4);
+
+  function ask(nextQuestion: string) {
+    const trimmed = nextQuestion.trim();
+    if (!trimmed) return;
+    const result = sendSupplierAIChatMessage(data, supplierBusinessId, userId, trimmed, period, customRange);
+    setData(result.data);
+    setAnswer(result.answer);
+    setQuestion("");
+  }
+
+  return (
+    <>
+      <TodayAIHeader mode="supplier" requestCount={usage?.request_count ?? 0} />
+      <TodayAIInsightSummaryCard title="AI가 본 이번 달 싸와 매출" answer={answer} navigate={navigate} />
+      <section className="toolPanel aiChatPanel">
+        <SectionHeader title="빠른 질문" />
+        <div className="aiQuestionChips">
+          {supplierAIQuickQuestions.map((item) => <button type="button" key={item} onClick={() => ask(item)}>{item}</button>)}
+        </div>
+        <form className="aiAskForm" onSubmit={(event) => { event.preventDefault(); ask(question); }}>
+          <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="예: 견적 성사율이 낮은 이유가 뭐야?" />
+          <button className="primaryButton compact" type="submit">질문</button>
+        </form>
+      </section>
+      <TodayAIConversationLog messages={recentMessages} navigate={navigate} />
+    </>
+  );
+}
+
+function TodayAIHeader({ mode, requestCount }: { mode: TodayAIModeLocal; requestCount: number }) {
+  return (
+    <section className="todayQuickPanel aiHeroPanel">
+      <div>
+        <span className="eyebrow">{mode === "buyer" ? "AI 장사 도우미" : "AI 매출 도우미"}</span>
+        <h2>{mode === "buyer" ? "이번 달 장사를 쉽게 설명해드릴게요." : "싸와 매출과 견적 성사율을 쉽게 설명해드릴게요."}</h2>
+        <p>데이터 기준으로 본 참고용 분석입니다. 모르는 내용은 데이터 부족으로 안내하고, 직접 처리할 화면으로 연결합니다.</p>
+      </div>
+      <div className="aiModeBadge">
+        <strong>mock</strong>
+        <span>오늘 요청 {requestCount}회</span>
+      </div>
+    </section>
+  );
+}
+
+function TodayAIConversationLog({ messages, navigate }: { messages: AppData["today_ai_messages"]; navigate: Navigate }) {
+  return (
+    <section className="toolPanel">
+      <SectionHeader title="최근 AI 답변 로그" />
+      <div className="aiAnswerList">
+        {messages.map((message) => {
+          const evidence = safeJsonParse<TodayAIEvidenceItem[]>(message.evidence_json, []);
+          const actions = safeJsonParse<TodayAIAction[]>(message.actions_json, []);
+          const warnings = safeJsonParse<string[]>(message.safety_warnings_json, []);
+          return (
+            <article className={`aiAnswerCard ${message.status}`} key={message.id}>
+              <div className="aiAnswerMeta"><span>{message.status === "blocked" ? "차단됨" : "답변"}</span><small>{message.created_at.slice(0, 16).replace("T", " ")}</small></div>
+              <p>{message.message_text}</p>
+              <div className="aiEvidenceGrid">{evidence.slice(0, 4).map((item) => <span key={`${message.id}-${item.label}`}><b>{item.label}</b>{item.value}</span>)}</div>
+              <div className="formActions compactActions">{actions.slice(0, 3).map((action) => <button className="ghostButton compact" type="button" key={action.label} onClick={() => navigate(action.url)}>{action.label}</button>)}</div>
+              {warnings[0] && <small>{warnings[0]}</small>}
+            </article>
+          );
+        })}
+        {!messages.length && <p className="mutedText">아직 저장된 AI 답변 로그가 없습니다. 빠른 질문을 눌러보세요.</p>}
+      </div>
+    </section>
+  );
+}
+
+function safeJsonParse<T>(value: string, fallback: T): T {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function TodayJangsaV4Page({ data, navigate, setData, routePath, section, role }: MutatingPageProps & { routePath: string; section: TodaySection; role: UserRole }) {
+  const businessId = "buyer-1";
+  const isAdmin = role === "admin";
+  const profile = data.profiles.find((entry) => entry.id === businessId) ?? data.profiles.find((entry) => entry.role === "buyer");
+  const [period, setPeriod] = useState<TodayV4Period>("month");
+  const [customRange, setCustomRange] = useState<TodayV4Range>({ start: "2026-07-01", end: "2026-07-31" });
+  const [quickMode, setQuickMode] = useState<TodayQuickMode | null>(routePath.endsWith("/sales/new") ? "sales" : routePath.endsWith("/expenses/new") ? "expense" : routePath.endsWith("/purchases/new") ? "purchase" : null);
+  const [editing, setEditing] = useState<{ mode: TodayQuickMode; id: string } | null>(null);
+  const [entryFilter, setEntryFilter] = useState<TodayV4EntryType>("all");
+
+  const purchases = data.purchase_records.filter((record) => !record.deleted_at && (isAdmin || record.buyer_id === businessId || record.business_id === businessId));
+  const sales = data.sales_records.filter((record) => !record.deleted_at && (isAdmin || record.business_id === businessId));
+  const expenses = data.expense_records.filter((record) => !record.deleted_at && (isAdmin || record.business_id === businessId));
+  const taxDocuments = data.tax_documents.filter((document) => !document.deleted_at && (isAdmin || document.business_id === businessId));
+  const periodRange = getTodayV4PeriodRange(period, customRange);
+  const periodPurchases = purchases.filter((record) => isDateInRange(record.purchase_date, periodRange));
+  const periodSales = sales.filter((record) => isDateInRange(record.sales_date, periodRange));
+  const periodExpenses = expenses.filter((record) => isDateInRange(record.expense_date, periodRange));
+  const periodTaxDocuments = taxDocuments.filter((document) => isDateInRange(document.issued_at || document.created_at.slice(0, 10), periodRange));
+  const summary = getTodayV4Summary(periodPurchases, periodSales, periodExpenses);
+  const analysis = getTodayV5ProfitAnalysis(purchases, sales, expenses, period, customRange);
+  const aiAnswer = generateBuyerTodayAIInsight(buildBuyerTodayAIContext(data, businessId, period, customRange));
+  const quickContext = editing ? { mode: editing.mode, id: editing.id } : quickMode ? { mode: quickMode } : null;
+
+  function closeQuick() {
+    setQuickMode(null);
+    setEditing(null);
+    if (routePath.endsWith("/new")) navigate(`/app/today/${section === "home" ? "" : section}`.replace(/\/$/, ""));
+  }
+
+  return (
+    <Page>
+      <div className="todayShell">
+        <section className="todayHero v4">
+          <div>
+            <span className="eyebrow">오늘장사 {isAdmin ? "운영 보기" : profile?.business_name ?? "내 사업장"}</span>
+            <h1>오늘 장사가 얼마나 남았는지 확인하세요.</h1>
+            <p>매출과 지출만 빠르게 입력하면 싸와 매입까지 합쳐 예상 순이익을 바로 보여줍니다.</p>
+          </div>
+          <TodayQuickButtons onOpen={setQuickMode} navigate={navigate} />
+        </section>
+
+        <TodayV4Frame section={section} navigate={navigate}>
+          {section === "home" && <TodayV4Home summary={summary} analysis={analysis} aiAnswer={aiAnswer} purchases={periodPurchases} sales={periodSales} expenses={periodExpenses} onOpen={setQuickMode} navigate={navigate} />}
+          {section === "ledger" && (
+            <TodayV4Ledger
+              period={period}
+              setPeriod={setPeriod}
+              customRange={customRange}
+              setCustomRange={setCustomRange}
+              filter={entryFilter}
+              setFilter={setEntryFilter}
+              purchases={periodPurchases}
+              sales={periodSales}
+              expenses={periodExpenses}
+              summary={summary}
+              navigate={navigate}
+              onOpen={setQuickMode}
+            />
+          )}
+          {section === "sales" && <TodayV4Sales period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} records={periodSales} allRecords={sales} summary={summary} onOpen={() => setQuickMode("sales")} onEdit={(id) => setEditing({ mode: "sales", id })} onDelete={(id) => setData(deleteSalesRecord(data, id))} />}
+          {section === "expenses" && <TodayV4Expenses period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} records={periodExpenses} allRecords={expenses} summary={summary} recurringRules={data.recurring_rules} onOpen={() => setQuickMode("expense")} onEdit={(id) => setEditing({ mode: "expense", id })} onDelete={(id) => setData(deleteExpenseRecord(data, id))} />}
+          {section === "purchases" && <TodayV4Purchases data={data} records={periodPurchases} allRecords={purchases} period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} navigate={navigate} setData={setData} onOpen={() => setQuickMode("purchase")} onEdit={(id) => setEditing({ mode: "purchase", id })} />}
+          {section === "profit" && <TodayV4Profit analysis={analysis} aiAnswer={aiAnswer} period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} navigate={navigate} />}
+          {section === "requotes" && <TodayRequotesPage data={data} setData={setData} navigate={navigate} routePath={routePath} />}
+          {section === "uploads" && <TodayUploadsRouter data={data} setData={setData} navigate={navigate} routePath={routePath} businessId={businessId} />}
+          {section === "ai" && <TodayBuyerAIPage data={data} setData={setData} navigate={navigate} businessId={businessId} period={period} customRange={customRange} />}
+          {section === "notifications" && <TodayNotificationsPage data={data} setData={setData} navigate={navigate} audience="buyer" userId={businessId} />}
+          {section === "tax" && (
+            routePath.startsWith("/app/today/tax/accountant-summary")
+              ? <TodayAccountantSummaryPage data={data} setData={setData} profile={profile} purchases={periodPurchases} sales={periodSales} expenses={periodExpenses} documents={periodTaxDocuments} period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} navigate={navigate} />
+              : <TodayTaxV6Page data={data} setData={setData} aiAnswer={aiAnswer} purchases={periodPurchases} sales={periodSales} expenses={periodExpenses} documents={periodTaxDocuments} period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} navigate={navigate} />
+          )}
+          {section === "ssawa" && <TodaySsawaPage purchases={purchases} navigate={navigate} />}
+          {section === "settings" && <TodaySettingsPage data={data} profile={profile} admin={isAdmin} navigate={navigate} />}
+        </TodayV4Frame>
+
+        <div className="todayFloatingActions">
+          <button type="button" onClick={() => setQuickMode("sales")}>매출 입력</button>
+          <button type="button" onClick={() => setQuickMode("expense")}>지출 입력</button>
+          <button type="button" onClick={() => setQuickMode("purchase")}>매입 입력</button>
+        </div>
+      </div>
+      {quickContext && <TodayQuickEntrySheet data={data} setData={setData} mode={quickContext.mode} editId={"id" in quickContext ? quickContext.id : undefined} onClose={closeQuick} />}
+    </Page>
+  );
+}
+
+function TodayQuickButtons({ onOpen, navigate }: { onOpen: (mode: TodayQuickMode) => void; navigate: Navigate }) {
+  return (
+    <div className="todayHeroActions">
+      <button className="primaryButton" type="button" onClick={() => onOpen("sales")}><Plus size={16} />매출 입력</button>
+      <button className="secondaryButton" type="button" onClick={() => onOpen("expense")}><FilePlus2 size={16} />지출 입력</button>
+      <button className="ghostButton" type="button" onClick={() => onOpen("purchase")}>매입 입력</button>
+      <button className="ghostButton" type="button" onClick={() => navigate("/app/today/uploads")}><Upload size={16} />파일 업로드</button>
+      <button className="ghostButton" type="button" onClick={() => navigate("/app/requests/new")}>싸와 견적받기</button>
+    </div>
+  );
+}
+
+function TodayV4Frame({ section, navigate, children }: { section: TodaySection; navigate: Navigate; children: ReactNode }) {
+  const navLabels: Record<string, string> = {
+    home: "홈",
+    ledger: "장부",
+    sales: "매출",
+    purchases: "매입",
+    expenses: "지출",
+    profit: "순이익",
+    tax: "세무자료",
+    ssawa: "싸와 구매",
+    uploads: "파일 업로드",
+    settings: "설정",
+  };
+  return (
+    <>
+      <nav className="todayNav" aria-label="오늘장사 메뉴">
+        {todayNavItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button className={item.section === section ? "todayNavButton active" : "todayNavButton"} type="button" onClick={() => navigate(item.path)} key={item.section}>
+              <Icon size={17} />
+              <span>{item.section === "requotes" ? "재견적" : item.section === "notifications" ? "알림" : navLabels[item.section]}</span>
+            </button>
+          );
+        })}
+      </nav>
+      {children}
+    </>
+  );
+}
+
+function TodayUploadsRouter({ data, setData, navigate, routePath, businessId }: MutatingPageProps & { routePath: string; businessId: string }) {
+  const previewMatch = routePath.match(/\/app\/today\/uploads\/([^/?]+)(?:\/preview)?/);
+  if (routePath.startsWith("/app/today/uploads/new")) return <TodayUploadNewPage data={data} setData={setData} navigate={navigate} businessId={businessId} />;
+  if (previewMatch?.[1] && previewMatch[1] !== "new") return <TodayUploadPreviewPage data={data} setData={setData} navigate={navigate} batchId={previewMatch[1]} />;
+  return <TodayUploadsPage data={data} navigate={navigate} businessId={businessId} />;
+}
+
+function TodayUploadsPage({ data, navigate, businessId }: PageProps & { businessId: string }) {
+  const batches = data.today_upload_batches.filter((batch) => batch.business_id === businessId).slice(0, 12);
+  const pendingCount = batches.filter((batch) => batch.status === "mapping_needed" || batch.status === "ready_to_import").length;
+  const importedCount = batches.reduce((sum, batch) => sum + batch.imported_count, 0);
+
+  function downloadTemplate(type: TodayUploadType) {
+    downloadTextFile(`today-upload-template-${type}.csv`, toCsv(getTodayUploadTemplateRows(type)), "text/csv;charset=utf-8");
+  }
+
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="검수 대기 파일" value={`${pendingCount}개`} icon={<Upload />} desc="반영 전 확인이 필요한 묶음" />
+        <Metric label="업로드 반영 행" value={`${importedCount}건`} icon={<Check />} desc="장부에 연결된 행" />
+        <Metric label="중복 의심" value={`${batches.reduce((sum, batch) => sum + batch.duplicate_count, 0)}건`} icon={<ShieldCheck />} />
+        <Metric label="템플릿" value="CSV" icon={<ClipboardList />} desc="엑셀에서 열 수 있습니다." />
+      </div>
+
+      <section className="toolPanel">
+        <SectionHeader title="파일 업로드" action="새 업로드" onAction={() => navigate("/app/today/uploads/new")} />
+        <div className="todayInsightGrid compact">
+          {(["sales", "expense", "purchase", "mixed"] as TodayUploadType[]).map((type) => (
+            <article className="todayInsightCard" key={type}>
+              <div className="todayInsightHeader">
+                <span>{todayUploadTypeLabels[type]}</span>
+                <Upload size={18} />
+              </div>
+              <h3>{todayUploadTypeLabels[type]} 파일</h3>
+              <p>CSV 또는 엑셀 파일을 올리고 컬럼 매핑과 행 상태를 검수한 뒤 장부에 반영합니다.</p>
+              <div className="formActions">
+                <button className="primaryButton" type="button" onClick={() => navigate(`/app/today/uploads/new?type=${type}`)}>업로드</button>
+                <button className="secondaryButton" type="button" onClick={() => downloadTemplate(type)}>템플릿</button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="toolPanel">
+        <SectionHeader title="업로드 이력" />
+        <div className="todayTableWrap">
+          <table className="todayTable">
+            <thead><tr><th>파일</th><th>상태</th><th>행</th><th>오류/중복</th><th>반영</th><th /></tr></thead>
+            <tbody>
+              {batches.map((batch) => (
+                <tr key={batch.id}>
+                  <td><strong>{batch.file_name}</strong><br /><span className="mutedText">{todayUploadTypeLabels[batch.upload_type]} · {batch.created_at.slice(0, 10)}</span></td>
+                  <td><StatusPill status={batch.status}>{todayUploadBatchStatusLabels[batch.status]}</StatusPill></td>
+                  <td>{batch.row_count}건</td>
+                  <td>{batch.invalid_count + batch.duplicate_count}건</td>
+                  <td>{batch.imported_count}건</td>
+                  <td><button className="ghostButton" type="button" onClick={() => navigate(`/app/today/uploads/${batch.id}/preview`)}>검수</button></td>
+                </tr>
+              ))}
+              {!batches.length && <tr><td colSpan={6}><p className="mutedText">아직 업로드 이력이 없습니다.</p></td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function getUploadTypeFromUrl(): TodayUploadType {
+  const type = new URLSearchParams(window.location.search).get("type") as TodayUploadType | null;
+  return type && Object.keys(todayUploadTypeLabels).includes(type) ? type : "mixed";
+}
+
+function TodayUploadNewPage({ data, setData, navigate, businessId }: MutatingPageProps & { businessId: string }) {
+  const [uploadType, setUploadType] = useState<TodayUploadType>(getUploadTypeFromUrl);
+  const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function parseWorkbookFile(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const firstSheet = workbook.SheetNames[0];
+    const matrix = XLSX.utils.sheet_to_json<string[]>(workbook.Sheets[firstSheet], { header: 1, raw: false, defval: "" });
+    const headers = (matrix[0] ?? []).map((cell, index) => String(cell || `열${index + 1}`).trim());
+    const rows = matrix.slice(1).filter((row) => row.some((cell) => String(cell).trim())).map((row) => Object.fromEntries(headers.map((header, index) => [header, String(row[index] ?? "").trim()])));
+    return { headers, rows };
+  }
+
+  async function handleFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    setError("");
+    setBusy(true);
+    try {
+      const lower = file.name.toLowerCase();
+      const parsed: { headers: string[]; rows: Record<string, string>[]; error?: string } = lower.endsWith(".xlsx") || lower.endsWith(".xls")
+        ? await parseWorkbookFile(file)
+        : parseCsvText(await file.text());
+      if (parsed.error) {
+        setError(parsed.error);
+        return;
+      }
+      const result = createUploadPreview(data, {
+        businessId,
+        uploadType,
+        fileName: file.name,
+        fileMimeType: file.type || (lower.endsWith(".csv") ? "text/csv" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        fileSize: file.size,
+        headers: parsed.headers,
+        rows: parsed.rows,
+        createdBy: businessId,
+      });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setData(result.data);
+      navigate(`/app/today/uploads/${result.batchId}/preview`);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "파일을 읽지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="toolPanel">
+      <SectionHeader title="새 파일 업로드" action="이력 보기" onAction={() => navigate("/app/today/uploads")} />
+      <div className="formGrid">
+        <label>
+          업로드 유형
+          <select value={uploadType} onChange={(event) => setUploadType(event.target.value as TodayUploadType)}>
+            {(["sales", "expense", "purchase", "mixed"] as TodayUploadType[]).map((type) => <option value={type} key={type}>{todayUploadTypeLabels[type]}</option>)}
+          </select>
+        </label>
+        <label>
+          파일 선택
+          <input type="file" accept=".csv,.tsv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleFile} disabled={busy} />
+        </label>
+      </div>
+      <div className="uploadDropPanel">
+        <Upload size={32} />
+        <h3>{busy ? "파일을 분석하는 중입니다." : fileName || "CSV 또는 엑셀 파일을 선택하세요."}</h3>
+        <p>선택한 파일은 곧바로 장부에 들어가지 않고, 컬럼 매핑과 행 검수 화면을 먼저 거칩니다.</p>
+      </div>
+      {error && <p className="formError">{error}</p>}
+      <div className="formActions">
+        <button className="secondaryButton" type="button" onClick={() => downloadTextFile(`today-upload-template-${uploadType}.csv`, toCsv(getTodayUploadTemplateRows(uploadType)), "text/csv;charset=utf-8")}>템플릿 다운로드</button>
+      </div>
+    </section>
+  );
+}
+
+function TodayUploadPreviewPage({ data, setData, navigate, batchId }: MutatingPageProps & { batchId: string }) {
+  const batch = data.today_upload_batches.find((entry) => entry.id === batchId);
+  const [filter, setFilter] = useState<"all" | "valid" | "warning" | "invalid" | "duplicate" | "imported">("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [message, setMessage] = useState("");
+  if (!batch) {
+    return <EmptyState icon={<Upload />} title="업로드 묶음을 찾을 수 없습니다." desc="이력 화면에서 다시 선택해 주세요." actionLabel="업로드 이력" onAction={() => navigate("/app/today/uploads")} />;
+  }
+  const activeBatch = batch;
+  const mappings = data.today_upload_column_mappings.filter((mapping) => mapping.batch_id === batchId);
+  const rows = data.today_upload_rows.filter((row) => row.batch_id === batchId).sort((a, b) => a.row_index - b.row_index);
+  const visibleRows = rows.filter((row) => filter === "all" || row.validation_status === filter).slice(0, 120);
+  const selectedIds = Array.from(selected);
+
+  function handleMapping(sourceColumnName: string, targetField: TodayUploadTargetField) {
+    const nextData = updateUploadColumnMapping(data, batchId, sourceColumnName, targetField);
+    setData(nextData);
+    setMessage("컬럼 매핑을 다시 계산했습니다.");
+  }
+
+  function handleRowType(rowId: string, finalType: TodayUploadFinalRecordType) {
+    const nextData = updateUploadRow(data, rowId, { final_record_type: finalType });
+    setData(nextData);
+  }
+
+  function handleImport(selectedOnly: boolean, allowWarnings: boolean) {
+    const result = importUploadRows(data, batchId, {
+      selectedRowIds: selectedOnly ? selectedIds : undefined,
+      validOnly: !allowWarnings,
+      allowWarnings,
+      skipDuplicates: true,
+      actorUserId: activeBatch.business_id,
+    });
+    setData(result.data);
+    setMessage(`${result.importedCount}건 반영, ${result.skippedCount}건 건너뜀`);
+    setSelected(new Set());
+  }
+
+  return (
+    <>
+      <section className="toolPanel">
+        <SectionHeader title={activeBatch.file_name} action="업로드 이력" onAction={() => navigate("/app/today/uploads")} />
+        <div className="dashboardGrid">
+          <Metric label="전체 행" value={`${activeBatch.row_count}건`} icon={<ClipboardList />} />
+          <Metric label="반영 가능" value={`${activeBatch.valid_count}건`} icon={<Check />} />
+          <Metric label="확인 필요" value={`${activeBatch.warning_count + activeBatch.invalid_count}건`} icon={<ShieldCheck />} />
+          <Metric label="중복 의심" value={`${activeBatch.duplicate_count}건`} icon={<RefreshCcw />} />
+        </div>
+        <p className="mutedText">업로드 파일은 이 화면에서 검수한 뒤 버튼을 눌러야 장부에 반영됩니다. 카드번호처럼 보이는 값은 저장 전에 마스킹됩니다.</p>
+        {message && <p className="successText">{message}</p>}
+      </section>
+
+      <section className="toolPanel">
+        <SectionHeader title="컬럼 매핑" />
+        <div className="uploadMappingGrid">
+          {mappings.map((mapping) => (
+            <label key={mapping.id}>
+              {mapping.source_column_name}
+              <select value={mapping.target_field} onChange={(event) => handleMapping(mapping.source_column_name, event.target.value as TodayUploadTargetField)}>
+                {todayUploadTargetFields.map((field) => <option value={field} key={field}>{todayUploadTargetFieldLabels[field]}</option>)}
+              </select>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="toolPanel">
+        <SectionHeader title="행 검수" />
+        <div className="filterTabs">
+          {(["all", "valid", "warning", "invalid", "duplicate", "imported"] as const).map((status) => (
+            <button className={filter === status ? "active" : ""} type="button" onClick={() => setFilter(status)} key={status}>
+              {status === "all" ? "전체" : todayUploadValidationStatusLabels[status]}
+            </button>
+          ))}
+        </div>
+        <div className="todayTableWrap">
+          <table className="todayTable uploadPreviewTable">
+            <thead><tr><th>선택</th><th>행</th><th>구분</th><th>날짜</th><th>거래처/품목</th><th>금액</th><th>상태</th><th>메시지</th></tr></thead>
+            <tbody>
+              {visibleRows.map((row) => {
+                const mapped = JSON.parse(row.mapped_json || "{}") as Record<string, string | number>;
+                const messages = JSON.parse(row.validation_messages_json || "[]") as string[];
+                return (
+                  <tr key={row.id}>
+                    <td><input type="checkbox" checked={selected.has(row.id)} onChange={(event) => setSelected((prev) => {
+                      const next = new Set(prev);
+                      if (event.target.checked) next.add(row.id);
+                      else next.delete(row.id);
+                      return next;
+                    })} disabled={Boolean(row.imported_at)} /></td>
+                    <td>{row.row_index}</td>
+                    <td>
+                      <select value={row.final_record_type} onChange={(event) => handleRowType(row.id, event.target.value as TodayUploadFinalRecordType)} disabled={Boolean(row.imported_at)}>
+                        {(["sales", "expense", "purchase", "skip", "unknown"] as TodayUploadFinalRecordType[]).map((type) => <option value={type} key={type}>{todayUploadRecordTypeLabels[type]}</option>)}
+                      </select>
+                    </td>
+                    <td>{mapped.date || "-"}</td>
+                    <td><strong>{mapped.counterparty_name || "-"}</strong><br /><span className="mutedText">{mapped.item_summary || mapped.category || "-"}</span></td>
+                    <td>{money(Number(mapped.amount ?? 0))}</td>
+                    <td><StatusPill status={row.validation_status}>{row.imported_at ? "반영 완료" : todayUploadValidationStatusLabels[row.validation_status]}</StatusPill></td>
+                    <td>{messages.join(" · ") || "-"}</td>
+                  </tr>
+                );
+              })}
+              {!visibleRows.length && <tr><td colSpan={8}><p className="mutedText">표시할 행이 없습니다.</p></td></tr>}
+            </tbody>
+          </table>
+        </div>
+        <div className="formActions">
+          <button className="primaryButton" type="button" onClick={() => handleImport(false, false)}>정상 행 반영</button>
+          <button className="secondaryButton" type="button" onClick={() => handleImport(false, true)}>확인 필요 포함 반영</button>
+          <button className="secondaryButton" type="button" onClick={() => handleImport(true, true)} disabled={!selected.size}>선택 {selected.size}건 반영</button>
+          <button className="ghostButton" type="button" onClick={() => setData(cancelUploadBatch(data, batchId))}>취소 표시</button>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function TodayV4Home({ summary, analysis, aiAnswer, purchases, sales, expenses, onOpen, navigate }: { summary: ReturnType<typeof getTodayV4Summary>; analysis: TodayV5ProfitAnalysis; aiAnswer: TodayAIAnswer; purchases: PurchaseRecord[]; sales: TodaySaleRecord[]; expenses: TodayExpenseRecordV4[]; onOpen: (mode: TodayQuickMode) => void; navigate: Navigate }) {
+  const categorySummary = getPurchaseCategorySummary(purchases).slice(0, 4);
+  const hasData = sales.length + purchases.length + expenses.length > 0;
+  const topInsights = analysis.insights.slice(0, 3);
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="오늘 예상 순이익" value={money(getTodayV4Summary(purchases.filter((record) => record.purchase_date === today), sales.filter((record) => record.sales_date === today), expenses.filter((record) => record.expense_date === today)).profit)} icon={<Landmark />} desc="예상 순이익입니다." />
+        <Metric label="이번 달 예상 순이익" value={money(summary.profit)} icon={<CalendarDays />} desc={formatDeltaSentence("순이익", analysis.profitDeltaRate, periodCompareLabel(analysis.period))} />
+        <Metric label="싸와 매입" value={money(analysis.ssawaPurchases)} icon={<Boxes />} desc={analysis.ssawaPurchaseShare === null ? "매출 데이터가 더 필요해요." : `매입의 ${formatPercent(analysis.ssawaPurchaseShare)}`} />
+        <Metric label="확인 필요" value={`${analysis.dataQualityMessages.length + analysis.costAlerts.length}건`} icon={<ShieldCheck />} desc={dataQualityLabel(analysis.dataQualityStatus)} />
+      </div>
+      <TodayAIInsightSummaryCard title="AI가 본 이번 달 장사" answer={aiAnswer} navigate={navigate} compact />
+      <section className="toolPanel">
+        <SectionHeader title="핵심 인사이트" action="이유 보기" onAction={() => navigate("/app/today/profit")} />
+        <div className="todayInsightGrid compact">
+          {topInsights.map((insight) => <TodayInsightCard key={insight.id} insight={insight} navigate={navigate} />)}
+          {!topInsights.length && <p className="mutedText">데이터가 더 쌓이면 비교 분석을 보여드릴게요.</p>}
+        </div>
+      </section>
+      <section className="todayQuickPanel">
+        <div>
+          <h2>오늘 매출이나 지출을 입력해보세요.</h2>
+          <p>저장하면 장부와 예상 순이익에 바로 반영됩니다.</p>
+        </div>
+        <TodayQuickButtons onOpen={onOpen} navigate={navigate} />
+      </section>
+      <div className="problemGrid">
+        <ProblemCard title="미분류 매입" count={purchases.filter((record) => record.category_needs_review || record.accounting_category === "미분류").length} desc="매입 카테고리를 확인하세요." icon={<ClipboardList />} onClick={() => navigate("/app/today/purchases")} />
+        <ProblemCard title="증빙 없음" count={[...purchases, ...expenses].filter((record) => record.evidence_status === "missing").length} desc="영수증이나 자료가 없는 내역입니다." icon={<ShieldCheck />} onClick={() => navigate("/app/today/tax")} />
+        <ProblemCard title="세금계산서 확인" count={purchases.filter((record) => record.tax_invoice_status === "pending" || record.tax_invoice_status === "requested").length} desc="발행 또는 수취 상태를 확인하세요." icon={<ReceiptText />} onClick={() => navigate("/app/today/tax")} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="매입 카테고리 요약" action="매입 보기" onAction={() => navigate("/app/today/purchases")} />
+        <div className="categorySummaryGrid">
+          {categorySummary.map((entry) => (
+            <article className="categorySummaryItem" key={entry.category}>
+              <div><strong>{entry.category}</strong><span>{entry.count}건 · 확인 필요 {entry.reviewCount}건</span></div>
+              <b>{money(entry.amount)}</b>
+            </article>
+          ))}
+        </div>
+        {!categorySummary.length && <p className="mutedText">아직 매입 카테고리 데이터가 없습니다.</p>}
+      </section>
+      {!hasData && <EmptyState icon={<Landmark />} title="아직 오늘장사 데이터가 없습니다." desc="매출이나 지출을 입력해보세요." actionLabel="매출 입력" onAction={() => onOpen("sales")} />}
+    </>
+  );
+}
+
+function TodayV4Ledger({ period, setPeriod, customRange, setCustomRange, filter, setFilter, purchases, sales, expenses, summary, navigate, onOpen }: { period: TodayV4Period; setPeriod: (period: TodayV4Period) => void; customRange: TodayV4Range; setCustomRange: (range: TodayV4Range) => void; filter: TodayV4EntryType; setFilter: (filter: TodayV4EntryType) => void; purchases: PurchaseRecord[]; sales: TodaySaleRecord[]; expenses: TodayExpenseRecordV4[]; summary: ReturnType<typeof getTodayV4Summary>; navigate: Navigate; onOpen: (mode: TodayQuickMode) => void }) {
+  const entries = getLedgerEntriesV4(purchases, sales, expenses).filter((entry) => {
+    if (filter === "sales") return entry.kind === "sales";
+    if (filter === "purchase") return entry.kind === "purchase";
+    if (filter === "expense") return entry.kind === "expense";
+    if (filter === "ssawa") return entry.kind === "purchase" && entry.source === "싸와";
+    if (filter === "needs_review") return entry.needsReview;
+    if (filter === "missing_evidence") return entry.evidenceStatus === "missing";
+    return true;
+  });
+  return (
+    <>
+      <PeriodTabs period={period} onChange={setPeriod} customRange={customRange} onCustomRangeChange={setCustomRange} />
+      <div className="dashboardGrid">
+        <Metric label="매출" value={money(summary.sales)} icon={<ReceiptText />} />
+        <Metric label="매입" value={money(summary.purchases)} icon={<PackageCheck />} />
+        <Metric label="지출" value={money(summary.expenses)} icon={<FilePlus2 />} />
+        <Metric label="예상 순이익" value={money(summary.profit)} icon={<Landmark />} desc="매출 - 매입 - 지출" />
+      </div>
+      <div className="purchaseToolbar categoryToolbar">
+        <FilterTabs options={["전체", "매출", "매입", "지출", "싸와 매입", "확인 필요", "증빙 없음"]} active={ledgerFilterLabel(filter)} onChange={(label) => setFilter(ledgerFilterValue(label))} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="기간별 장부" />
+        <div className="ledgerEntryList">
+          {entries.map((entry) => (
+            <button className="ledgerEntryRow" type="button" key={entry.id} onClick={() => entry.href ? navigate(entry.href) : undefined}>
+              <span><b>{entry.date}</b><strong>{entry.title}</strong><small>{entry.category} · {entry.source} · {todayEvidenceStatusLabel(entry.evidenceStatus)}</small></span>
+              <em className={entry.amount > 0 ? "positive" : "negative"}>{entry.amount > 0 ? "+" : "-"} {money(Math.abs(entry.amount))}</em>
+            </button>
+          ))}
+          {!entries.length && <EmptyState icon={<ClipboardList />} title="선택한 기간의 장부 내역이 없습니다." desc="매출이나 지출을 입력하거나 싸와에서 견적을 받아보세요." actionLabel="매출 입력" onAction={() => onOpen("sales")} />}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function TodayV4Sales({ period, setPeriod, customRange, setCustomRange, records, allRecords, summary, onOpen, onEdit, onDelete }: { period: TodayV4Period; setPeriod: (period: TodayV4Period) => void; customRange: TodayV4Range; setCustomRange: (range: TodayV4Range) => void; records: TodaySaleRecord[]; allRecords: TodaySaleRecord[]; summary: ReturnType<typeof getTodayV4Summary>; onOpen: () => void; onEdit: (id: string) => void; onDelete: (id: string) => void }) {
+  const groups = groupAmountRows(records, (record) => record.sales_type, (record) => record.amount);
+  return (
+    <>
+      <PeriodTabs period={period} onChange={setPeriod} customRange={customRange} onCustomRangeChange={setCustomRange} />
+      <div className="dashboardGrid">
+        <Metric label="기간 매출" value={money(summary.sales)} icon={<ReceiptText />} />
+        <Metric label="입력 건수" value={`${records.length}건`} icon={<ClipboardList />} />
+        <Metric label="전체 매출" value={money(allRecords.reduce((sum, record) => sum + record.amount, 0))} icon={<CalendarDays />} />
+        <Metric label="확인 필요" value={`${records.filter((record) => record.evidence_status === "needs_review").length}건`} icon={<ShieldCheck />} />
+      </div>
+      <SectionHeader title="매출 내역" action="매출 입력" onAction={onOpen} />
+      <CategorySpendBars title="매출 구분별 요약" groups={groups} total={summary.sales} />
+      <TodayV4RecordList
+        emptyTitle="아직 매출 내역이 없습니다."
+        rows={records.map((record) => ({ id: record.id, date: record.sales_date, title: record.sales_type, desc: `${salesPaymentLabel(record.payment_method)} · ${salesChannelLabel(record.sales_channel)} · ${record.memo}`, amount: record.amount, evidence: record.evidence_status }))}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+    </>
+  );
+}
+
+function TodayV4Expenses({ period, setPeriod, customRange, setCustomRange, records, allRecords, summary, recurringRules, onOpen, onEdit, onDelete }: { period: TodayV4Period; setPeriod: (period: TodayV4Period) => void; customRange: TodayV4Range; setCustomRange: (range: TodayV4Range) => void; records: TodayExpenseRecordV4[]; allRecords: TodayExpenseRecordV4[]; summary: ReturnType<typeof getTodayV4Summary>; recurringRules: AppData["recurring_rules"]; onOpen: () => void; onEdit: (id: string) => void; onDelete: (id: string) => void }) {
+  const groups = groupAmountRows(records, (record) => record.expense_type, (record) => record.amount);
+  return (
+    <>
+      <PeriodTabs period={period} onChange={setPeriod} customRange={customRange} onCustomRangeChange={setCustomRange} />
+      <div className="dashboardGrid">
+        <Metric label="기간 지출" value={money(summary.expenses)} icon={<FilePlus2 />} />
+        <Metric label="입력 건수" value={`${records.length}건`} icon={<ClipboardList />} />
+        <Metric label="반복 지출" value={`${recurringRules.filter((rule) => rule.is_active).length}건`} icon={<RefreshCcw />} />
+        <Metric label="증빙 없음" value={`${records.filter((record) => record.evidence_status === "missing").length}건`} icon={<ShieldCheck />} />
+      </div>
+      <SectionHeader title="지출 내역" action="지출 입력" onAction={onOpen} />
+      <CategorySpendBars title="지출 구분별 요약" groups={groups} total={summary.expenses} />
+      <TodayV4RecordList
+        emptyTitle="아직 지출 내역이 없습니다."
+        rows={records.map((record) => ({ id: record.id, date: record.expense_date, title: record.expense_type, desc: `${record.vendor_name || "거래처 없음"} · ${expensePaymentLabel(record.payment_method)} · ${record.is_recurring ? "반복" : "1회"} · ${record.memo}`, amount: record.amount, evidence: record.evidence_status }))}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+    </>
+  );
+}
+
+type TodayRequoteFilter = "active" | "high" | "purchase" | "draft" | "submitted" | "dismissed";
+
+function getSearchParams(path: string) {
+  if (path.includes("?")) return new URLSearchParams(path.slice(path.indexOf("?")));
+  if (typeof window !== "undefined") return new URLSearchParams(window.location.search);
+  return new URLSearchParams("");
+}
+
+function parseIdList(value: string) {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function requoteFilterLabel(filter: TodayRequoteFilter) {
+  const labels: Record<TodayRequoteFilter, string> = {
+    active: "추천 전체",
+    high: "우선 확인",
+    purchase: "지난 구매 기반",
+    draft: "초안 생성됨",
+    submitted: "요청 완료",
+    dismissed: "숨긴 추천",
+  };
+  return labels[filter];
+}
+
+function requoteFilterValue(label: string): TodayRequoteFilter {
+  if (label === "우선 확인") return "high";
+  if (label === "지난 구매 기반") return "purchase";
+  if (label === "초안 생성됨") return "draft";
+  if (label === "요청 완료") return "submitted";
+  if (label === "숨긴 추천") return "dismissed";
+  return "active";
+}
+
+function requoteLogLabel(action: string) {
+  if (action === "recommendation_created") return "추천";
+  if (action === "draft_created") return "초안";
+  if (action === "request_submitted") return "제출";
+  if (action === "dismissed") return "숨김";
+  if (action === "draft_opened") return "열람";
+  return "확인";
+}
+
+function TodayRequotesPage({ data, setData, navigate, routePath }: MutatingPageProps & { routePath: string }) {
+  const businessId = "buyer-1";
+  const params = getSearchParams(routePath);
+  const focusRecommendationId = params.get("recommendationId") ?? "";
+  const [filter, setFilter] = useState<TodayRequoteFilter>(params.get("status") === "dismissed" ? "dismissed" : "active");
+  const [message, setMessage] = useState("");
+  const recommendations = data.today_requote_recommendations
+    .filter((entry) => entry.business_id === businessId)
+    .sort((a, b) => b.score - a.score || b.created_at.localeCompare(a.created_at));
+  const visibleRecommendations = recommendations.filter((entry) => {
+    if (focusRecommendationId) return entry.id === focusRecommendationId;
+    if (filter === "active") return entry.status === "active" || entry.status === "draft_created";
+    if (filter === "high") return entry.recommendation_level === "high" && entry.status !== "dismissed";
+    if (filter === "purchase") return ["purchase_record", "item", "category"].includes(entry.recommendation_type);
+    if (filter === "draft") return entry.status === "draft_created";
+    if (filter === "submitted") return entry.status === "request_submitted";
+    return entry.status === "dismissed";
+  });
+  const drafts = data.today_ssawa_quote_drafts.filter((draft) => draft.business_id === businessId);
+  const logs = data.today_requote_logs.filter((log) => log.business_id === businessId).slice(0, 5);
+
+  function refreshRecommendations() {
+    const nextData = generateRequoteRecommendations(data, businessId);
+    setData(nextData);
+    setMessage("최근 매입 흐름을 기준으로 추천을 다시 만들었어요.");
+  }
+
+  function createDraft(recommendation: TodayRequoteRecommendation) {
+    const result = createRequoteDraftFromRecommendation(data, recommendation.id, businessId);
+    if (result.error || !result.url) {
+      setData(result.data);
+      setMessage(result.error ?? "초안을 만들 수 없습니다.");
+      return;
+    }
+    setData(result.data);
+    navigate(result.url);
+  }
+
+  function dismiss(recommendationId: string) {
+    setData(dismissRequoteRecommendation(data, recommendationId, businessId));
+    setMessage("추천을 숨겼어요. 숨긴 추천 탭에서 다시 볼 수 있습니다.");
+  }
+
+  return (
+    <>
+      <section className="toolPanel requoteHeroPanel">
+        <div>
+          <span className="eyebrow">오늘장사 x 싸와</span>
+          <h2>비용이 오른 품목을 지난 구매내역으로 다시 견적받아보세요.</h2>
+          <p>추천은 장부와 구매내역을 바탕으로 만든 초안 출발점입니다. 요청서는 사용자가 확인한 뒤 직접 제출합니다.</p>
+        </div>
+        <div className="todayHeroActions">
+          <button className="primaryButton" type="button" onClick={refreshRecommendations}>
+            <RefreshCcw size={16} />
+            추천 새로고침
+          </button>
+          <button className="secondaryButton" type="button" onClick={() => navigate("/app/today/purchases")}>
+            <PackageCheck size={16} />
+            매입에서 선택
+          </button>
+        </div>
+      </section>
+      {message && <div className="alert success">{message}</div>}
+      <div className="dashboardGrid compactMetrics">
+        <Metric label="추천 중" value={`${recommendations.filter((entry) => entry.status === "active").length}건`} icon={<RefreshCcw />} />
+        <Metric label="초안" value={`${drafts.filter((entry) => entry.status === "draft" || entry.status === "opened").length}건`} icon={<FilePlus2 />} />
+        <Metric label="요청 제출" value={`${recommendations.filter((entry) => entry.status === "request_submitted").length}건`} icon={<Check />} />
+        <Metric label="숨김" value={`${recommendations.filter((entry) => entry.status === "dismissed").length}건`} icon={<ShieldCheck />} />
+      </div>
+      <div className="purchaseToolbar categoryToolbar">
+        <FilterTabs options={["추천 전체", "우선 확인", "지난 구매 기반", "초안 생성됨", "요청 완료", "숨긴 추천"]} active={requoteFilterLabel(filter)} onChange={(label) => setFilter(requoteFilterValue(label))} />
+      </div>
+      <div className="requoteGrid">
+        {visibleRecommendations.map((recommendation) => (
+          <TodayRequoteCard
+            key={recommendation.id}
+            recommendation={recommendation}
+            draft={drafts.find((entry) => entry.id === recommendation.ssawa_quote_draft_id)}
+            onCreateDraft={() => createDraft(recommendation)}
+            onDismiss={() => dismiss(recommendation.id)}
+            onOpenDraft={(draftId) => navigate(`/app/requests/new?source=today&draftId=${encodeURIComponent(draftId)}`)}
+          />
+        ))}
+        {!visibleRecommendations.length && <EmptyState icon={<RefreshCcw />} title="표시할 재견적 추천이 없습니다." desc="최근 매입 데이터로 추천을 다시 만들거나 매입 목록에서 품목을 선택해 초안을 만들 수 있어요." actionLabel="추천 새로고침" onAction={refreshRecommendations} />}
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="최근 재견적 로그" />
+        <div className="miniList">
+          {logs.map((log) => (
+            <div className="miniRow static" key={log.id}>
+              <span>{log.message}<small>{new Date(log.created_at).toLocaleString("ko-KR")}</small></span>
+              <strong>{requoteLogLabel(log.action)}</strong>
+            </div>
+          ))}
+          {!logs.length && <p className="mutedText">아직 재견적 로그가 없습니다.</p>}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function TodayRequoteCard({ recommendation, draft, onCreateDraft, onDismiss, onOpenDraft }: { recommendation: TodayRequoteRecommendation; draft?: TodaySsawaQuoteDraft; onCreateDraft: () => void; onDismiss: () => void; onOpenDraft: (draftId: string) => void }) {
+  const purchaseIds = parseIdList(recommendation.related_purchase_record_ids_json);
+  const disabled = recommendation.status === "request_submitted";
+  return (
+    <article className="requoteCard">
+      <div className="requoteCardHeader">
+        <span className={`statusPill ${recommendation.recommendation_level}`}>{todayRequoteRecommendationLevelLabels[recommendation.recommendation_level]}</span>
+        <span className="statusPill neutral">{todayRequoteRecommendationStatusLabels[recommendation.status]}</span>
+      </div>
+      <h3>{recommendation.category || recommendation.item_keyword} 다시 견적받기</h3>
+      <p>{recommendation.reason}</p>
+      <div className="requoteFacts">
+        <span>관련 매입 {purchaseIds.length}건</span>
+        <span>증가 금액 {money(recommendation.delta_amount)}</span>
+        <span>증가율 {formatPercent(recommendation.delta_rate)}</span>
+      </div>
+      <div className="requoteMeta">
+        <span>{recommendation.item_keyword}</span>
+        {recommendation.supplier_name && <span>공급처 기준 분석</span>}
+      </div>
+      <div className="formActions compactActions">
+        {draft ? (
+          <button className="primaryButton compact" type="button" onClick={() => onOpenDraft(draft.id)} disabled={disabled}>
+            <FilePlus2 size={16} />
+            초안 열기
+          </button>
+        ) : (
+          <button className="primaryButton compact" type="button" onClick={onCreateDraft} disabled={disabled || recommendation.status === "dismissed"}>
+            <FilePlus2 size={16} />
+            초안 만들기
+          </button>
+        )}
+        {recommendation.status !== "dismissed" && recommendation.status !== "request_submitted" && (
+          <button className="ghostButton compact" type="button" onClick={onDismiss}>숨기기</button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function TodayV4Purchases({ data, records, allRecords, period, setPeriod, customRange, setCustomRange, navigate, setData, onOpen, onEdit }: { data: AppData; records: PurchaseRecord[]; allRecords: PurchaseRecord[]; period: TodayV4Period; setPeriod: (period: TodayV4Period) => void; customRange: TodayV4Range; setCustomRange: (range: TodayV4Range) => void; navigate: Navigate; setData: (data: AppData) => void; onOpen: () => void; onEdit: (id: string) => void }) {
+  const ssawaAmount = records.filter((record) => record.source === "ssawa" || record.ssawa_deal_id).reduce((sum, record) => sum + record.total_amount, 0);
+  const manualAmount = records.filter((record) => record.source !== "ssawa" && !record.ssawa_deal_id).reduce((sum, record) => sum + record.total_amount, 0);
+  const [selectedPurchaseIds, setSelectedPurchaseIds] = useState<string[]>([]);
+  const selectedPurchases = records.filter((record) => selectedPurchaseIds.includes(record.id));
+  const selectedCategories = Array.from(new Set(selectedPurchases.map((record) => record.category_name || record.accounting_category).filter(Boolean)));
+
+  function togglePurchaseSelection(id: string) {
+    setSelectedPurchaseIds((current) => current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]);
+  }
+
+  function createDraftFromPurchases(ids: string[]) {
+    const result = createRequoteDraftFromPurchaseRecords(data, { businessId: "buyer-1", purchaseRecordIds: ids });
+    if (result.error || !result.url) {
+      setData(result.data);
+      return;
+    }
+    setData(result.data);
+    navigate(result.url);
+  }
+  return (
+    <>
+      <PeriodTabs period={period} onChange={setPeriod} customRange={customRange} onCustomRangeChange={setCustomRange} />
+      <div className="dashboardGrid">
+        <Metric label="기간 매입" value={money(records.reduce((sum, record) => sum + record.total_amount, 0))} icon={<PackageCheck />} />
+        <Metric label="싸와 매입" value={money(ssawaAmount)} icon={<Boxes />} />
+        <Metric label="수동 매입" value={money(manualAmount)} icon={<FilePlus2 />} />
+        <Metric label="확인 필요" value={`${records.filter((record) => record.category_needs_review || record.evidence_status === "missing").length}건`} icon={<ShieldCheck />} />
+      </div>
+      <SectionHeader title="매입 내역" action="수동 매입 입력" onAction={onOpen} />
+      <section className="toolPanel requoteSelectionPanel">
+        <div>
+          <strong>지난 구매내역으로 견적요청 초안을 만들 수 있어요.</strong>
+          <p className="mutedText">{selectedCategories.length > 1 ? "선택한 카테고리가 여러 개입니다. 필요하면 카테고리별로 나눠 요청하는 것을 추천합니다." : "품목을 선택하거나 단건 버튼으로 바로 초안을 만들 수 있습니다."}</p>
+        </div>
+        <div className="formActions compactActions">
+          <button className="primaryButton compact" type="button" onClick={() => createDraftFromPurchases(selectedPurchaseIds)} disabled={selectedPurchaseIds.length === 0}>
+            <FilePlus2 size={16} />
+            선택 품목 견적받기
+          </button>
+          <button className="ghostButton compact" type="button" onClick={() => navigate("/app/today/requotes")}>재견적 추천 보기</button>
+        </div>
+      </section>
+      <PurchaseList data={data} records={records} navigate={navigate} selectedIds={selectedPurchaseIds} onToggleSelect={togglePurchaseSelection} onCreateRequote={(id) => createDraftFromPurchases([id])} />
+      {!records.length && <EmptyState icon={<PackageCheck />} title="아직 매입 내역이 없습니다." desc="싸와 구매내역이 있으면 자동으로 정리됩니다." actionLabel="수동 매입 입력" onAction={onOpen} />}
+      <div className="formActions">
+        <button className="secondaryButton" type="button" onClick={onOpen}>수동 매입 입력</button>
+        <button className="ghostButton" type="button" onClick={() => navigate("/app/requests/new")}>싸와 견적받기</button>
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="수동 매입 관리" />
+        <div className="miniList">
+          {allRecords.filter((record) => record.source !== "ssawa" && !record.ssawa_deal_id).slice(0, 6).map((record) => (
+            <div className="miniRow static" key={record.id}>
+              <span>{record.purchase_title}<small>{record.purchase_date} · {record.supplier_name}</small></span>
+              <strong>{money(record.total_amount)}</strong>
+              <button className="ghostButton compact" type="button" onClick={() => onEdit(record.id)}>수정</button>
+              <button className="ghostButton compact" type="button" onClick={() => setData(deleteManualPurchaseRecord(data, record.id))}>삭제</button>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function TodayV4Profit({ analysis, aiAnswer, period, setPeriod, customRange, setCustomRange, navigate }: { analysis: TodayV5ProfitAnalysis; aiAnswer: TodayAIAnswer; period: TodayV4Period; setPeriod: (period: TodayV4Period) => void; customRange: TodayV4Range; setCustomRange: (range: TodayV4Range) => void; navigate: Navigate }) {
+  const summary = analysis.summary;
+  return (
+    <>
+      <PeriodTabs period={period} onChange={setPeriod} customRange={customRange} onCustomRangeChange={setCustomRange} />
+      <section className="todayProfitHero">
+        <span className="eyebrow">{periodLabel(period)} 예상 순이익</span>
+        <strong>{money(summary.profit)}</strong>
+        <p>{formatDeltaSentence("예상 순이익", analysis.profitDeltaRate, periodCompareLabel(period))} 세금 신고용 확정 금액은 아닙니다.</p>
+      </section>
+      <div className="dashboardGrid">
+        <Metric label="매출" value={money(summary.sales)} icon={<ReceiptText />} />
+        <Metric label="매입" value={money(summary.purchases)} icon={<PackageCheck />} />
+        <Metric label="지출" value={money(summary.expenses)} icon={<FilePlus2 />} />
+        <Metric label="예상 순이익" value={money(summary.profit)} icon={<Landmark />} desc="세금 신고용 확정 금액은 아닙니다." />
+      </div>
+      <TodayAIInsightSummaryCard title="AI 순이익 설명" answer={aiAnswer} navigate={navigate} />
+      <section className="todayFormulaPanel">
+        <h2>예상 순이익 계산</h2>
+        <p>총매출 - 총매입 - 총지출 = 예상 순이익입니다.</p>
+        <div className="todayFormulaGrid">
+          <span>매출 {money(summary.sales)}</span>
+          <span>매입 {money(summary.purchases)}</span>
+          <span>지출 {money(summary.expenses)}</span>
+          <strong>{money(summary.profit)}</strong>
+        </div>
+      </section>
+      <div className="dashboardGrid compactMetrics">
+        <Metric label="매입비율" value={formatNullablePercent(analysis.purchaseRatio)} icon={<PackageCheck />} desc={analysis.purchaseRatio === null ? "매출 데이터가 없어 비율을 계산할 수 없습니다." : "매출 대비 매입입니다."} />
+        <Metric label="지출비율" value={formatNullablePercent(analysis.expenseRatio)} icon={<FilePlus2 />} desc={analysis.expenseRatio === null ? "매출 데이터가 더 필요합니다." : "매출 대비 지출입니다."} />
+        <Metric label="예상 순이익률" value={formatNullablePercent(analysis.profitMargin)} icon={<Landmark />} desc="예상 기준입니다." />
+        <Metric label="싸와 매입 비중" value={formatNullablePercent(analysis.ssawaPurchaseShare)} icon={<Boxes />} desc={`${money(analysis.ssawaPurchases)} · 수동 ${money(analysis.manualPurchases)}`} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="지난 기간 대비" />
+        <div className="todayComparisonGrid">
+          <TodayDeltaCard label="매출" amount={analysis.salesDelta} rate={analysis.salesDeltaRate} compareLabel={periodCompareLabel(period)} />
+          <TodayDeltaCard label="매입" amount={analysis.purchaseDelta} rate={analysis.purchaseDeltaRate} compareLabel={periodCompareLabel(period)} />
+          <TodayDeltaCard label="지출" amount={analysis.expenseDelta} rate={analysis.expenseDeltaRate} compareLabel={periodCompareLabel(period)} />
+          <TodayDeltaCard label="예상 순이익" amount={analysis.profitDelta} rate={analysis.profitDeltaRate} compareLabel={periodCompareLabel(period)} />
+        </div>
+        {analysis.dataQualityStatus === "not_enough_history" && <p className="mutedText">비교할 이전 데이터가 아직 없습니다.</p>}
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="손익 인사이트" />
+        <div className="todayInsightGrid">
+          {analysis.insights.map((insight) => <TodayInsightCard key={insight.id} insight={insight} navigate={navigate} />)}
+          {!analysis.insights.length && <p className="mutedText">데이터가 더 쌓이면 비교 분석을 보여드릴게요.</p>}
+        </div>
+      </section>
+      {analysis.dataQualityMessages.length > 0 && (
+        <section className="toolPanel">
+          <SectionHeader title="데이터 확인 필요" action="세무자료 확인" onAction={() => navigate("/app/today/tax")} />
+          <div className="todayQualityList">
+            {analysis.dataQualityMessages.map((message) => <span key={message}>{message}</span>)}
+          </div>
+        </section>
+      )}
+      <div className="twoColumn">
+        <TodayCostBreakdown title="카테고리별 매입 비용" rows={analysis.categoryBreakdown} total={summary.purchases} navigate={navigate} />
+        <TodayCostBreakdown title="지출 구분별 비용" rows={analysis.expenseBreakdown} total={summary.expenses} navigate={navigate} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="많이 구매한 업체" />
+        <div className="miniList">
+          {analysis.supplierBreakdown.slice(0, 4).map((row) => (
+            <div className="miniRow static" key={row.key}>
+              <span>{row.label}<small>{row.count}건 · {formatDelta(row.deltaRate)}</small></span>
+              <strong>{money(row.amount)}</strong>
+            </div>
+          ))}
+          {!analysis.supplierBreakdown.length && <p className="mutedText">업체별로 볼 매입 데이터가 아직 없습니다.</p>}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function TodayV4RecordList({ rows, emptyTitle, onEdit, onDelete }: { rows: Array<{ id: string; date: string; title: string; desc: string; amount: number; evidence: TodayEvidenceStatus }>; emptyTitle: string; onEdit: (id: string) => void; onDelete: (id: string) => void }) {
+  return (
+    <section className="toolPanel">
+      <div className="miniList">
+        {rows.map((row) => (
+          <div className="miniRow static todayRecordRow" key={row.id}>
+            <span>{row.title}<small>{row.date} · {row.desc} · {todayEvidenceStatusLabel(row.evidence)}</small></span>
+            <strong>{money(row.amount)}</strong>
+            <button className="ghostButton compact" type="button" onClick={() => onEdit(row.id)}>수정</button>
+            <button className="ghostButton compact" type="button" onClick={() => onDelete(row.id)}>삭제</button>
+          </div>
+        ))}
+        {!rows.length && <p className="mutedText">{emptyTitle}</p>}
+      </div>
+    </section>
+  );
+}
+
+function TodayQuickEntrySheet({ data, setData, mode, editId, onClose }: { data: AppData; setData: (data: AppData) => void; mode: TodayQuickMode; editId?: string; onClose: () => void }) {
+  const editingSale = mode === "sales" && editId ? data.sales_records.find((record) => record.id === editId) : undefined;
+  const editingExpense = mode === "expense" && editId ? data.expense_records.find((record) => record.id === editId) : undefined;
+  const editingPurchase = mode === "purchase" && editId ? data.purchase_records.find((record) => record.id === editId) : undefined;
+  const [amount, setAmount] = useState(editingSale?.amount ?? editingExpense?.amount ?? editingPurchase?.total_amount ?? 100000);
+  const [date, setDate] = useState(editingSale?.sales_date ?? editingExpense?.expense_date ?? editingPurchase?.purchase_date ?? today);
+  const [title, setTitle] = useState(editingPurchase?.purchase_title ?? "수동 매입");
+  const [supplierName, setSupplierName] = useState(editingPurchase?.supplier_name ?? "");
+  const [salesType, setSalesType] = useState<TodaySaleRecord["sales_type"]>(editingSale?.sales_type ?? "매장 매출");
+  const [salesPayment, setSalesPayment] = useState<TodaySaleRecord["payment_method"]>(editingSale?.payment_method ?? "card");
+  const [salesChannel, setSalesChannel] = useState<TodaySaleRecord["sales_channel"]>(editingSale?.sales_channel ?? "store");
+  const [expenseType, setExpenseType] = useState<TodayExpenseRecordV4["expense_type"]>(editingExpense?.expense_type ?? "기타");
+  const [expensePayment, setExpensePayment] = useState<TodayExpenseRecordV4["payment_method"]>(editingExpense?.payment_method ?? "card");
+  const [vendorName, setVendorName] = useState(editingExpense?.vendor_name ?? "");
+  const [purchaseCategory, setPurchaseCategory] = useState(editingPurchase?.accounting_category ?? todayPurchaseCategoryNames[0]);
+  const [memo, setMemo] = useState(editingSale?.memo ?? editingExpense?.memo ?? editingPurchase?.user_memo ?? "");
+  const [hasEvidence, setHasEvidence] = useState((editingSale?.evidence_status ?? editingExpense?.evidence_status ?? editingPurchase?.evidence_status) === "complete");
+  const [isRecurring, setIsRecurring] = useState(editingExpense?.is_recurring ?? false);
+  const [error, setError] = useState("");
+  const titleText = mode === "sales" ? "매출 입력" : mode === "expense" ? "지출 입력" : "수동 매입 입력";
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (amount <= 0) return setError("금액을 입력해 주세요.");
+    if (!date) return setError("날짜를 선택해 주세요.");
+    if (mode === "sales") {
+      if (editingSale) {
+        setData(updateSalesRecord(data, editingSale.id, { amount, sales_date: date, sales_type: salesType, payment_method: salesPayment, sales_channel: salesChannel, memo, evidence_status: hasEvidence ? "complete" : "not_required" }));
+      } else {
+        const result = createSalesRecord(data, { amount, sales_date: date, sales_type: salesType, payment_method: salesPayment, sales_channel: salesChannel, memo, evidence_status: hasEvidence ? "complete" : "not_required", business_id: "buyer-1" });
+        if (result.error) return setError(result.error);
+        setData(result.data);
+      }
+    }
+    if (mode === "expense") {
+      if (editingExpense) {
+        setData(updateExpenseRecord(data, editingExpense.id, { amount, expense_date: date, expense_type: expenseType, payment_method: expensePayment, vendor_name: vendorName, memo, evidence_status: hasEvidence ? "complete" : "missing", is_recurring: isRecurring }));
+      } else {
+        const result = createExpenseRecord(data, { amount, expense_date: date, expense_type: expenseType, payment_method: expensePayment, vendor_name: vendorName, memo, evidence_status: hasEvidence ? "complete" : "missing", is_recurring: isRecurring, business_id: "buyer-1" });
+        if (result.error) return setError(result.error);
+        setData(result.data);
+      }
+    }
+    if (mode === "purchase") {
+      if (editingPurchase) {
+        const supplyAmount = Math.round(amount / 1.1);
+        setData(updatePurchaseRecord(data, editingPurchase.id, { purchase_title: title, supplier_name: supplierName || editingPurchase.supplier_name, purchase_date: date, category_name: purchaseCategory, accounting_category: purchaseCategory, total_amount: Math.round(amount), supply_amount: supplyAmount, vat_amount: Math.round(amount) - supplyAmount, item_summary: title, user_memo: memo, evidence_status: hasEvidence ? "complete" : "missing" }));
+      } else {
+        const result = createManualPurchaseRecord(data, { purchase_title: title, supplier_name: supplierName || "수동 거래처", supplier_business_number: "000-00-00000", purchase_date: date, category_name: purchaseCategory, accounting_category: purchaseCategory, sub_category: "", total_amount: amount, supply_amount: 0, vat_amount: 0, delivery_fee: 0, discount_amount: 0, payment_method: "card", tax_invoice_status: "none", receipt_status: hasEvidence ? "uploaded" : "none", delivery_note_status: "none", memo, items: [{ item_name: title, spec: "", quantity: 1, unit: "건", unit_price: amount, total_price: amount, memo: "" }] });
+        setData(result.data);
+      }
+    }
+    onClose();
+  }
+
+  return (
+    <div className="todaySheetBackdrop" role="dialog" aria-modal="true">
+      <form className="todayQuickSheet" onSubmit={submit}>
+        <SectionHeader title={titleText} action="닫기" onAction={onClose} />
+        <label className="field amountField">금액<input type="number" value={amount} onChange={(event) => setAmount(Number(event.target.value))} autoFocus /></label>
+        <label className="field">날짜<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
+        {mode === "sales" && (
+          <>
+            <SegmentedChoices options={todaySalesTypeOptions} value={salesType} onChange={(value) => setSalesType(value as TodaySaleRecord["sales_type"])} />
+            <label className="field">결제수단<select value={salesPayment} onChange={(event) => setSalesPayment(event.target.value as TodaySaleRecord["payment_method"])}>{todaySalesPaymentOptions.map((option) => <option value={option} key={option}>{salesPaymentLabel(option)}</option>)}</select></label>
+            <label className="field">판매 채널<select value={salesChannel} onChange={(event) => setSalesChannel(event.target.value as TodaySaleRecord["sales_channel"])}>{todaySalesChannelOptions.map((option) => <option value={option} key={option}>{salesChannelLabel(option)}</option>)}</select></label>
+          </>
+        )}
+        {mode === "expense" && (
+          <>
+            <SegmentedChoices options={todayExpenseTypeOptions} value={expenseType} onChange={(value) => setExpenseType(value as TodayExpenseRecordV4["expense_type"])} />
+            <label className="field">거래처<input value={vendorName} onChange={(event) => setVendorName(event.target.value)} placeholder="예: 광고대행사" /></label>
+            <label className="field">결제수단<select value={expensePayment} onChange={(event) => setExpensePayment(event.target.value as TodayExpenseRecordV4["payment_method"])}>{todayExpensePaymentOptions.map((option) => <option value={option} key={option}>{expensePaymentLabel(option)}</option>)}</select></label>
+            <label className="checkField"><input type="checkbox" checked={isRecurring} onChange={(event) => setIsRecurring(event.target.checked)} />반복 지출로 저장</label>
+          </>
+        )}
+        {mode === "purchase" && (
+          <>
+            <label className="field">제목<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+            <label className="field">거래처<input value={supplierName} onChange={(event) => setSupplierName(event.target.value)} placeholder="공급업체/거래처명" /></label>
+            <label className="field">카테고리<select value={purchaseCategory} onChange={(event) => setPurchaseCategory(event.target.value)}>{todayPurchaseCategoryNames.map((category) => <option key={category}>{category}</option>)}</select></label>
+          </>
+        )}
+        <label className="checkField"><input type="checkbox" checked={hasEvidence} onChange={(event) => setHasEvidence(event.target.checked)} />증빙 있음</label>
+        <label className="field">메모<textarea value={memo} onChange={(event) => setMemo(event.target.value)} /></label>
+        {error && <p className="formError">{error}</p>}
+        <button className="primaryButton full" type="submit">저장하기</button>
+      </form>
+    </div>
+  );
+}
+
+function SegmentedChoices({ options, value, onChange }: { options: string[]; value: string; onChange: (value: string) => void }) {
+  return (
+    <div className="todaySegmented">
+      {options.map((option) => <button className={option === value ? "active" : ""} type="button" key={option} onClick={() => onChange(option)}>{option}</button>)}
+    </div>
+  );
+}
+
+function PeriodTabs({ period, onChange, customRange, onCustomRangeChange }: { period: TodayV4Period; onChange: (period: TodayV4Period) => void; customRange?: TodayV4Range; onCustomRangeChange?: (range: TodayV4Range) => void }) {
+  return (
+    <div className="todayPeriodPicker">
+      <FilterTabs options={["오늘", "이번 주", "이번 달", "올해", "직접 선택"]} active={periodLabel(period)} onChange={(label) => onChange(periodValue(label))} />
+      {period === "custom" && customRange && onCustomRangeChange && (
+        <div className="todayCustomRange">
+          <label>시작<input type="date" value={customRange.start} onChange={(event) => onCustomRangeChange({ ...customRange, start: event.target.value })} /></label>
+          <label>끝<input type="date" value={customRange.end} onChange={(event) => onCustomRangeChange({ ...customRange, end: event.target.value })} /></label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type TodaySupplierSection = "home" | "sales" | "settlements" | "products" | "customers" | "tax" | "quotes" | "uploads" | "ai" | "notifications";
+type TodaySupplierSaleRecord = AppData["supplier_sales_records"][number];
+type TodaySupplierProductRow = { label: string; amount: number; count: number; latestDate: string; productId?: string; views: number; inquiries: number; orderRequests: number; dealsCompleted: number; conversionRate: number | null };
+type TodaySupplierCustomerRow = { label: string; amount: number; count: number; latestDate: string; averageAmount: number; taxNeeds: number; settlementNeeds: number; status: string };
+type TodaySupplierQuoteMetrics = ReturnType<typeof getSupplierQuoteConversion>;
+
+function TodaySupplierPage({ data, navigate, setData, routePath, role }: MutatingPageProps & { routePath: string; role: UserRole }) {
+  const supplier = getActiveSupplier(data);
+  const supplierBusinessId = supplier.id;
+  const [period, setPeriod] = useState<TodayV4Period>("month");
+  const [customRange, setCustomRange] = useState<TodayV4Range>({ start: "2026-07-01", end: "2026-07-31" });
+  const [manualOpen, setManualOpen] = useState(routePath.endsWith("/sales/new"));
+  const section = getTodaySupplierSection(routePath);
+  const isAdmin = role === "admin";
+  const allSales = data.supplier_sales_records.filter((record) => !record.deleted_at && (isAdmin || record.supplier_business_id === supplierBusinessId));
+  const periodRange = getTodayV4PeriodRange(period, customRange);
+  const previousRange = getTodayV4PreviousRange(period, periodRange);
+  const sales = allSales.filter((record) => isDateInRange(record.sold_at, periodRange));
+  const previousSales = allSales.filter((record) => isDateInRange(record.sold_at, previousRange));
+  const quoteRows = data.quotes.filter((quote) => isAdmin || quote.supplier_id === supplierBusinessId);
+  const periodQuotes = quoteRows.filter((quote) => isDateInRange(quote.created_at.slice(0, 10), periodRange));
+  const summary = getSupplierTodaySummary(allSales, periodRange, previousRange);
+  const productRows = getSupplierProductMetrics(data, supplierBusinessId, periodRange);
+  const customerRows = getSupplierCustomerMetrics(sales);
+  const quoteMetrics = getSupplierQuoteConversion(data, supplierBusinessId, periodRange);
+  const insights = getSupplierInsights(data, supplierBusinessId, periodRange, summary, quoteMetrics, productRows);
+  const tasks = getSupplierTasks(data, supplierBusinessId, periodRange, sales, quoteMetrics, productRows);
+  const aiAnswer = generateSupplierTodayAIInsight(buildSupplierTodayAIContext(data, supplierBusinessId, period, customRange));
+  function runSync() {
+    const result = syncCompletedSsawaDealsToSupplierSales(data, supplierBusinessId, { triggeredBy: isAdmin ? "admin" : "supplier", actorUserId: supplier.user_id });
+    setData(result.data);
+  }
+
+  function closeManual() {
+    setManualOpen(false);
+    if (routePath.endsWith("/sales/new")) navigate("/app/today/supplier/sales");
+  }
+
+  return (
+    <Page>
+      <div className="todayShell todaySupplierShell">
+        <section className="todayHero supplier">
+          <div>
+            <span className="eyebrow">공급업체 오늘장사 · {supplier.business_name}</span>
+            <h1>싸와에서 발생한 매출을 확인하세요.</h1>
+            <p>거래 완료 내역은 공급업체 매출로 정리됩니다. 이번 달 싸와 매출, 정산 예정, 세금계산서 발행 필요 항목을 한눈에 확인할 수 있습니다.</p>
+          </div>
+          <div className="todayHeroActions">
+            <button className="primaryButton" type="button" onClick={() => navigate("/app/today/supplier/sales")}><ReceiptText size={16} />매출 보기</button>
+            <button className="secondaryButton" type="button" onClick={runSync}><RefreshCcw size={16} />싸와 거래 반영</button>
+            <button className="ghostButton" type="button" onClick={() => setManualOpen(true)}><Plus size={16} />수동 매출</button>
+            <button className="ghostButton" type="button" onClick={() => navigate("/app/today/supplier/uploads")}><Upload size={16} />업로드</button>
+          </div>
+        </section>
+
+        <TodaySupplierFrame section={section} navigate={navigate}>
+          <PeriodTabs period={period} onChange={setPeriod} customRange={customRange} onCustomRangeChange={setCustomRange} />
+          {section === "home" && <TodaySupplierHome summary={summary} aiAnswer={aiAnswer} sales={sales} productRows={productRows} customerRows={customerRows} quoteMetrics={quoteMetrics} insights={insights} tasks={tasks} navigate={navigate} />}
+          {section === "sales" && <TodaySupplierSalesView sales={sales} previousSales={previousSales} period={period} navigate={navigate} />}
+          {section === "settlements" && <TodaySupplierSettlementsView sales={sales} aiAnswer={aiAnswer} navigate={navigate} />}
+          {section === "products" && <TodaySupplierProductsView rows={productRows} />}
+          {section === "customers" && <TodaySupplierCustomersView rows={customerRows} />}
+          {section === "tax" && <TodaySupplierTaxView data={data} setData={setData} sales={sales} />}
+          {section === "quotes" && <TodaySupplierQuotesView data={data} quotes={periodQuotes} metrics={quoteMetrics} sales={allSales} aiAnswer={aiAnswer} navigate={navigate} />}
+          {section === "uploads" && <TodaySupplierUploadsView data={data} setData={setData} supplier={supplier} />}
+          {section === "ai" && <TodaySupplierAIPage data={data} setData={setData} navigate={navigate} supplierBusinessId={supplierBusinessId} userId={supplier.user_id} period={period} customRange={customRange} />}
+          {section === "notifications" && <TodayNotificationsPage data={data} setData={setData} navigate={navigate} audience="supplier" userId={supplier.user_id} />}
+        </TodaySupplierFrame>
+      </div>
+      {manualOpen && <TodaySupplierManualSaleSheet data={data} setData={setData} supplier={supplier} onClose={closeManual} />}
+    </Page>
+  );
+}
+
+function TodaySupplierFrame({ section, navigate, children }: { section: TodaySupplierSection; navigate: Navigate; children: ReactNode }) {
+  const items: Array<{ section: TodaySupplierSection; path: string; label: string; icon: (props: IconProps) => ReactNode }> = [
+    { section: "home", path: "/app/today/supplier", label: "홈", icon: Home },
+    { section: "sales", path: "/app/today/supplier/sales", label: "매출", icon: ReceiptText },
+    { section: "settlements", path: "/app/today/supplier/settlements", label: "정산", icon: Landmark },
+    { section: "products", path: "/app/today/supplier/products", label: "상품", icon: Boxes },
+    { section: "customers", path: "/app/today/supplier/customers", label: "거래처", icon: UsersRound },
+    { section: "tax", path: "/app/today/supplier/tax", label: "세금계산서", icon: ShieldCheck },
+    { section: "quotes", path: "/app/today/supplier/quotes", label: "견적 성사", icon: ClipboardList },
+    { section: "uploads", path: "/app/today/supplier/uploads", label: "업로드", icon: Upload },
+    { section: "ai", path: "/app/today/supplier/ai", label: "AI", icon: MessageCircle },
+    { section: "notifications", path: "/app/today/supplier/notifications", label: "알림", icon: Bell },
+  ];
+  return (
+    <>
+      <nav className="todayNav todaySupplierNav" aria-label="공급업체 오늘장사 메뉴">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return <button className={item.section === section ? "todayNavButton active" : "todayNavButton"} type="button" onClick={() => navigate(item.path)} key={item.section}><Icon size={17} /><span>{item.label}</span></button>;
+        })}
+      </nav>
+      {children}
+    </>
+  );
+}
+
+function TodaySupplierHome({ summary, aiAnswer, sales, productRows, customerRows, quoteMetrics, insights, tasks, navigate }: { summary: ReturnType<typeof getSupplierTodaySummary>; aiAnswer: TodayAIAnswer; sales: TodaySupplierSaleRecord[]; productRows: TodaySupplierProductRow[]; customerRows: TodaySupplierCustomerRow[]; quoteMetrics: TodaySupplierQuoteMetrics; insights: ReturnType<typeof getSupplierInsights>; tasks: ReturnType<typeof getSupplierTasks>; navigate: Navigate }) {
+  const topProduct = productRows[0]?.label ?? "아직 없음";
+  const topCustomer = customerRows[0]?.label ?? "아직 없음";
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="오늘 싸와 매출" value={money(summary.todayAmount)} icon={<ReceiptText />} desc={`${summary.todayCount}건`} />
+        <Metric label="이번 달 싸와 매출" value={money(summary.totalAmount)} icon={<CalendarDays />} desc={summary.previousAmount ? `${formatPercent(summary.salesDeltaRate)} ${summary.salesDelta >= 0 ? "증가" : "감소"}` : "이전 데이터 없음"} />
+        <Metric label="정산 예정" value={money(summary.settlementScheduledAmount)} icon={<Landmark />} desc={`${summary.settlementPendingCount}건 확인`} />
+        <Metric label="정산 완료" value={money(summary.settlementPaidAmount)} icon={<BadgeCheck />} desc="완료 표시 기준" />
+        <Metric label="정산 확인 필요" value={`${summary.settlementReviewCount}건`} icon={<SearchCheck />} desc="보류/실패/확인 필요" />
+        <Metric label="세금계산서 발행 필요" value={`${summary.taxRequiredCount}건`} icon={<ShieldCheck />} desc="전문가 확인 권장" />
+      </div>
+      <div className="dashboardGrid">
+        <Metric label="새 요청견적" value={`${quoteMetrics.availableRequestCount}건`} icon={<SearchCheck />} />
+        <Metric label="보낸 견적" value={`${quoteMetrics.sentQuoteCount}건`} icon={<ClipboardList />} />
+        <Metric label="선택된 견적" value={`${quoteMetrics.selectedQuoteCount}건`} icon={<BadgeCheck />} />
+        <Metric label="거래 완료" value={`${quoteMetrics.completedDealCount}건`} icon={<PackageCheck />} />
+        <Metric label="이번 달 성사율" value={quoteMetrics.sentQuoteCount ? formatPercent(quoteMetrics.quoteWinRate) : "-"} icon={<Landmark />} />
+      </div>
+      <TodayAIInsightSummaryCard title="AI가 본 이번 달 싸와 매출" answer={aiAnswer} navigate={navigate} compact />
+      <section className="toolPanel">
+        <SectionHeader title="공급업체 인사이트" action="견적 성사율 보기" onAction={() => navigate("/app/today/supplier/quotes")} />
+        <div className="todayInsightGrid compact">
+          {insights.slice(0, 3).map((insight) => <InfoPanel key={insight.id} title={insight.title} items={[insight.message]} />)}
+          {!insights.length && <InfoPanel title="데이터 수집 중" items={["완료 거래와 견적 데이터가 쌓이면 운영 인사이트를 보여드릴게요."]} />}
+        </div>
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="처리할 일" action="정산 확인" onAction={() => navigate("/app/today/supplier/settlements")} />
+        <div className="taskList">
+          {tasks.slice(0, 5).map((task) => <button className="taskRow" type="button" key={task.id} onClick={() => navigate(task.actionUrl)}><strong>{task.title}</strong><span>{task.message}</span></button>)}
+          {!tasks.length && <p className="mutedText">지금 바로 처리할 공급업체 할 일이 없습니다.</p>}
+        </div>
+      </section>
+      <section className="twoColumn">
+        <InfoPanel title="많이 팔린 상품" items={[topProduct, productRows[0] ? `${money(productRows[0].amount)} · ${productRows[0].count}건` : "상품 매출 데이터가 쌓이면 보여드립니다."]} />
+        <InfoPanel title="자주 거래한 거래처" items={[topCustomer, customerRows[0] ? `${money(customerRows[0].amount)} · ${customerRows[0].count}건` : "거래 완료 후 요약됩니다."]} />
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="최근 싸와 매출" action="전체 보기" onAction={() => navigate("/app/today/supplier/sales")} />
+        <TodaySupplierSalesTable sales={sales.slice(0, 5)} compact />
+      </section>
+    </>
+  );
+}
+
+function TodaySupplierSalesView({ sales, previousSales, period, navigate }: { sales: TodaySupplierSaleRecord[]; previousSales: TodaySupplierSaleRecord[]; period: TodayV4Period; navigate: Navigate }) {
+  const total = sumSupplierRecognizedSales(sales);
+  const previous = sumSupplierRecognizedSales(previousSales);
+  const completed = sales.filter(isSupplierRecognizedSale);
+  const trendRows = getSupplierSalesTrend(sales);
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="총 매출" value={money(total)} icon={<ReceiptText />} desc={previous ? `${formatPercent(getRate(total - previous, previous))} ${periodCompareLabel(period)}` : "비교할 이전 데이터가 아직 없습니다."} />
+        <Metric label="거래 완료 건수" value={`${completed.length}건`} icon={<PackageCheck />} />
+        <Metric label="평균 거래금액" value={money(completed.length ? Math.round(total / completed.length) : 0)} icon={<Landmark />} />
+        <Metric label="정산 예정" value={money(sales.filter((record) => record.settlement_status === "scheduled" || record.settlement_status === "pending").reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0))} icon={<CalendarDays />} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="매출 추이" />
+        <div className="categorySummaryGrid">
+          {trendRows.map((row) => <article className="categorySummaryItem" key={row.date}><div><strong>{row.date}</strong><span>{row.count}건</span></div><b>{money(row.amount)}</b></article>)}
+          {!trendRows.length && <p className="mutedText">기간 내 완료 매출이 없습니다.</p>}
+        </div>
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="공급업체 매출 내역" action="수동 매출 입력" onAction={() => navigate("/app/today/supplier/sales/new")} />
+        <TodaySupplierSalesTable sales={sales} />
+      </section>
+    </>
+  );
+}
+
+function TodaySupplierSettlementsView({ sales, aiAnswer, navigate }: { sales: TodaySupplierSaleRecord[]; aiAnswer: TodayAIAnswer; navigate: Navigate }) {
+  const summary = getTodaySupplierSummary(sales);
+  const riskRows = sales.filter(isSupplierSettlementRisk);
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="정산 예정 금액" value={money(summary.settlementScheduledAmount)} icon={<Landmark />} desc="상태 기준 참고" />
+        <Metric label="정산 완료" value={money(summary.settlementPaidAmount)} icon={<BadgeCheck />} desc="완료 표시 금액" />
+        <Metric label="정산 보류" value={money(summary.settlementHeldAmount)} icon={<ShieldCheck />} desc="확인 필요" />
+        <Metric label="확인 필요" value={`${riskRows.length}건`} icon={<SearchCheck />} desc="거래 방식에 따라 확인 필요" />
+      </div>
+      <TodayAIInsightSummaryCard title="AI 정산 확인" answer={validateAIResponse({ ...aiAnswer, answerText: `정산 확인이 필요한 거래는 ${riskRows.length}건입니다. 정산 상태는 입력된 거래 상태 기준이며 실제 입금 여부는 거래 방식에 따라 확인이 필요할 수 있습니다.`, summary: "정산 확인", evidenceItems: [{ label: "정산 예정", value: money(summary.settlementScheduledAmount) }, { label: "정산 완료 표시", value: money(summary.settlementPaidAmount) }, { label: "확인 필요", value: `${riskRows.length}건` }], actions: [{ label: "정산 확인", url: "/app/today/supplier/settlements", type: "settlement" }, { label: "AI에 질문", url: "/app/today/supplier/ai", type: "ai" }], warnings: ["정산 상태는 싸와 거래 상태와 입력된 정보를 기준으로 표시됩니다. 실제 입금 여부는 거래 방식에 따라 확인이 필요할 수 있습니다."] })} navigate={navigate} compact />
+      <section className="toolPanel">
+        <SectionHeader title="정산 확인 필요" />
+        <p className="muted">보류, 실패, 확인 필요 또는 완료 거래인데 정산 상태가 비어 있는 내역을 먼저 보여드립니다.</p>
+        <TodaySupplierSalesTable sales={riskRows} compact />
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="정산 상태" />
+        <p className="muted">정산 상태는 싸와 거래 상태를 기준으로 표시합니다. 실제 입금 여부는 거래 방식에 따라 확인이 필요할 수 있습니다.</p>
+        <TodaySupplierSalesTable sales={sales.filter((record) => record.settlement_status !== "not_applicable")} compact />
+      </section>
+    </>
+  );
+}
+
+function TodaySupplierProductsView({ rows }: { rows: TodaySupplierProductRow[] }) {
+  return (
+    <section className="toolPanel">
+      <SectionHeader title="상품별 매출/전환" />
+      {rows.length === 0 ? <EmptyState icon={<Boxes />} title="아직 상품 매출 데이터가 없습니다." desc="싸와 거래와 상품 이벤트가 쌓이면 상품 성과를 보여드립니다." /> : (
+        <div className="tableWrap">
+          <table className="dataTable">
+            <thead><tr><th>상품</th><th>매출</th><th>거래</th><th>조회</th><th>문의</th><th>주문요청</th><th>완료 전환</th><th>최근 거래</th></tr></thead>
+            <tbody>{rows.map((row) => <tr key={row.label}><td>{row.label}</td><td>{money(row.amount)}</td><td>{row.count}건</td><td>{row.views}건</td><td>{row.inquiries}건</td><td>{row.orderRequests}건</td><td>{row.conversionRate === null ? "데이터 부족" : formatPercent(row.conversionRate)}</td><td>{row.latestDate}</td></tr>)}</tbody>
+          </table>
+        </div>
+      )}
+      <p className="mutedText">상품 정보가 자세할수록 문의 전환에 도움이 될 수 있어요.</p>
+    </section>
+  );
+}
+
+function TodaySupplierCustomersView({ rows }: { rows: TodaySupplierCustomerRow[] }) {
+  return (
+    <section className="toolPanel">
+      <SectionHeader title="거래처별 매출" />
+      {rows.length === 0 ? <EmptyState icon={<UsersRound />} title="아직 거래처 매출 데이터가 없습니다." desc="거래가 완료되면 구매처별 매출과 재거래 현황을 보여드립니다." /> : (
+        <div className="tableWrap">
+          <table className="dataTable">
+            <thead><tr><th>구매처</th><th>거래건수</th><th>매출금액</th><th>평균 거래금액</th><th>최근 거래일</th><th>세금계산서</th><th>정산</th><th>상태</th></tr></thead>
+            <tbody>{rows.map((row) => <tr key={row.label}><td>{row.label}</td><td>{row.count}건</td><td>{money(row.amount)}</td><td>{money(row.averageAmount)}</td><td>{row.latestDate}</td><td>{row.taxNeeds}건</td><td>{row.settlementNeeds}건</td><td>{row.status}</td></tr>)}</tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TodaySupplierSummaryTable({ title, rows, empty, primaryLabel }: { title: string; rows: ReturnType<typeof getTodaySupplierProductRows>; empty: string; primaryLabel: string }) {
+  return (
+    <section className="toolPanel">
+      <SectionHeader title={title} />
+      {rows.length === 0 ? <EmptyState icon={<Boxes />} title={empty} desc="싸와 거래가 완료되면 이곳에 요약됩니다." /> : (
+        <div className="tableWrap">
+          <table className="dataTable">
+            <thead><tr><th>{primaryLabel}</th><th>매출금액</th><th>거래건수</th><th>평균 거래금액</th><th>최근 거래일</th></tr></thead>
+            <tbody>{rows.map((row) => <tr key={row.label}><td>{row.label}</td><td>{money(row.amount)}</td><td>{row.count}건</td><td>{money(Math.round(row.amount / Math.max(1, row.count)))}</td><td>{row.latestDate}</td></tr>)}</tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TodaySupplierTaxView({ data, setData, sales }: { data: AppData; setData: (data: AppData) => void; sales: TodaySupplierSaleRecord[] }) {
+  const needs = sales.filter((record) => record.tax_invoice_status === "required" || record.tax_invoice_status === "requested" || record.tax_invoice_status === "unknown");
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="발행 필요" value={`${sales.filter((record) => record.tax_invoice_status === "required").length}건`} icon={<ReceiptText />} />
+        <Metric label="요청 받음" value={`${sales.filter((record) => record.tax_invoice_status === "requested").length}건`} icon={<Bell />} />
+        <Metric label="발행 완료" value={`${sales.filter((record) => record.tax_invoice_status === "issued").length}건`} icon={<BadgeCheck />} />
+        <Metric label="확인 필요" value={`${sales.filter((record) => record.tax_invoice_status === "unknown").length}건`} icon={<ShieldCheck />} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="세금계산서 발행 관리" />
+        <p className="muted">표시된 상태는 공급업체가 관리상 체크하는 상태입니다. 최종 세무 처리는 세무사 또는 전문가 확인을 권장합니다.</p>
+        <TodaySupplierSalesTable
+          sales={needs}
+          renderActions={(record) => (
+            <select value={record.tax_invoice_status} onChange={(event) => setData(updateSupplierSaleTaxInvoiceStatus(data, record.id, event.target.value as TodaySupplierSaleRecord["tax_invoice_status"]))}>
+              {(["required", "requested", "issued", "not_needed", "unknown"] as TodaySupplierSaleRecord["tax_invoice_status"][]).map((status) => <option value={status} key={status}>{supplierTaxInvoiceLabel(status)}</option>)}
+            </select>
+          )}
+        />
+      </section>
+    </>
+  );
+}
+
+function TodaySupplierQuotesView({ data, quotes, metrics, sales, aiAnswer, navigate }: { data: AppData; quotes: Quote[]; metrics: TodaySupplierQuoteMetrics; sales: TodaySupplierSaleRecord[]; aiAnswer: TodayAIAnswer; navigate: Navigate }) {
+  return (
+    <>
+      <div className="dashboardGrid">
+        <Metric label="보낸 견적" value={`${metrics.sentQuoteCount}건`} icon={<ClipboardList />} />
+        <Metric label="선택된 견적" value={`${metrics.selectedQuoteCount}건`} icon={<BadgeCheck />} />
+        <Metric label="거래 생성" value={`${metrics.createdDealCount}건`} icon={<PackageCheck />} />
+        <Metric label="거래 완료" value={`${metrics.completedDealCount}건`} icon={<Landmark />} />
+        <Metric label="견적 성사율" value={metrics.sentQuoteCount ? formatPercent(metrics.quoteWinRate) : "-"} icon={<SearchCheck />} />
+        <Metric label="거래 완료율" value={metrics.selectedQuoteCount ? formatPercent(metrics.dealCompletionRate) : "-"} icon={<ReceiptText />} />
+      </div>
+      <TodayAIInsightSummaryCard title="AI 견적 성사율 설명" answer={validateAIResponse({ ...aiAnswer, answerText: `견적 성사율은 ${metrics.sentQuoteCount ? formatPercent(metrics.quoteWinRate) : "데이터 부족"}입니다. 보낸 견적 ${metrics.sentQuoteCount}건과 선택된 견적 ${metrics.selectedQuoteCount}건을 기준으로 봅니다.`, summary: "견적 성사율", evidenceItems: [{ label: "보낸 견적", value: `${metrics.sentQuoteCount}건` }, { label: "선택된 견적", value: `${metrics.selectedQuoteCount}건` }, { label: "성사율", value: metrics.sentQuoteCount ? formatPercent(metrics.quoteWinRate) : "데이터 부족" }], actions: [{ label: "요청견적 보기", url: "/app/supplier/requests", type: "requests" }, { label: "AI에 질문", url: "/app/today/supplier/ai", type: "ai" }], warnings: ["실제 견적 결과는 업체별로 달라질 수 있습니다."] })} navigate={navigate} compact />
+      <section className="toolPanel">
+        <SectionHeader title="카테고리별 성사율" />
+        <div className="categorySummaryGrid">
+          {metrics.categoryRows.map((row) => <article className="categorySummaryItem" key={row.category}><div><strong>{row.category}</strong><span>견적 {row.sent}건 · 선택 {row.selected}건</span></div><b>{row.sent ? formatPercent(row.selected / row.sent) : "-"}</b></article>)}
+          {!metrics.categoryRows.length && <p className="mutedText">아직 보낸 견적이 없습니다.</p>}
+        </div>
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="견적 성사 현황" action="싸와 견적 보기" onAction={() => navigate("/app/supplier/quotes")} />
+        <div className="tableWrap">
+          <table className="dataTable">
+            <thead><tr><th>견적</th><th>구매처</th><th>카테고리</th><th>금액</th><th>상태</th><th>오늘장사 매출</th></tr></thead>
+            <tbody>{quotes.map((quote) => {
+              const request = data.quote_requests.find((entry) => entry.id === quote.quote_request_id);
+              const sale = sales.find((entry) => entry.ssawa_quote_id === quote.id || entry.ssawa_quote_request_id === quote.quote_request_id);
+              const buyer = request ? data.profiles.find((entry) => entry.id === request.buyer_id) : undefined;
+              return <tr key={quote.id}><td>{request?.title ?? quote.id}</td><td>{buyer?.business_name ?? "구매처"}</td><td>{request?.category_name ?? "-"}</td><td>{money(quote.total_amount)}</td><td>{quoteStatusLabels[quote.status]}</td><td>{sale ? "매출 정리됨" : "대기"}</td></tr>;
+            })}</tbody>
+          </table>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function TodaySupplierUploadsView({ data, setData, supplier }: { data: AppData; setData: (data: AppData) => void; supplier: SupplierProfile }) {
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const batches = data.today_upload_batches.filter((batch) => batch.upload_context === "supplier_today" && batch.business_id === supplier.id).slice(0, 8);
+
+  async function parseSupplierWorkbook(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const matrix = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, raw: false, defval: "" });
+    const headers = (matrix[0] ?? []).map((cell, index) => String(cell || `열${index + 1}`).trim());
+    const rows = matrix.slice(1).filter((row) => row.some((cell) => String(cell).trim())).map((row) => Object.fromEntries(headers.map((header, index) => [header, String(row[index] ?? "").trim()])));
+    return { headers, rows };
+  }
+
+  function getSupplierUploadValue(row: Record<string, string>, keys: string[]) {
+    const entry = Object.entries(row).find(([key]) => keys.some((needle) => key.replace(/\s/g, "").includes(needle)));
+    return entry?.[1]?.trim() ?? "";
+  }
+
+  async function handleFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setMessage("");
+    setError("");
+    try {
+      const parsed: { headers: string[]; rows: Record<string, string>[]; error?: string } = file.name.toLowerCase().endsWith(".xlsx") || file.name.toLowerCase().endsWith(".xls")
+        ? await parseSupplierWorkbook(file)
+        : parseCsvText(await file.text());
+      if (parsed.error) {
+        setError(parsed.error);
+        return;
+      }
+      let nextData = data;
+      let importedCount = 0;
+      parsed.rows.forEach((row) => {
+        const amount = Number(getSupplierUploadValue(row, ["금액", "매출", "합계", "amount"]).replace(/[^\d.-]/g, ""));
+        const soldAt = parseSupplierUploadDate(getSupplierUploadValue(row, ["날짜", "일자", "거래일", "date"])) || today;
+        if (!Number.isFinite(amount) || amount <= 0) return;
+        const supplyAmount = Math.round(amount / 1.1);
+        const result = createSupplierManualSalesRecord(nextData, {
+          supplier_business_id: supplier.id,
+          buyer_business_id: "supplier-upload-buyer",
+          buyer_display_name: getSupplierUploadValue(row, ["거래처", "구매처", "buyer"]) || "업로드 거래처",
+          item_summary: getSupplierUploadValue(row, ["품목", "상품", "내용", "item"]) || "업로드 매출",
+          category: getSupplierUploadValue(row, ["카테고리", "분류", "category"]) || "업로드 매출",
+          total_amount: Math.round(amount),
+          supply_amount: supplyAmount,
+          vat_amount: Math.round(amount) - supplyAmount,
+          payment_method: "direct",
+          sale_status: "completed",
+          settlement_status: "not_applicable",
+          tax_invoice_status: normalizeSupplierUploadTaxStatus(getSupplierUploadValue(row, ["세금계산서", "계산서", "tax"])),
+          evidence_status: "needs_review",
+          sold_at: soldAt,
+          memo: [getSupplierUploadValue(row, ["메모", "비고", "memo"]), `공급업체 업로드: ${file.name}`].filter(Boolean).join(" / "),
+          created_by: supplier.user_id,
+        });
+        nextData = result.data;
+        importedCount += 1;
+      });
+      const createdAt = new Date().toISOString();
+      const batchId = `supplier-upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      nextData = {
+        ...nextData,
+        today_upload_batches: [{
+          id: batchId,
+          business_id: supplier.id,
+          upload_context: "supplier_today",
+          upload_type: "sales",
+          status: importedCount > 0 ? "imported" : "failed",
+          file_name: file.name,
+          file_mime_type: file.type || "text/csv",
+          file_size: file.size,
+          original_header_json: JSON.stringify(parsed.headers),
+          detected_mapping_json: JSON.stringify({ mode: "supplier_sales_basic" }),
+          row_count: parsed.rows.length,
+          valid_count: importedCount,
+          warning_count: Math.max(0, parsed.rows.length - importedCount),
+          invalid_count: 0,
+          duplicate_count: 0,
+          imported_count: importedCount,
+          skipped_count: Math.max(0, parsed.rows.length - importedCount),
+          created_by: supplier.user_id,
+          created_at: createdAt,
+          updated_at: createdAt,
+          imported_at: importedCount > 0 ? createdAt : undefined,
+        }, ...nextData.today_upload_batches],
+      };
+      saveData(nextData);
+      setData(nextData);
+      setMessage(`${importedCount}건의 공급업체 매출을 업로드했습니다.`);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "파일을 읽지 못했습니다.");
+    }
+  }
+
+  return (
+    <>
+      <section className="toolPanel">
+        <SectionHeader title="공급업체 업로드" />
+        <p className="muted">싸와 외 매출을 CSV 또는 엑셀로 등록할 수 있습니다. 정산/세금계산서 상태 일괄 변경은 구조만 준비했고, 이번 화면에서는 매출 등록만 처리합니다.</p>
+        <div className="formGrid">
+          <label>매출 파일<input type="file" accept=".csv,.tsv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleFile} /></label>
+        </div>
+        <div className="formActions">
+          <button className="secondaryButton" type="button" onClick={() => downloadTextFile("supplier-today-sales-template.csv", toCsv(getSupplierUploadTemplateRows()), "text/csv;charset=utf-8")}>CSV 템플릿 다운로드</button>
+        </div>
+        {message && <p className="successText">{message}</p>}
+        {error && <p className="formError">{error}</p>}
+      </section>
+      <section className="toolPanel">
+        <SectionHeader title="공급업체 업로드 이력" />
+        <div className="tableWrap">
+          <table className="dataTable">
+            <thead><tr><th>파일</th><th>행</th><th>반영</th><th>상태</th><th>일시</th></tr></thead>
+            <tbody>{batches.map((batch) => <tr key={batch.id}><td>{batch.file_name}</td><td>{batch.row_count}건</td><td>{batch.imported_count}건</td><td>{todayUploadBatchStatusLabels[batch.status]}</td><td>{batch.created_at.slice(0, 10)}</td></tr>)}</tbody>
+          </table>
+        </div>
+        {!batches.length && <p className="mutedText">아직 공급업체 업로드 이력이 없습니다.</p>}
+      </section>
+    </>
+  );
+}
+
+function TodaySupplierSalesTable({ sales, compact = false, renderActions }: { sales: TodaySupplierSaleRecord[]; compact?: boolean; renderActions?: (record: TodaySupplierSaleRecord) => ReactNode }) {
+  if (sales.length === 0) return <EmptyState icon={<ReceiptText />} title="아직 싸와에서 완료된 거래가 없습니다." desc="요청 견적에 응답하고 거래가 진행되면 매출이 이곳에 정리됩니다." />;
+  return (
+    <div className="tableWrap">
+      <table className="dataTable">
+        <thead><tr><th>거래일</th><th>구매처</th><th>품목</th><th>금액</th><th>매출 상태</th><th>정산</th>{!compact && <th>세금계산서</th>}{renderActions && <th>작업</th>}</tr></thead>
+        <tbody>{sales.map((record) => <tr key={record.id}><td>{record.sold_at}</td><td>{record.buyer_display_name}</td><td>{record.item_summary}</td><td>{money(record.total_amount)}</td><td><StatusBadge tone={record.sale_status === "completed" ? "green" : record.sale_status === "needs_review" || record.sale_status === "disputed" ? "orange" : record.sale_status === "cancelled" ? "gray" : "blue"}>{supplierSaleStatusLabel(record.sale_status)}</StatusBadge></td><td>{supplierSettlementLabel(record.settlement_status)}</td>{!compact && <td>{supplierTaxInvoiceLabel(record.tax_invoice_status)}</td>}{renderActions && <td>{renderActions(record)}</td>}</tr>)}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function TodaySupplierManualSaleSheet({ data, setData, supplier, onClose }: { data: AppData; setData: (data: AppData) => void; supplier: SupplierProfile; onClose: () => void }) {
+  const [buyerName, setBuyerName] = useState("직접 거래처");
+  const [itemSummary, setItemSummary] = useState("수동 매출");
+  const [amount, setAmount] = useState(100000);
+  const [soldAt, setSoldAt] = useState(today);
+  const [memo, setMemo] = useState("");
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const supplyAmount = Math.round(amount / 1.1);
+    const result = createSupplierManualSalesRecord(data, {
+      supplier_business_id: supplier.id,
+      buyer_business_id: "manual-buyer",
+      buyer_display_name: buyerName.trim() || "직접 거래처",
+      item_summary: itemSummary.trim() || "수동 매출",
+      category: "수동 매출",
+      total_amount: amount,
+      supply_amount: supplyAmount,
+      vat_amount: amount - supplyAmount,
+      payment_method: "direct",
+      sale_status: "completed",
+      settlement_status: "not_applicable",
+      tax_invoice_status: "unknown",
+      evidence_status: "needs_review",
+      sold_at: soldAt,
+      memo,
+      created_by: supplier.user_id,
+    });
+    setData(result.data);
+    onClose();
+  }
+  return (
+    <div className="todaySheetBackdrop" role="dialog" aria-modal="true">
+      <form className="todayQuickSheet" onSubmit={submit}>
+        <SectionHeader title="수동 매출 입력" action="닫기" onAction={onClose} />
+        <label className="field">거래일<input type="date" value={soldAt} onChange={(event) => setSoldAt(event.target.value)} /></label>
+        <label className="field">거래처명<input value={buyerName} onChange={(event) => setBuyerName(event.target.value)} /></label>
+        <label className="field">품목/내용<input value={itemSummary} onChange={(event) => setItemSummary(event.target.value)} /></label>
+        <label className="field amountField">금액<input type="number" value={amount} onChange={(event) => setAmount(Number(event.target.value))} /></label>
+        <label className="field">메모<textarea value={memo} onChange={(event) => setMemo(event.target.value)} /></label>
+        <button className="primaryButton full" type="submit">저장하기</button>
+      </form>
+    </div>
+  );
+}
+
+function getTodaySupplierSection(path: string): TodaySupplierSection {
+  const slug = path.split("/")[4] ?? "";
+  if (slug === "sales") return "sales";
+  if (slug === "settlements") return "settlements";
+  if (slug === "products") return "products";
+  if (slug === "customers") return "customers";
+  if (slug === "tax") return "tax";
+  if (slug === "quotes") return "quotes";
+  if (slug === "uploads") return "uploads";
+  if (slug === "ai") return "ai";
+  if (slug === "notifications") return "notifications";
+  return "home";
+}
+
+function isSupplierRecognizedSale(record: TodaySupplierSaleRecord) {
+  return ["confirmed", "completed"].includes(record.sale_status) && !["cancelled", "refunded", "disputed"].includes(record.sale_status);
+}
+
+function sumSupplierRecognizedSales(sales: TodaySupplierSaleRecord[]) {
+  return sales.filter(isSupplierRecognizedSale).reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0);
+}
+
+function isSupplierSettlementRisk(record: TodaySupplierSaleRecord) {
+  return record.settlement_status === "held" || record.settlement_status === "failed" || record.settlement_status === "needs_review" || (record.sale_status === "completed" && !record.settlement_status);
+}
+
+function isSupplierTaxInvoiceNeeded(record: TodaySupplierSaleRecord) {
+  return record.tax_invoice_status === "required" || record.tax_invoice_status === "requested" || record.tax_invoice_status === "unknown" || (record.total_amount >= 1000000 && record.tax_invoice_status !== "issued" && record.tax_invoice_status !== "not_needed");
+}
+
+function getRate(delta: number, base: number) {
+  return base > 0 ? delta / base : 0;
+}
+
+function getSupplierTodaySummary(allSales: TodaySupplierSaleRecord[], range: TodayV4Range, previousRange: TodayV4Range) {
+  const sales = allSales.filter((record) => isDateInRange(record.sold_at, range));
+  const previousSales = allSales.filter((record) => isDateInRange(record.sold_at, previousRange));
+  const totalAmount = sumSupplierRecognizedSales(sales);
+  const previousAmount = sumSupplierRecognizedSales(previousSales);
+  const todaySales = sales.filter((record) => record.sold_at === today);
+  return {
+    totalAmount,
+    previousAmount,
+    salesDelta: totalAmount - previousAmount,
+    salesDeltaRate: previousAmount ? getRate(totalAmount - previousAmount, previousAmount) : 0,
+    todayAmount: sumSupplierRecognizedSales(todaySales),
+    todayCount: todaySales.length,
+    settlementScheduledAmount: sales.filter((record) => record.settlement_status === "scheduled" || record.settlement_status === "pending").reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0),
+    settlementPaidAmount: sales.filter((record) => record.settlement_status === "paid").reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0),
+    settlementHeldAmount: sales.filter((record) => record.settlement_status === "held" || record.settlement_status === "failed" || record.settlement_status === "needs_review").reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0),
+    settlementPendingCount: sales.filter((record) => record.settlement_status === "scheduled" || record.settlement_status === "pending").length,
+    settlementReviewCount: sales.filter(isSupplierSettlementRisk).length,
+    taxRequiredCount: sales.filter(isSupplierTaxInvoiceNeeded).length,
+    reviewCount: sales.filter((record) => record.sale_status === "needs_review" || record.evidence_status === "needs_review" || isSupplierSettlementRisk(record) || isSupplierTaxInvoiceNeeded(record)).length,
+  };
+}
+
+function getTodaySupplierSummary(sales: TodaySupplierSaleRecord[]) {
+  return {
+    totalAmount: sales.reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0),
+    todayAmount: sales.filter((record) => record.sold_at === today).reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0),
+    todayCount: sales.filter((record) => record.sold_at === today).length,
+    settlementScheduledAmount: sales.filter((record) => record.settlement_status === "scheduled" || record.settlement_status === "pending").reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0),
+    settlementPaidAmount: sales.filter((record) => record.settlement_status === "paid").reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0),
+    settlementHeldAmount: sales.filter((record) => record.settlement_status === "held" || record.settlement_status === "needs_review").reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0),
+    settlementPendingCount: sales.filter((record) => record.settlement_status === "scheduled" || record.settlement_status === "pending").length,
+    settlementReviewCount: sales.filter(isSupplierSettlementRisk).length,
+    taxRequiredCount: sales.filter(isSupplierTaxInvoiceNeeded).length,
+    reviewCount: sales.filter((record) => record.sale_status === "needs_review" || record.settlement_status === "needs_review" || record.evidence_status === "needs_review" || isSupplierSettlementRisk(record)).length,
+  };
+}
+
+function getSupplierSalesTrend(sales: TodaySupplierSaleRecord[]) {
+  return getTodaySupplierGroupedRows(sales.filter(isSupplierRecognizedSale), (record) => record.sold_at)
+    .map((row) => ({ date: row.label, amount: row.amount, count: row.count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function getSupplierProductMetrics(data: AppData, supplierBusinessId: string, range: TodayV4Range): TodaySupplierProductRow[] {
+  const sales = data.supplier_sales_records.filter((record) => !record.deleted_at && record.supplier_business_id === supplierBusinessId && isDateInRange(record.sold_at, range));
+  const events = data.supplier_product_events.filter((event) => event.supplier_business_id === supplierBusinessId && isDateInRange(event.created_at.slice(0, 10), range));
+  const rows = new Map<string, TodaySupplierProductRow>();
+  const ensure = (label: string, productId?: string) => {
+    const key = productId || label;
+    const row = rows.get(key) ?? { label, productId, amount: 0, count: 0, latestDate: "", views: 0, inquiries: 0, orderRequests: 0, dealsCompleted: 0, conversionRate: null };
+    rows.set(key, row);
+    return row;
+  };
+  sales.forEach((record) => {
+    const product = record.ssawa_product_id ? data.supplier_products.find((entry) => entry.id === record.ssawa_product_id) : undefined;
+    const row = ensure(product?.title ?? (record.item_summary || record.category || "상품"), record.ssawa_product_id);
+    if (isSupplierRecognizedSale(record)) row.amount += safePositiveAmount(record.total_amount);
+    row.count += 1;
+    row.latestDate = row.latestDate && row.latestDate > record.sold_at ? row.latestDate : record.sold_at;
+    if (record.sale_status === "completed") row.dealsCompleted += 1;
+  });
+  events.forEach((event) => {
+    const product = event.product_id ? data.supplier_products.find((entry) => entry.id === event.product_id) : undefined;
+    const row = ensure(product?.title ?? "상품 이벤트", event.product_id);
+    if (event.event_type === "view") row.views += 1;
+    if (event.event_type === "inquiry") row.inquiries += 1;
+    if (event.event_type === "order_request") row.orderRequests += 1;
+    if (event.event_type === "deal_completed") row.dealsCompleted += 1;
+  });
+  return [...rows.values()]
+    .map((row) => ({ ...row, conversionRate: row.views + row.inquiries + row.orderRequests > 0 ? row.dealsCompleted / (row.views + row.inquiries + row.orderRequests) : null }))
+    .sort((a, b) => b.amount - a.amount || b.inquiries - a.inquiries);
+}
+
+function getSupplierCustomerMetrics(sales: TodaySupplierSaleRecord[]): TodaySupplierCustomerRow[] {
+  return getTodaySupplierGroupedRows(sales, (record) => record.buyer_display_name || "거래처")
+    .map((row) => {
+      const customerSales = sales.filter((record) => (record.buyer_display_name || "거래처") === row.label);
+      return {
+        ...row,
+        averageAmount: Math.round(row.amount / Math.max(1, row.count)),
+        taxNeeds: customerSales.filter(isSupplierTaxInvoiceNeeded).length,
+        settlementNeeds: customerSales.filter(isSupplierSettlementRisk).length,
+        status: row.count >= 2 ? "재거래" : "신규",
+      };
+    });
+}
+
+function getTodaySupplierProductRows(sales: TodaySupplierSaleRecord[]) {
+  return getTodaySupplierGroupedRows(sales, (record) => record.item_summary || record.category || "상품");
+}
+
+function getTodaySupplierCustomerRows(sales: TodaySupplierSaleRecord[]) {
+  return getTodaySupplierGroupedRows(sales, (record) => record.buyer_display_name || "거래처");
+}
+
+function getTodaySupplierGroupedRows(sales: TodaySupplierSaleRecord[], keyFn: (record: TodaySupplierSaleRecord) => string) {
+  const rows = new Map<string, { label: string; amount: number; count: number; latestDate: string }>();
+  sales.forEach((record) => {
+    const key = keyFn(record);
+    const row = rows.get(key) ?? { label: key, amount: 0, count: 0, latestDate: record.sold_at };
+    row.amount += safePositiveAmount(record.total_amount);
+    row.count += 1;
+    if (record.sold_at > row.latestDate) row.latestDate = record.sold_at;
+    rows.set(key, row);
+  });
+  return [...rows.values()].sort((a, b) => b.amount - a.amount);
+}
+
+function getSupplierQuoteConversion(data: AppData, supplierBusinessId: string, range: TodayV4Range) {
+  const quotes = data.quotes.filter((quote) => quote.supplier_id === supplierBusinessId && isDateInRange(quote.created_at.slice(0, 10), range));
+  const selectedQuotes = quotes.filter((quote) => quote.status === "selected");
+  const deals = data.deals.filter((deal) => deal.supplier_id === supplierBusinessId && isDateInRange(deal.created_at.slice(0, 10), range));
+  const completedDeals = deals.filter((deal) => deal.status === "completed" || deal.status === "delivered" || deal.status === "confirmed");
+  const categories = new Map<string, { category: string; sent: number; selected: number }>();
+  quotes.forEach((quote) => {
+    const request = data.quote_requests.find((entry) => entry.id === quote.quote_request_id);
+    const category = request?.category_name ?? "기타";
+    const row = categories.get(category) ?? { category, sent: 0, selected: 0 };
+    row.sent += 1;
+    if (quote.status === "selected") row.selected += 1;
+    categories.set(category, row);
+  });
+  return {
+    availableRequestCount: data.quote_requests.filter((request) => isDateInRange(request.created_at.slice(0, 10), range)).length,
+    sentQuoteCount: quotes.length,
+    selectedQuoteCount: selectedQuotes.length,
+    createdDealCount: deals.length,
+    completedDealCount: completedDeals.length,
+    unselectedQuoteCount: quotes.filter((quote) => quote.status === "rejected" || quote.status === "expired").length,
+    quoteWinRate: quotes.length ? selectedQuotes.length / quotes.length : 0,
+    dealCompletionRate: selectedQuotes.length ? completedDeals.length / selectedQuotes.length : 0,
+    averageQuoteAmount: quotes.length ? Math.round(quotes.reduce((sum, quote) => sum + safePositiveAmount(quote.total_amount), 0) / quotes.length) : 0,
+    categoryRows: [...categories.values()].sort((a, b) => b.selected - a.selected || b.sent - a.sent),
+  };
+}
+
+function getSupplierInsights(data: AppData, supplierBusinessId: string, range: TodayV4Range, summary: ReturnType<typeof getSupplierTodaySummary>, quoteMetrics: ReturnType<typeof getSupplierQuoteConversion>, productRows: TodaySupplierProductRow[]) {
+  const createdAt = new Date().toISOString();
+  const insights: Array<{ id: string; title: string; message: string; actionUrl: string; severity: "low" | "medium" | "high" }> = data.supplier_today_insights
+    .filter((entry) => entry.supplier_business_id === supplierBusinessId && isDateInRange(entry.created_at.slice(0, 10), range))
+    .map((entry) => ({ id: entry.id, title: entry.title, message: entry.message, actionUrl: entry.action_url, severity: entry.severity }));
+  if (summary.previousAmount > 0) insights.push({ id: "supplier-sales-trend", title: summary.salesDelta >= 0 ? "매출이 늘었어요" : "매출이 줄었어요", message: summary.salesDelta >= 0 ? "이번 달 싸와 매출이 지난 기간보다 늘었어요." : "이번 달 매출이 줄었어요. 견적 성사율을 확인해보세요.", actionUrl: "/app/today/supplier/sales", severity: Math.abs(summary.salesDeltaRate) >= 0.2 ? "medium" : "low" });
+  if (quoteMetrics.sentQuoteCount >= 3 && quoteMetrics.quoteWinRate < 0.25) insights.push({ id: "supplier-quote-low", title: "견적 성사율 확인", message: "견적은 많이 보냈지만 선택된 비율이 낮아요.", actionUrl: "/app/today/supplier/quotes", severity: "medium" });
+  if (summary.settlementReviewCount > 0) insights.push({ id: "supplier-settlement-review", title: "정산 확인 필요", message: "정산 확인이 필요한 거래가 있어요.", actionUrl: "/app/today/supplier/settlements", severity: "high" });
+  if (summary.taxRequiredCount > 0) insights.push({ id: "supplier-tax-needed", title: "세금계산서 상태 확인", message: "세금계산서 발행 상태를 확인해주세요.", actionUrl: "/app/today/supplier/tax", severity: "medium" });
+  const topProduct = productRows.find((row) => row.inquiries > 0 || row.amount > 0);
+  if (topProduct) insights.push({ id: "supplier-product-performing", title: "상품 성과", message: `${topProduct.label} 상품 성과를 확인해보세요.`, actionUrl: "/app/today/supplier/products", severity: "low" });
+  return insights.slice(0, 8);
+}
+
+function getSupplierTasks(data: AppData, supplierBusinessId: string, range: TodayV4Range, sales: TodaySupplierSaleRecord[], quoteMetrics: ReturnType<typeof getSupplierQuoteConversion>, productRows: TodaySupplierProductRow[]) {
+  const storedTasks = data.supplier_tasks
+    .filter((task) => task.supplier_business_id === supplierBusinessId && task.status === "open")
+    .map((task) => ({ id: task.id, title: task.title, message: task.message, actionUrl: task.related_type === "tax" ? "/app/today/supplier/tax" : "/app/today/supplier" }));
+  const tasks = [...storedTasks];
+  const openRequests = data.quote_requests.filter((request) => isDateInRange(request.created_at.slice(0, 10), range) && !data.quotes.some((quote) => quote.quote_request_id === request.id && quote.supplier_id === supplierBusinessId));
+  if (openRequests.length) tasks.push({ id: "supplier-task-quotes", title: "견적 보내기", message: `${openRequests.length}건의 요청견적을 확인하세요.`, actionUrl: "/app/supplier/requests" });
+  const settlementNeeds = sales.filter(isSupplierSettlementRisk).length;
+  if (settlementNeeds) tasks.push({ id: "supplier-task-settlement", title: "정산 확인", message: `${settlementNeeds}건의 정산 상태를 확인하세요.`, actionUrl: "/app/today/supplier/settlements" });
+  const taxNeeds = sales.filter(isSupplierTaxInvoiceNeeded).length;
+  if (taxNeeds) tasks.push({ id: "supplier-task-tax", title: "세금계산서 상태 확인", message: `${taxNeeds}건의 발행 상태를 확인하세요.`, actionUrl: "/app/today/supplier/tax" });
+  if (productRows.some((row) => row.views + row.inquiries + row.orderRequests === 0)) tasks.push({ id: "supplier-task-product", title: "상품 정보 보완", message: "상품 정보가 자세할수록 문의 전환에 도움이 될 수 있어요.", actionUrl: "/app/supplier/products" });
+  if (!quoteMetrics.sentQuoteCount) tasks.push({ id: "supplier-task-first-quote", title: "첫 견적 보내기", message: "요청견적에 견적을 보내 매출을 만들어보세요.", actionUrl: "/app/supplier/requests" });
+  return tasks;
+}
+
+function parseSupplierUploadDate(value: string) {
+  const ymd = value.match(/(20\d{2})[./-](\d{1,2})[./-](\d{1,2})/);
+  if (ymd) return `${ymd[1]}-${ymd[2].padStart(2, "0")}-${ymd[3].padStart(2, "0")}`;
+  return "";
+}
+
+function normalizeSupplierUploadTaxStatus(value: string): TodaySupplierSaleRecord["tax_invoice_status"] {
+  if (/완료|발행|issued/.test(value)) return "issued";
+  if (/요청|requested/.test(value)) return "requested";
+  if (/필요|required/.test(value)) return "required";
+  if (/없음|불필요|not/.test(value)) return "not_needed";
+  return "unknown";
+}
+
+function getSupplierUploadTemplateRows() {
+  return [
+    ["날짜", "거래처", "품목", "카테고리", "금액", "세금계산서", "메모"],
+    ["2026-07-06", "월계치킨", "치킨박스 외", "포장재", "120000", "발행 필요", "싸와 외 매출"],
+  ];
+}
+
+function supplierSaleStatusLabel(status: TodaySupplierSaleRecord["sale_status"]) {
+  if (status === "pending") return "대기";
+  if (status === "confirmed") return "거래 진행";
+  if (status === "completed") return "거래 완료";
+  if (status === "cancelled") return "취소";
+  if (status === "refunded") return "환불";
+  if (status === "disputed") return "분쟁";
+  return "확인 필요";
+}
+
+function supplierSettlementLabel(status: TodaySupplierSaleRecord["settlement_status"]) {
+  if (status === "not_applicable") return "직접거래";
+  if (status === "pending") return "정산 대기";
+  if (status === "scheduled") return "정산 예정";
+  if (status === "paid") return "정산 완료";
+  if (status === "held") return "보류";
+  if (status === "failed") return "실패";
+  return "확인 필요";
+}
+
+function supplierTaxInvoiceLabel(status: TodaySupplierSaleRecord["tax_invoice_status"]) {
+  if (status === "required") return "발행 필요";
+  if (status === "requested") return "요청 받음";
+  if (status === "issued") return "발행 완료";
+  if (status === "not_needed") return "필요 없음";
+  return "모르겠음";
+}
+
+function getTodayV4Summary(purchases: PurchaseRecord[], sales: TodaySaleRecord[], expenses: TodayExpenseRecordV4[]) {
+  const salesAmount = sales.reduce((sum, record) => sum + safePositiveAmount(record.amount), 0);
+  const purchaseAmount = purchases.reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0);
+  const expenseAmount = expenses.reduce((sum, record) => sum + safePositiveAmount(record.amount), 0);
+  return { sales: salesAmount, purchases: purchaseAmount, expenses: expenseAmount, profit: salesAmount - purchaseAmount - expenseAmount };
+}
+
+function getTodayV4PeriodRange(period: TodayV4Period, customRange?: TodayV4Range): TodayV4Range {
+  if (period === "custom" && customRange?.start && customRange?.end) return normalizeRange(customRange);
+  if (period === "today") return { start: today, end: today };
+  if (period === "week") return { start: "2026-07-06", end: "2026-07-12" };
+  if (period === "year") return { start: "2026-01-01", end: "2026-12-31" };
+  return { start: "2026-07-01", end: "2026-07-31" };
+}
+
+function getTodayV4PreviousRange(period: TodayV4Period, currentRange: TodayV4Range): TodayV4Range {
+  if (period === "today") return { start: addDays(currentRange.start, -1), end: addDays(currentRange.end, -1) };
+  if (period === "week") return { start: addDays(currentRange.start, -7), end: addDays(currentRange.end, -7) };
+  if (period === "month") return { start: "2026-06-01", end: "2026-06-30" };
+  if (period === "year") return { start: "2025-01-01", end: "2025-12-31" };
+  const days = diffDays(currentRange.start, currentRange.end) + 1;
+  return { start: addDays(currentRange.start, -days), end: addDays(currentRange.start, -1) };
+}
+
+function getTodayV5ProfitAnalysis(purchases: PurchaseRecord[], sales: TodaySaleRecord[], expenses: TodayExpenseRecordV4[], period: TodayV4Period, customRange?: TodayV4Range): TodayV5ProfitAnalysis {
+  const currentRange = getTodayV4PeriodRange(period, customRange);
+  const previousRange = getTodayV4PreviousRange(period, currentRange);
+  const currentPurchases = purchases.filter((record) => !record.deleted_at && isDateInRange(record.purchase_date, currentRange));
+  const currentSales = sales.filter((record) => !record.deleted_at && isDateInRange(record.sales_date, currentRange));
+  const currentExpenses = expenses.filter((record) => !record.deleted_at && isDateInRange(record.expense_date, currentRange));
+  const previousPurchases = purchases.filter((record) => !record.deleted_at && isDateInRange(record.purchase_date, previousRange));
+  const previousSales = sales.filter((record) => !record.deleted_at && isDateInRange(record.sales_date, previousRange));
+  const previousExpenses = expenses.filter((record) => !record.deleted_at && isDateInRange(record.expense_date, previousRange));
+  const summary = getTodayV4Summary(currentPurchases, currentSales, currentExpenses);
+  const previousSummary = getTodayV4Summary(previousPurchases, previousSales, previousExpenses);
+  const ssawaPurchases = currentPurchases.filter(isSsawaPurchase).reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0);
+  const manualPurchases = currentPurchases.filter((record) => !isSsawaPurchase(record)).reduce((sum, record) => sum + safePositiveAmount(record.total_amount), 0);
+  const categoryBreakdown = buildTodayV5Breakdown(
+    currentPurchases,
+    previousPurchases,
+    (record) => record.accounting_category || record.category_name || "미분류",
+    (record) => safePositiveAmount(record.total_amount),
+    "purchase",
+    summary.purchases,
+  );
+  const expenseBreakdown = buildTodayV5Breakdown(
+    currentExpenses,
+    previousExpenses,
+    (record) => record.expense_type || "기타",
+    (record) => safePositiveAmount(record.amount),
+    "expense",
+    summary.expenses,
+  );
+  const supplierBreakdown = buildTodayV5Breakdown(
+    currentPurchases,
+    previousPurchases,
+    (record) => record.supplier_name || "거래처 미입력",
+    (record) => safePositiveAmount(record.total_amount),
+    "supplier",
+    summary.purchases,
+  );
+  const dataQualityMessages = getTodayV5DataQualityMessages(currentPurchases, currentSales, currentExpenses, previousPurchases, previousSales, previousExpenses);
+  const dataQualityStatus = getTodayV5DataQualityStatus(dataQualityMessages, currentSales, currentExpenses, previousPurchases, previousSales, previousExpenses);
+  const costAlerts = detectTodayV5CostAlerts(categoryBreakdown, expenseBreakdown, supplierBreakdown);
+  const baseAnalysis = {
+    period,
+    currentRange,
+    previousRange,
+    summary,
+    previousSummary,
+    salesDelta: summary.sales - previousSummary.sales,
+    purchaseDelta: summary.purchases - previousSummary.purchases,
+    expenseDelta: summary.expenses - previousSummary.expenses,
+    profitDelta: summary.profit - previousSummary.profit,
+    salesDeltaRate: percentDelta(summary.sales, previousSummary.sales),
+    purchaseDeltaRate: percentDelta(summary.purchases, previousSummary.purchases),
+    expenseDeltaRate: percentDelta(summary.expenses, previousSummary.expenses),
+    profitDeltaRate: percentDelta(summary.profit, previousSummary.profit),
+    purchaseRatio: ratio(summary.purchases, summary.sales),
+    expenseRatio: ratio(summary.expenses, summary.sales),
+    profitMargin: ratio(summary.profit, summary.sales),
+    ssawaPurchases,
+    manualPurchases,
+    ssawaPurchaseShare: ratio(ssawaPurchases, summary.purchases),
+    dataQualityStatus,
+    dataQualityMessages,
+    categoryBreakdown,
+    expenseBreakdown,
+    supplierBreakdown,
+    costAlerts,
+    insights: [] as TodayV5Insight[],
+  };
+  return { ...baseAnalysis, insights: buildTodayV5Insights(baseAnalysis) };
+}
+
+function buildTodayV5Breakdown<T>(currentRecords: T[], previousRecords: T[], labeler: (record: T) => string, amount: (record: T) => number, kind: "purchase" | "expense" | "supplier", total: number): TodayV5BreakdownRow[] {
+  const current = groupAmountRows(currentRecords, labeler, amount);
+  const previous = new Map(groupAmountRows(previousRecords, labeler, amount).map((row) => [row.label, row]));
+  return current.map((row) => {
+    const previousAmount = previous.get(row.label)?.totalAmount ?? 0;
+    const deltaAmount = row.totalAmount - previousAmount;
+    const actionUrl = kind === "expense" ? "/app/today/expenses" : buildSsawaRequoteUrl({ category: row.label });
+    return {
+      key: `${kind}-${row.label}`,
+      label: row.label,
+      amount: row.totalAmount,
+      previousAmount,
+      deltaAmount,
+      deltaRate: percentDelta(row.totalAmount, previousAmount),
+      count: row.count,
+      share: ratio(row.totalAmount, total),
+      ssawaActionAvailable: kind !== "expense" && row.label !== "미분류",
+      actionUrl,
+    };
+  }).sort((a, b) => b.amount - a.amount);
+}
+
+function detectTodayV5CostAlerts(categoryRows: TodayV5BreakdownRow[], expenseRows: TodayV5BreakdownRow[], supplierRows: TodayV5BreakdownRow[]): TodayV5CostAlert[] {
+  const rows = [
+    ...categoryRows.map((row) => ({ row, alertType: "category_increase" as const, targetType: "purchase_category" as const })),
+    ...expenseRows.map((row) => ({ row, alertType: "expense_increase" as const, targetType: "expense_type" as const })),
+    ...supplierRows.map((row) => ({ row, alertType: "supplier_increase" as const, targetType: "supplier" as const })),
+  ];
+  return rows
+    .filter(({ row }) => row.previousAmount > 0 && row.deltaAmount >= 10000 && (row.deltaRate ?? 0) >= 15 && (row.count >= 2 || row.amount >= 100000))
+    .map(({ row, alertType, targetType }) => ({
+      id: `${alertType}-${row.label}`,
+      alertType,
+      targetType,
+      targetKey: row.label,
+      currentAmount: row.amount,
+      previousAmount: row.previousAmount,
+      deltaAmount: row.deltaAmount,
+      deltaRate: row.deltaRate,
+      severity: getCostAlertSeverity(row.deltaRate, row.deltaAmount),
+      message: `${row.label}가 ${formatCompareRate(row.deltaRate)} 올랐어요.`,
+      recommendedAction: row.ssawaActionAvailable ? "싸와에서 비교견적을 받아볼 수 있어요." : "비용이 오른 항목을 확인해보세요.",
+      ssawaActionAvailable: row.ssawaActionAvailable,
+    }));
+}
+
+function buildTodayV5Insights(analysis: Omit<TodayV5ProfitAnalysis, "insights">): TodayV5Insight[] {
+  const insights: TodayV5Insight[] = [];
+  const createdAt = `${today}T12:00:00.000Z`;
+  if (analysis.dataQualityMessages.length) {
+    insights.push({ id: "missing-data", type: "missing_data", severity: "high", title: "데이터 확인 필요", message: analysis.dataQualityMessages[0], actionLabel: "확인하기", actionUrl: "/app/today/ledger", createdAt });
+  }
+  if ((analysis.profitDeltaRate ?? 0) < 0 && analysis.previousSummary.sales + analysis.previousSummary.purchases + analysis.previousSummary.expenses > 0) {
+    insights.push({ id: "profit-drop", type: "profit_drop", severity: Math.abs(analysis.profitDeltaRate ?? 0) >= 30 ? "high" : "medium", title: "예상 순이익이 줄었어요", message: `예상 순이익이 ${periodCompareLabel(analysis.period)}보다 ${formatCompareRate(Math.abs(analysis.profitDeltaRate ?? 0))} 줄었어요.`, actionLabel: "장부 자세히 보기", actionUrl: "/app/today/ledger", relatedAmount: analysis.profitDelta, createdAt });
+  }
+  if ((analysis.salesDeltaRate ?? 0) > 0 && (analysis.profitDeltaRate ?? 0) < 0) {
+    insights.push({ id: "sales-up-profit-down", type: "sales_up_profit_down", severity: "high", title: "매출은 늘었지만 남은 금액은 줄었어요", message: "매입비와 지출을 확인해보세요.", actionLabel: "이유 보기", actionUrl: "/app/today/profit", createdAt });
+  }
+  if ((analysis.purchaseDeltaRate ?? 0) >= 15) {
+    insights.push({ id: "purchase-increase", type: "purchase_increase", severity: getCostAlertSeverity(analysis.purchaseDeltaRate, analysis.purchaseDelta), title: "매입비가 올랐어요", message: `매입비가 ${periodCompareLabel(analysis.period)}보다 ${formatCompareRate(analysis.purchaseDeltaRate)} 올랐어요.`, actionLabel: "매입 보기", actionUrl: "/app/today/purchases", relatedAmount: analysis.purchaseDelta, createdAt });
+  }
+  analysis.costAlerts.slice(0, 4).forEach((alert) => {
+    insights.push({ id: `alert-${alert.id}`, type: alert.alertType === "expense_increase" ? "expense_increase" : "category_increase", severity: alert.severity, title: alert.targetKey, message: alert.message, actionLabel: alert.ssawaActionAvailable ? "싸와에서 견적받기" : "확인하기", actionUrl: alert.ssawaActionAvailable ? buildSsawaRequoteUrl({ category: alert.targetKey }) : "/app/today/ledger", relatedCategory: alert.targetKey, relatedAmount: alert.deltaAmount, createdAt });
+    if (alert.ssawaActionAvailable) {
+      insights.push({ id: `ssawa-${alert.id}`, type: "ssawa_opportunity", severity: "medium", title: "싸와 재견적 추천", message: `${alert.targetKey} 비용이 올랐어요. 비교견적을 받아볼 수 있어요.`, actionLabel: "싸와에서 견적받기", actionUrl: buildSsawaRequoteUrl({ category: alert.targetKey }), relatedCategory: alert.targetKey, createdAt });
+    }
+  });
+  if (analysis.summary.sales > 0 && analysis.summary.profit >= analysis.previousSummary.profit && insights.length === 0) {
+    insights.push({ id: "positive", type: "positive", severity: "low", title: "이번 기간 흐름이 괜찮아요", message: "매출과 비용을 계속 입력하면 더 정확하게 보여드릴게요.", actionLabel: "장부 보기", actionUrl: "/app/today/ledger", createdAt });
+  }
+  return insights.sort((a, b) => insightPriority(a.type) - insightPriority(b.type));
+}
+
+function TodayDeltaCard({ label, amount, rate, compareLabel }: { label: string; amount: number; rate: number | null; compareLabel: string }) {
+  const direction = amount >= 0 ? "positive" : "negative";
+  return (
+    <article className={`todayDeltaCard ${direction}`}>
+      <span>{compareLabel} 대비 {label}</span>
+      <strong>{rate === null ? "비교 데이터 없음" : formatDelta(rate)}</strong>
+      <small>{rate === null ? "데이터가 더 쌓이면 보여드릴게요." : `${amount >= 0 ? "+" : "-"}${money(Math.abs(amount))}`}</small>
+    </article>
+  );
+}
+
+function TodayInsightCard({ insight, navigate }: { insight: TodayV5Insight; navigate: Navigate }) {
+  return (
+    <article className={`todayInsightCard ${insight.severity}`}>
+      <div>
+        <span>{insight.title}</span>
+        <p>{insight.message}</p>
+      </div>
+      {insight.actionLabel && insight.actionUrl && <button className="ghostButton compact" type="button" onClick={() => navigate(insight.actionUrl || "/app/today/profit")}>{insight.actionLabel}</button>}
+    </article>
+  );
+}
+
+function TodayCostBreakdown({ title, rows, total, navigate }: { title: string; rows: TodayV5BreakdownRow[]; total: number; navigate: Navigate }) {
+  return (
+    <section className="toolPanel">
+      <SectionHeader title={title} />
+      <div className="barList todayCostBreakdown">
+        {rows.map((row) => {
+          const percent = total > 0 ? Math.round((row.amount / total) * 100) : 0;
+          return (
+            <div className="barRow todayCostRow" key={row.key}>
+              <div>
+                <strong>{row.label}</strong>
+                <span>{money(row.amount)} · {row.share === null ? "비중 계산 전" : `전체의 ${formatPercent(row.share)}`} · {formatDelta(row.deltaRate)}</span>
+              </div>
+              <div className="barTrack" aria-hidden="true"><span style={{ width: `${Math.max(4, percent)}%` }} /></div>
+              <button className="ghostButton compact" type="button" onClick={() => navigate(row.ssawaActionAvailable ? row.actionUrl : "/app/today/purchases")}>{row.ssawaActionAvailable ? "싸와 견적받기" : "자세히"}</button>
+            </div>
+          );
+        })}
+        {!rows.length && <p className="mutedText">계산할 내역이 없습니다.</p>}
+      </div>
+    </section>
+  );
+}
+
+function isDateInRange(date: string, range: { start: string; end: string }) {
+  return date >= range.start && date <= range.end;
+}
+
+function normalizeRange(range: TodayV4Range): TodayV4Range {
+  return range.start <= range.end ? range : { start: range.end, end: range.start };
+}
+
+function addDays(date: string, days: number) {
+  const next = new Date(`${date}T00:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+function diffDays(start: string, end: string) {
+  const startTime = new Date(`${start}T00:00:00.000Z`).getTime();
+  const endTime = new Date(`${end}T00:00:00.000Z`).getTime();
+  return Math.max(0, Math.round((endTime - startTime) / 86400000));
+}
+
+function safePositiveAmount(value: number | null | undefined) {
+  return Number.isFinite(value) && Number(value) > 0 ? Number(value) : 0;
+}
+
+function ratio(value: number, base: number) {
+  return base > 0 ? (value / base) * 100 : null;
+}
+
+function percentDelta(current: number, previous: number) {
+  if (previous <= 0) return null;
+  return ((current - previous) / previous) * 100;
+}
+
+function isSsawaPurchase(record: PurchaseRecord) {
+  return record.source === "ssawa" || Boolean(record.ssawa_deal_id || record.deal_id);
+}
+
+function buildSsawaRequoteUrl(params: { category?: string; repeatPurchaseId?: string; item?: string }) {
+  const query = new URLSearchParams({ source: "today" });
+  if (params.category) query.set("category", params.category);
+  if (params.repeatPurchaseId) query.set("repeatPurchaseId", params.repeatPurchaseId);
+  if (params.item) query.set("item", params.item);
+  return `/app/today/requotes?${query.toString()}`;
+}
+
+function getTodayV5DataQualityMessages(currentPurchases: PurchaseRecord[], currentSales: TodaySaleRecord[], currentExpenses: TodayExpenseRecordV4[], previousPurchases: PurchaseRecord[], previousSales: TodaySaleRecord[], previousExpenses: TodayExpenseRecordV4[]) {
+  const messages: string[] = [];
+  if (currentSales.length === 0) messages.push("매출 데이터가 부족해요.");
+  if (currentPurchases.some((record) => record.category_needs_review || record.accounting_category === "미분류")) messages.push("미분류 매입을 확인해주세요.");
+  if ([...currentPurchases, ...currentExpenses].some((record) => record.evidence_status === "missing")) messages.push("증빙 확인이 필요한 항목이 있어요.");
+  if (previousPurchases.length + previousSales.length + previousExpenses.length === 0) messages.push("비교할 이전 데이터가 아직 없습니다.");
+  return messages;
+}
+
+function getTodayV5DataQualityStatus(messages: string[], currentSales: TodaySaleRecord[], currentExpenses: TodayExpenseRecordV4[], previousPurchases: PurchaseRecord[], previousSales: TodaySaleRecord[], previousExpenses: TodayExpenseRecordV4[]): TodayV4DataQualityStatus {
+  if (currentSales.length === 0) return "needs_sales";
+  if (currentExpenses.length === 0) return "needs_expense";
+  if (messages.some((message) => message.includes("미분류"))) return "needs_category_review";
+  if (messages.some((message) => message.includes("증빙"))) return "needs_evidence_review";
+  if (previousPurchases.length + previousSales.length + previousExpenses.length === 0) return "not_enough_history";
+  return "good";
+}
+
+function dataQualityLabel(status: TodayV4DataQualityStatus) {
+  const labels: Record<TodayV4DataQualityStatus, string> = {
+    good: "분석 가능",
+    needs_sales: "매출 확인 필요",
+    needs_expense: "지출 확인 필요",
+    needs_category_review: "분류 확인 필요",
+    needs_evidence_review: "증빙 확인 필요",
+    not_enough_history: "비교 데이터 부족",
+  };
+  return labels[status];
+}
+
+function getCostAlertSeverity(rate: number | null, amount: number): TodayV5CostAlert["severity"] {
+  if ((rate ?? 0) >= 50 || amount >= 100000) return "high";
+  if ((rate ?? 0) >= 30) return "medium";
+  return "low";
+}
+
+function insightPriority(type: TodayV5Insight["type"]) {
+  const priorities: Record<TodayV5Insight["type"], number> = {
+    missing_data: 1,
+    profit_drop: 2,
+    sales_up_profit_down: 2,
+    purchase_increase: 3,
+    category_increase: 3,
+    expense_increase: 3,
+    ssawa_opportunity: 4,
+    tax_evidence_missing: 5,
+    positive: 6,
+  };
+  return priorities[type];
+}
+
+function periodCompareLabel(period: TodayV4Period) {
+  if (period === "today") return "어제";
+  if (period === "week") return "지난주";
+  if (period === "year") return "작년";
+  if (period === "custom") return "이전 기간";
+  return "지난달";
+}
+
+function formatPercent(value: number) {
+  return `${Math.round(value)}%`;
+}
+
+function formatNullablePercent(value: number | null) {
+  return value === null ? "계산 전" : formatPercent(value);
+}
+
+function formatDelta(value: number | null) {
+  if (value === null) return "비교 데이터 없음";
+  return `${value >= 0 ? "+" : ""}${Math.round(value)}%`;
+}
+
+function formatCompareRate(value: number | null) {
+  if (value === null) return "비교 데이터가 부족해요";
+  return `${Math.abs(Math.round(value))}%`;
+}
+
+function formatDeltaSentence(label: string, rate: number | null, compareLabel: string) {
+  if (rate === null) return "비교할 이전 데이터가 아직 없습니다.";
+  if (rate > 0) return `${compareLabel}보다 ${label}이 ${formatCompareRate(rate)} 늘었어요.`;
+  if (rate < 0) return `${compareLabel}보다 ${label}이 ${formatCompareRate(rate)} 줄었어요.`;
+  return `${compareLabel}과 비슷해요.`;
+}
+
+function getLedgerEntriesV4(purchases: PurchaseRecord[], sales: TodaySaleRecord[], expenses: TodayExpenseRecordV4[]) {
+  return [
+    ...sales.map((record) => ({ id: record.id, kind: "sales" as const, date: record.sales_date, title: record.sales_type, category: salesPaymentLabel(record.payment_method), amount: record.amount, source: "수동", evidenceStatus: record.evidence_status, needsReview: record.evidence_status === "needs_review", href: "" })),
+    ...purchases.map((record) => ({ id: record.id, kind: "purchase" as const, date: record.purchase_date, title: record.item_summary || record.purchase_title, category: record.accounting_category || record.category_name, amount: -record.total_amount, source: record.source === "ssawa" || record.ssawa_deal_id ? "싸와" : "수동", evidenceStatus: record.evidence_status, needsReview: Boolean(record.category_needs_review || record.evidence_status === "needs_review" || record.evidence_status === "missing"), href: `/app/purchases/${record.id}` })),
+    ...expenses.map((record) => ({ id: record.id, kind: "expense" as const, date: record.expense_date, title: record.expense_type, category: record.vendor_name || expensePaymentLabel(record.payment_method), amount: -record.amount, source: "수동", evidenceStatus: record.evidence_status, needsReview: record.evidence_status === "needs_review" || record.evidence_status === "missing", href: "" })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function groupAmountRows<T>(records: T[], labeler: (record: T) => string, amount: (record: T) => number) {
+  const map = new Map<string, { label: string; count: number; totalAmount: number; savingsAmount: number }>();
+  records.forEach((record) => {
+    const label = labeler(record);
+    const current = map.get(label) ?? { label, count: 0, totalAmount: 0, savingsAmount: 0 };
+    current.count += 1;
+    current.totalAmount += amount(record);
+    map.set(label, current);
+  });
+  return [...map.values()].sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
+function periodLabel(period: TodayV4Period) {
+  if (period === "today") return "오늘";
+  if (period === "week") return "이번 주";
+  if (period === "year") return "올해";
+  return "이번 달";
+}
+
+function periodValue(label: string): TodayV4Period {
+  if (label === "오늘") return "today";
+  if (label === "이번 주") return "week";
+  if (label === "올해") return "year";
+  return "month";
+}
+
+function ledgerFilterLabel(filter: TodayV4EntryType) {
+  const labels: Record<TodayV4EntryType, string> = { all: "전체", sales: "매출", purchase: "매입", expense: "지출", ssawa: "싸와 매입", needs_review: "확인 필요", missing_evidence: "증빙 없음" };
+  return labels[filter];
+}
+
+function ledgerFilterValue(label: string): TodayV4EntryType {
+  if (label === "매출") return "sales";
+  if (label === "매입") return "purchase";
+  if (label === "지출") return "expense";
+  if (label === "싸와 매입") return "ssawa";
+  if (label === "확인 필요") return "needs_review";
+  if (label === "증빙 없음") return "missing_evidence";
+  return "all";
+}
+
+function salesPaymentLabel(value: TodaySaleRecord["payment_method"]) {
+  const labels: Record<TodaySaleRecord["payment_method"], string> = { card: "카드", cash: "현금", transfer: "계좌", delivery_app: "배달앱", mixed: "혼합", unknown: "미정" };
+  return labels[value];
+}
+
+function salesChannelLabel(value: TodaySaleRecord["sales_channel"]) {
+  const labels: Record<TodaySaleRecord["sales_channel"], string> = { store: "매장", baemin: "배민", yogiyo: "요기요", coupang_eats: "쿠팡이츠", naver: "네이버", phone_order: "전화주문", etc: "기타" };
+  return labels[value];
+}
+
+function expensePaymentLabel(value: TodayExpenseRecordV4["payment_method"]) {
+  const labels: Record<TodayExpenseRecordV4["payment_method"], string> = { card: "카드", cash: "현금", transfer: "계좌", auto_withdrawal: "자동이체", unknown: "미정" };
+  return labels[value];
 }
 
 function LoginPage({ data, navigate, onAuthChange }: { data: AppData; navigate: Navigate; onAuthChange: (session: AppAuthSession | null) => void }) {
@@ -3166,10 +7056,60 @@ function AdminProductsPage({ data, navigate, setData }: MutatingPageProps) {
   );
 }
 
-function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
+function getTodayRecommendationFromUrl(data: AppData) {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("source") !== "today") return null;
+  const rawCategory = params.get("category")?.trim() ?? "";
+  const rawItem = params.get("item")?.trim() ?? "";
+  const label = rawItem || rawCategory || "비용이 오른 품목";
+  const normalizedCategory = rawCategory.replace(/비$/, "");
+  const matchedCategory = data.categories.find((category) =>
+    category.name === rawCategory ||
+    category.name === normalizedCategory ||
+    rawCategory.includes(category.name) ||
+    category.name.includes(normalizedCategory),
+  ) ?? data.categories[0];
+  return {
+    label,
+    categoryId: matchedCategory?.id ?? data.categories[0]?.id ?? "",
+    title: `${label} 재견적 요청`,
+    description: `오늘장사에서 ${label} 비용 확인이 필요해 추천된 견적요청입니다. 다른 업체 견적을 확인해보세요.`,
+    textInput: `${label} 관련 품목 견적을 다시 받아보고 싶어요.`,
+    items: [{ ...emptyItem, item_name: rawItem || label.replace(/비$/, ""), memo: "오늘장사 추천 항목" }],
+  };
+}
+
+function parseTodayDraftItems(itemsJson: string): QuoteRequestDraft["items"] {
+  try {
+    const parsed = JSON.parse(itemsJson);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((entry) => ({
+      item_name: String(entry.item_name ?? entry.name ?? "").trim(),
+      spec: String(entry.spec ?? ""),
+      quantity: Number(entry.quantity) || 1,
+      unit: String(entry.unit ?? "개"),
+      memo: String(entry.memo ?? "수량과 규격을 확인해주세요."),
+      is_required: entry.is_required ?? true,
+      allow_alternative: entry.allow_alternative ?? true,
+      confidence_score: Number(entry.confidence_score) || 82,
+      needs_review: Boolean(entry.needs_review),
+      review_reason: String(entry.review_reason ?? ""),
+    })).filter((entry) => entry.item_name);
+  } catch {
+    return [];
+  }
+}
+
+function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/new" }: MutatingPageProps & { routePath?: string }) {
   const wizardSteps = ["올리기", "품목 확인", "납품 조건", "완료"];
+  const todayDraftId = getSearchParams(routePath).get("draftId") ?? "";
+  const todayRecommendation = todayDraftId ? null : getTodayRecommendationFromUrl(data);
+  const todayDraft = todayDraftId ? getTodayQuoteDraft(data, todayDraftId, "buyer-1") : undefined;
+  const todayDraftItems = todayDraft ? parseTodayDraftItems(todayDraft.items_json) : undefined;
+  const todayDraftCategory = todayDraft ? data.categories.find((category) => category.name === todayDraft.category || todayDraft.category.includes(category.name) || category.name.includes(todayDraft.category)) : undefined;
   const [step, setStep] = useState(0);
-  const [textInput, setTextInput] = useState("치킨박스 1000개, 소스컵 2000개, 배달봉투 대형 1000장 필요해요.");
+  const [textInput, setTextInput] = useState(todayRecommendation?.textInput ?? todayDraft?.description ?? "치킨박스 1000개, 소스컵 2000개, 배달봉투 대형 1000장 필요해요.");
   const [receiptFileName, setReceiptFileName] = useState("치킨집_포장재_영수증.jpg");
   const [receiptImageFile, setReceiptImageFile] = useState<File | null>(null);
   const [receiptAnalysisPreview, setReceiptAnalysisPreview] = useState<ReceiptAnalysisPreview | null>(null);
@@ -3178,18 +7118,18 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
   const [receiptAnalysisLoading, setReceiptAnalysisLoading] = useState(false);
   const [showMoreConditions, setShowMoreConditions] = useState(false);
   const [draft, setDraft] = useState<QuoteRequestDraft>({
-    title: "",
-    category_id: data.categories[0]?.id ?? "",
-    delivery_region: "",
-    delivery_address: "",
+    title: todayDraft?.title ?? todayRecommendation?.title ?? "",
+    category_id: todayDraftCategory?.id ?? todayRecommendation?.categoryId ?? data.categories[0]?.id ?? "",
+    delivery_region: todayDraft?.region ?? "",
+    delivery_address: todayDraft?.delivery_address_snapshot ?? "",
     desired_delivery_date: "2026-07-10",
     need_tax_invoice: true,
     card_payment_required: false,
-    description: "",
+    description: todayDraft?.description ?? todayRecommendation?.description ?? "",
     attachment_note: "",
     previous_amount: 0,
     input_method: "manual",
-    original_text_input: "",
+    original_text_input: todayRecommendation?.textInput ?? todayDraft?.description ?? "",
     template_name: "",
     previous_request_id: "",
     urgent: false,
@@ -3199,7 +7139,7 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
     preferred_brand: "",
     allow_alternatives: true,
     include_delivery_fee: true,
-    items: [{ ...emptyItem }],
+    items: todayDraftItems?.length ? todayDraftItems : todayRecommendation?.items ?? [{ ...emptyItem }],
     attachments: [],
   });
   const [error, setError] = useState("");
@@ -3214,6 +7154,11 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
+
+  useEffect(() => {
+    if (!todayDraftId || !todayDraft || todayDraft.status !== "draft") return;
+    setData(markTodayQuoteDraftOpened(data, todayDraftId, "buyer-1"));
+  }, [todayDraftId]);
 
   function updateItem(index: number, key: keyof QuoteRequestDraft["items"][number], value: string | number | boolean) {
     setDraft((current) => ({
@@ -3383,12 +7328,16 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
       setError("배송 지역, 희망 납품일, 품목을 입력해 주세요.");
       return;
     }
+    if (todayDraft?.status === "submitted") {
+      setError("이미 제출된 초안입니다. 다시 요청하려면 새 초안을 만들어주세요.");
+      return;
+    }
 
     const result = createQuoteRequest(data, {
       ...draft,
       title: draft.title.trim() || `${selectedCategory?.name ?? "자재"} 견적 요청`,
     });
-    setData(result.data);
+    setData(todayDraftId ? linkRequoteDraftToQuoteRequest(result.data, todayDraftId, result.requestId, "buyer-1") : result.data);
     navigate(`/app/requests/${result.requestId}`);
   }
 
@@ -3406,6 +7355,18 @@ function NewRequestPage({ data, navigate, setData }: MutatingPageProps) {
           ))}
         </div>
         {error && <div className="alert">{error}</div>}
+        {todayDraft && (
+          <div className="todayRecommendationNotice">
+            <strong>오늘장사 추천으로 만든 견적요청 초안입니다.</strong>
+            <span>지난 구매내역을 바탕으로 품목을 채웠어요. 수량, 규격, 납품일을 확인하고 필요한 부분을 수정한 뒤 제출해주세요.</span>
+          </div>
+        )}
+        {todayRecommendation && (
+          <div className="todayRecommendationNotice">
+            <strong>오늘장사에서 추천된 견적요청입니다.</strong>
+            <span>{todayRecommendation.label} 비용을 비교견적으로 확인해볼 수 있어요. 품목과 납품 조건을 확인한 뒤 제출해 주세요.</span>
+          </div>
+        )}
         {step === 0 && (
           <section className="wizardPanel">
             <SectionHeader title="어떻게 올릴까요?" />
@@ -3765,7 +7726,9 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
   const items = data.deal_items.filter((entry) => entry.deal_id === currentDeal.id);
   const attachments = data.deal_attachments.filter((entry) => entry.deal_id === currentDeal.id);
   const logs = data.deal_status_logs.filter((entry) => entry.deal_id === currentDeal.id);
-  const purchaseRecord = data.purchase_records.find((entry) => entry.deal_id === currentDeal.id);
+  const syncStatus = getSsawaPurchaseSyncStatus(data, currentDeal.id);
+  const purchaseRecord = syncStatus.record;
+  const canManageTodaySync = role === "buyer" || role === "admin";
   const savings = calculateEstimatedSavings(currentDeal.previous_amount, currentDeal.final_amount);
 
   function changeStatus(nextStatus: DealStatus, changedBy: "buyer" | "supplier" | "admin", statusMemo: string) {
@@ -3805,8 +7768,12 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
   }
 
   function syncPurchaseToAccounting() {
-    if (!purchaseRecord) return;
-    setData(updatePurchaseAccountingStatus(data, purchaseRecord.id, "synced", "거래 상세에서 오늘장사 장부 반영"));
+    const result = syncSsawaDealToTodayPurchase(data, currentDeal.id, {
+      force: Boolean(purchaseRecord),
+      actorUserId: role === "admin" ? "admin-1" : currentDeal.buyer_id,
+      triggeredBy: role === "admin" ? "admin" : "buyer",
+    });
+    setData(result.data);
   }
 
   return (
@@ -3847,6 +7814,23 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
         </div>
         <SavingsNotice savings={savings} previousAmount={deal.previous_amount} />
       </section>
+
+      {canManageTodaySync && (
+        <section className="statusNotice approved">
+          <Landmark size={22} />
+          <div>
+            <strong>오늘장사 {syncStatus.label}</strong>
+            <p>{purchaseRecord ? "오늘장사 장부에 정리되었습니다." : currentDeal.status === "completed" ? "오늘장사 매입장부에 반영할 수 있습니다." : "거래 완료 후 오늘장사에 반영됩니다."}</p>
+          </div>
+          <div className="formActions">
+            {purchaseRecord && <button className="secondaryButton compact" type="button" onClick={() => navigate(`/app/purchases/${purchaseRecord.id}`)}>오늘장사에서 보기</button>}
+            <button className="ghostButton compact" type="button" onClick={syncPurchaseToAccounting}>
+              {purchaseRecord ? "다시 반영하기" : "오늘장사에 반영하기"}
+            </button>
+            <StatusBadge tone={syncStatus.tone}>{syncStatus.label}</StatusBadge>
+          </div>
+        </section>
+      )}
 
       <SectionHeader title="품목 리스트" />
       <div className="itemsList">
@@ -3918,10 +7902,10 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
       {purchaseRecord && (
         <section className="completionPanel">
           <h2>거래가 완료되었습니다.</h2>
-          <p>이 구매내역은 오늘장사 장부에 반영할 수 있도록 저장되었습니다.</p>
+          <p>구매내역이 오늘장사 장부에 정리되었습니다.</p>
           <div className="formActions">
             <button className="secondaryButton" type="button" onClick={() => navigate(`/app/purchases/${purchaseRecord.id}`)}>구매내역 보기</button>
-            <button className="ghostButton" type="button" onClick={syncPurchaseToAccounting}>오늘장사 장부로 보내기</button>
+            {canManageTodaySync && <button className="ghostButton" type="button" onClick={syncPurchaseToAccounting}>다시 반영하기</button>}
             <button className="primaryButton" type="button" onClick={() => navigate("/app/requests/new")}>같은 품목 다시 견적받기</button>
           </div>
         </section>
@@ -5723,7 +9707,7 @@ function PurchasesPage({ data, navigate }: PageProps) {
         <Metric label="예상 절감" value={money(summary.savingsAmount)} icon={<BadgeCheck />} />
       </div>
       <div className="purchaseToolbar">
-        <FilterTabs options={["전체", "이번 달", "장부 반영 대기", "반영 완료", "세금계산서 대기", "증빙자료 누락", "제외/보류"]} active={filter} onChange={setFilter} />
+        <FilterTabs options={["전체", "이번 달", "싸와 구매", "수동 입력", "확인 필요", "장부 반영 대기", "반영 완료", "세금계산서 대기", "증빙자료 누락", "제외/보류"]} active={filter} onChange={setFilter} />
         <button className="primaryButton compact" type="button" onClick={() => navigate("/app/purchases/new")}>
           <Plus size={16} />
           수동 등록
@@ -5745,12 +9729,24 @@ function PurchaseDetailPage({ data, navigate, setData, purchaseId }: MutatingPag
   const deal = currentRecord.deal_id ? data.deals.find((entry) => entry.id === currentRecord.deal_id) : null;
   const request = currentRecord.quote_request_id ? data.quote_requests.find((entry) => entry.id === currentRecord.quote_request_id) : null;
   const [accountingCategory, setAccountingCategory] = useState(currentRecord.accounting_category);
+  const [learnSimilarCategory, setLearnSimilarCategory] = useState(false);
   const [userMemo, setUserMemo] = useState(currentRecord.user_memo ?? currentRecord.memo);
   const [documentType, setDocumentType] = useState<PurchaseDocumentType>("receipt");
   const [fileName, setFileName] = useState("");
 
   function saveRecordPatch() {
-    setData(updatePurchaseRecord(data, currentRecord.id, { accounting_category: accountingCategory, user_memo: userMemo }));
+    const categoryData = accountingCategory !== currentRecord.accounting_category
+      ? changePurchaseCategory(data, currentRecord.id, accountingCategory, { learnSimilar: learnSimilarCategory, actorUserId: "buyer-1" })
+      : data;
+    setData(updatePurchaseRecord(categoryData, currentRecord.id, { user_memo: userMemo }));
+  }
+
+  function confirmCategoryFromDetail() {
+    setData(confirmPurchaseCategory(data, currentRecord.id, "buyer-1"));
+  }
+
+  function reclassifyFromDetail() {
+    setData(applyPurchaseClassification(data, currentRecord.id, { force: true, actorUserId: "buyer-1" }));
   }
 
   function changeAccountingStatus(status: AccountingStatus, memo: string) {
@@ -5784,26 +9780,40 @@ function PurchaseDetailPage({ data, navigate, setData, purchaseId }: MutatingPag
           <span>세금계산서: {taxInvoiceStatusLabels[record.tax_invoice_status]}</span>
           <span>영수증: {receiptStatusLabels[record.receipt_status]}</span>
           <span>납품서: {deliveryNoteStatusLabels[record.delivery_note_status]}</span>
+          <span>원본: {record.source === "ssawa" || record.deal_id ? "싸와 구매내역" : "수동 입력"}</span>
+          <span>증빙 상태: {todayEvidenceStatusLabel(record.evidence_status)}</span>
           <span>동기화 대상: 오늘장사</span>
         </div>
       </section>
 
       <section className="purchaseDetailGrid">
         <div className="toolPanel">
-          <SectionHeader title="장부 분류" />
+          <SectionHeader title="매입 카테고리" />
           <label className="field">
-            장부 계정
+            카테고리
             <select value={accountingCategory} onChange={(event) => setAccountingCategory(event.target.value)}>
-              {accountingCategoryOptions(data).map((option) => <option key={option}>{option}</option>)}
+              {todayPurchaseCategoryNames.map((option) => <option key={option}>{option}</option>)}
             </select>
+          </label>
+          <div className="categoryReasonBox">
+            <StatusBadge tone={categoryStatusTone(record)}>{categoryConfidenceLabel(record)}</StatusBadge>
+            <p>{record.category_reason ?? "분류 사유가 아직 없습니다."}</p>
+          </div>
+          <label className="checkField">
+            <input type="checkbox" checked={learnSimilarCategory} onChange={(event) => setLearnSimilarCategory(event.target.checked)} />
+            비슷한 품목도 다음부터 적용
           </label>
           <label className="field">
             메모
             <textarea value={userMemo} onChange={(event) => setUserMemo(event.target.value)} />
           </label>
-          <button className="secondaryButton full" type="button" onClick={saveRecordPatch}>분류/메모 저장</button>
-        </div>
+          <div className="formActions">
+            <button className="secondaryButton" type="button" onClick={saveRecordPatch}>Change category</button>
+            <button className="ghostButton" type="button" onClick={confirmCategoryFromDetail}>Confirm category</button>
+            <button className="ghostButton" type="button" onClick={reclassifyFromDetail}>Auto classify again</button>
+          </div>
 
+        </div>
         <div className="toolPanel">
           <SectionHeader title="오늘장사 장부 반영" />
           <div className="ledgerState">
@@ -5838,6 +9848,7 @@ function PurchaseDetailPage({ data, navigate, setData, purchaseId }: MutatingPag
             {deal && <button className="secondaryButton compact" type="button" onClick={() => navigate(`/app/deals/${deal.id}`)}>거래 상세</button>}
             {request && <button className="secondaryButton compact" type="button" onClick={() => navigate(`/app/requests/${request.id}`)}>견적요청</button>}
             <button className="secondaryButton compact" type="button" onClick={() => navigate(`/app/suppliers/${record.supplier_id}`)}>공급업체</button>
+            {deal && <button className="primaryButton compact" type="button" onClick={() => navigate(`/app/deals/${deal.id}`)}>싸와 거래 보기</button>}
           </div>
           <p className="mutedText">{record.memo}</p>
         </div>
@@ -6228,7 +10239,7 @@ function AdminAccountingPage({ data, navigate, setData }: MutatingPageProps) {
   );
 }
 
-function PurchaseList({ data, records, navigate }: { data: AppData; records: PurchaseRecord[]; navigate: Navigate }) {
+function PurchaseList({ data, records, navigate, selectedIds = [], onToggleSelect, onCreateRequote }: { data: AppData; records: PurchaseRecord[]; navigate: Navigate; selectedIds?: string[]; onToggleSelect?: (id: string) => void; onCreateRequote?: (id: string) => void }) {
   if (!records.length) {
     return <EmptyState icon={<ReceiptText />} title="구매내역이 없습니다." desc="거래 완료 또는 수동 등록 후 구매내역이 표시됩니다." />;
   }
@@ -6239,6 +10250,15 @@ function PurchaseList({ data, records, navigate }: { data: AppData; records: Pur
         const buyer = data.profiles.find((profile) => profile.id === record.buyer_id);
         return (
           <article className="purchaseCard" key={record.id} onClick={() => navigate(`/app/purchases/${record.id}`)}>
+            {onToggleSelect && (
+              <label className="requoteSelect" onClick={(event) => event.stopPropagation()}>
+                <input type="checkbox" checked={selectedIds.includes(record.id)} onChange={() => onToggleSelect(record.id)} />
+                <span>선택</span>
+              </label>
+            )}
+            {onCreateRequote && (
+              <button className="ghostButton compact" type="button" onClick={(event) => { event.stopPropagation(); onCreateRequote(record.id); }}>이 품목 다시 견적받기</button>
+            )}
             <div>
               <span className="eyebrow">{record.accounting_category}</span>
               <h3>{record.purchase_title}</h3>
@@ -6247,8 +10267,11 @@ function PurchaseList({ data, records, navigate }: { data: AppData; records: Pur
             <strong>{money(record.total_amount)}</strong>
             <div className="purchaseStatusLine">
               <StatusBadge tone={purchaseStatusTone(record.accounting_status)}>{accountingStatusLabels[record.accounting_status]}</StatusBadge>
+              <StatusBadge tone={categoryStatusTone(record)}>{record.accounting_category || record.category_name}</StatusBadge>
+              <span>{categoryConfidenceLabel(record)}</span>
+              {(record.source === "ssawa" || record.deal_id) && <StatusBadge tone={record.evidence_status === "complete" ? "green" : "orange"}>싸와 매입</StatusBadge>}
               <span>세금계산서 {taxInvoiceStatusLabels[record.tax_invoice_status]}</span>
-              <span>영수증 {receiptStatusLabels[record.receipt_status]}</span>
+              <span>증빙 {todayEvidenceStatusLabel(record.evidence_status)}</span>
               <span>납품서 {deliveryNoteStatusLabels[record.delivery_note_status]}</span>
             </div>
           </article>
@@ -6331,6 +10354,11 @@ function AdminPurchaseTable({ data, records, navigate, setData }: { data: AppDat
                   <button className="primaryButton compact" type="button" onClick={(event) => { event.stopPropagation(); setData(updatePurchaseAccountingStatus(data, record.id, "synced", "관리자 구매내역 반영")); }}>
                     반영
                   </button>
+                  {record.deal_id && (
+                    <button className="ghostButton compact" type="button" onClick={(event) => { event.stopPropagation(); setData(rebuildTodayPurchaseFromSsawaDeal(data, record.deal_id ?? "", { triggeredBy: "admin", actorUserId: "admin-1" }).data); }}>
+                      재동기화
+                    </button>
+                  )}
                 </td>
               </tr>
             );
@@ -6342,13 +10370,27 @@ function AdminPurchaseTable({ data, records, navigate, setData }: { data: AppDat
 }
 
 function filterPurchaseRecords(records: PurchaseRecord[], filter: string) {
+  if (filter === "싸와 구매") return records.filter((record) => record.source === "ssawa" || Boolean(record.deal_id));
+  if (filter === "수동 입력") return records.filter((record) => record.source === "manual" || !record.deal_id);
+  if (filter === "확인 필요") return records.filter((record) => record.evidence_status === "needs_review" || record.evidence_status === "missing" || record.accounting_status === "hold" || record.category_needs_review);
+  if (filter === "세금계산서 대기") return records.filter((record) => record.tax_invoice_status === "requested" || record.tax_invoice_status === "pending" || record.tax_invoice_status === "unknown" || record.tax_invoice_status === "required");
   if (filter === "이번 달") return records.filter((record) => record.purchase_date.startsWith("2026-07"));
+  if (filter === "싸와 구매") return records.filter((record) => record.source === "ssawa" || Boolean(record.deal_id));
+  if (filter === "수동 입력") return records.filter((record) => record.source === "manual" || !record.deal_id);
+  if (filter === "확인 필요") return records.filter((record) => record.evidence_status === "needs_review" || record.evidence_status === "missing" || record.accounting_status === "hold");
   if (filter === "장부 반영 대기") return records.filter((record) => record.accounting_status === "pending");
   if (filter === "반영 완료") return records.filter((record) => record.accounting_status === "synced");
-  if (filter === "세금계산서 대기") return records.filter((record) => record.tax_invoice_status === "requested" || record.tax_invoice_status === "pending");
-  if (filter === "증빙자료 누락") return records.filter((record) => record.receipt_status === "none" || record.delivery_note_status === "none");
+  if (filter === "세금계산서 대기") return records.filter((record) => record.tax_invoice_status === "requested" || record.tax_invoice_status === "pending" || record.tax_invoice_status === "unknown" || record.tax_invoice_status === "required");
+  if (filter === "증빙자료 누락") return records.filter((record) => record.evidence_status === "missing" || record.receipt_status === "none" || record.delivery_note_status === "none");
   if (filter === "제외/보류") return records.filter((record) => record.accounting_status === "excluded" || record.accounting_status === "hold");
   return records;
+}
+
+function todayEvidenceStatusLabel(status?: PurchaseRecord["evidence_status"]) {
+  if (status === "complete") return "정리됨";
+  if (status === "missing") return "증빙 없음";
+  if (status === "not_required") return "증빙 불필요";
+  return "확인 필요";
 }
 
 function purchaseStatusTone(status: AccountingStatus): "orange" | "blue" | "green" | "gray" {
@@ -6356,6 +10398,20 @@ function purchaseStatusTone(status: AccountingStatus): "orange" | "blue" | "gree
   if (status === "hold" || status === "failed") return "orange";
   if (status === "excluded") return "gray";
   return "blue";
+}
+
+function categoryStatusTone(record: PurchaseRecord): "orange" | "blue" | "green" | "gray" {
+  if (record.accounting_category === "미분류" || record.category_needs_review) return "orange";
+  if (record.category_confirmed_by_user) return "green";
+  if ((record.category_confidence ?? 0) >= 0.9) return "blue";
+  return "gray";
+}
+
+function categoryConfidenceLabel(record: PurchaseRecord) {
+  if (record.category_confirmed_by_user) return "사용자 확인";
+  const confidence = Math.round((record.category_confidence ?? 0) * 100);
+  if (record.category_needs_review || confidence < 90) return `확인 필요 ${confidence}%`;
+  return `자동분류 ${confidence}%`;
 }
 
 function accountingCategoryOptions(data: AppData) {
@@ -7486,6 +11542,1170 @@ function SupplierSettlementsPage({ data, navigate, setData }: MutatingPageProps)
           <button className="ghostButton" type="button" onClick={() => setData(data)}>정산 확인</button>
         </section>
       </div>
+    </Page>
+  );
+}
+
+type TodayAdminSection = "overview" | "sync" | "uploads" | "ai" | "tax" | "settlements" | "security" | "notifications" | "launch" | "logs" | "settings";
+type TodayAdminSeverityLevel = "low" | "medium" | "high" | "critical";
+type TodayAdminIssueRow = {
+  id: string;
+  date: string;
+  type: string;
+  title: string;
+  desc: string;
+  status: string;
+  tone: "orange" | "blue" | "green" | "gray";
+  severity: TodayAdminSeverityLevel;
+  businessId?: string;
+  supplierBusinessId?: string;
+  userId?: string;
+  amount?: number;
+  targetType: AdminTodayTargetType;
+  actionType?: AdminTodayActionType;
+  beforeStatus?: string;
+  retryDealId?: string;
+  batchId?: string;
+};
+
+const todayAdminNav: Array<{ section: TodayAdminSection; label: string; path: string }> = [
+  { section: "overview", label: "운영 상태", path: "/app/admin/today" },
+  { section: "sync", label: "연동 상태", path: "/app/admin/today/sync" },
+  { section: "uploads", label: "업로드 오류", path: "/app/admin/today/uploads" },
+  { section: "ai", label: "AI 상태", path: "/app/admin/today/ai" },
+  { section: "tax", label: "세무자료 확인", path: "/app/admin/today/tax" },
+  { section: "settlements", label: "정산 확인", path: "/app/admin/today/settlements" },
+  { section: "security", label: "보안 점검", path: "/app/admin/today/security" },
+  { section: "logs", label: "운영 로그", path: "/app/admin/today/logs" },
+  { section: "settings", label: "설정", path: "/app/admin/today/settings" },
+];
+
+const todayAdminSeverityLabels: Record<TodayAdminSeverityLevel, string> = {
+  critical: "긴급",
+  high: "높음",
+  medium: "보통",
+  low: "낮음",
+};
+
+const todaySecurityEventLabels: Record<TodaySecurityEventType, string> = {
+  unauthorized_access_attempt: "비로그인 접근",
+  forbidden_business_access: "타 사업장 접근",
+  forbidden_supplier_access: "공급업체 권한 차단",
+  admin_route_denied: "관리자 라우트 차단",
+  storage_access_denied: "Storage 접근 거부",
+  ai_scope_blocked: "AI 권한 범위 차단",
+  rls_violation_detected: "RLS 점검 이벤트",
+  suspicious_repeated_attempt: "반복 의심 접근",
+};
+
+const todayAdminSettingLabels: Record<TodayAdminSettingKey, string> = {
+  sync_failure_threshold: "연동 실패 임계값",
+  upload_error_threshold: "업로드 오류 임계값",
+  large_amount_threshold: "큰 금액 기준",
+  tax_missing_high_amount: "세무자료 누락 high 기준",
+  ai_daily_request_limit: "AI 일일 요청 제한",
+  security_repeat_threshold: "반복 보안 이벤트 기준",
+  settlement_review_threshold: "정산 확인 필요 기준",
+  admin_alerts_enabled: "관리자 알림 표시",
+};
+
+function getTodayAdminSection(path: string): TodayAdminSection {
+  const routePath = path.split("?")[0];
+  if (routePath.endsWith("/sync")) return "sync";
+  if (routePath.endsWith("/uploads")) return "uploads";
+  if (routePath.endsWith("/ai")) return "ai";
+  if (routePath.endsWith("/tax")) return "tax";
+  if (routePath.endsWith("/settlements")) return "settlements";
+  if (routePath.endsWith("/security")) return "security";
+  if (routePath.endsWith("/notifications")) return "notifications";
+  if (routePath.endsWith("/launch")) return "launch";
+  if (routePath.endsWith("/logs")) return "logs";
+  if (routePath.endsWith("/settings")) return "settings";
+  return "overview";
+}
+
+function todayAdminSeverityTone(severity: TodayAdminSeverityLevel): "orange" | "blue" | "green" | "gray" {
+  if (severity === "critical" || severity === "high") return "orange";
+  if (severity === "medium") return "blue";
+  return "gray";
+}
+
+function todayAdminBusinessLabel(data: AppData, businessId?: string) {
+  if (!businessId) return "-";
+  const profile = data.profiles.find((entry) => entry.id === businessId || entry.email === businessId);
+  const supplier = data.supplier_profiles.find((entry) => entry.id === businessId || entry.user_id === businessId);
+  return profile?.business_name ?? supplier?.business_name ?? businessId;
+}
+
+function todayAdminMaskUser(value?: string) {
+  if (!value) return "-";
+  if (value.includes("@")) {
+    const [name, domain] = value.split("@");
+    return `${name.slice(0, 2)}***@${domain}`;
+  }
+  return value.length > 8 ? `${value.slice(0, 4)}...${value.slice(-3)}` : value;
+}
+
+function todayAdminSafeSummary(value: string | undefined, fallback = "요약 정보 없음") {
+  if (!value) return fallback;
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    return Object.entries(parsed)
+      .slice(0, 3)
+      .map(([key, item]) => `${key}: ${typeof item === "string" || typeof item === "number" ? item : "요약"}`)
+      .join(" · ") || fallback;
+  } catch {
+    return value.length > 90 ? `${value.slice(0, 90)}...` : value;
+  }
+}
+
+function getTodayAdminEnvironmentRows() {
+  const configured = isSupabaseConfigured();
+  const liveReady = isLiveModeReady();
+  const buckets = Object.values(storageBuckets).filter(Boolean);
+  return [
+    { label: "Supabase URL", ok: Boolean(SUPABASE_PROJECT_URL), value: SUPABASE_PROJECT_URL ? "configured" : "missing" },
+    { label: "Supabase anon key", ok: configured, value: configured ? "configured" : "missing" },
+    { label: "Supabase service role", ok: false, value: "server-only check 필요" },
+    { label: "liveDataEnabled", ok: appConfig.useLiveData && liveReady, value: appConfig.useLiveData ? "ON" : "OFF" },
+    { label: "Storage bucket", ok: buckets.length > 0, value: `${buckets.length}개 설정` },
+    { label: "AI provider", ok: !appConfig.enableMockAi, value: appConfig.enableMockAi ? "mock mode" : "live mode" },
+    { label: "AI_ENABLED", ok: true, value: appConfig.enableMockAi ? "mock enabled" : "provider required" },
+    { label: "App URL", ok: Boolean(appConfig.appUrl), value: appConfig.appUrl || "missing" },
+    { label: "API base URL", ok: Boolean(appConfig.apiBaseUrl), value: appConfig.apiBaseUrl || "same origin" },
+    { label: "Vercel environment", ok: appConfig.appEnv !== "local", value: environmentLabel(appConfig.appEnv) },
+  ];
+}
+
+function getTodayAdminSyncIssues(data: AppData): TodayAdminIssueRow[] {
+  const buyerRows: TodayAdminIssueRow[] = data.today_ssawa_sync_logs.map((log) => ({
+    id: log.id,
+    date: log.created_at,
+    type: "구매자 매입 sync",
+    title: log.ssawa_deal_id,
+    desc: `${log.message} · ${todayAdminSafeSummary(log.payload_snapshot_json)}`,
+    status: log.status,
+    tone: log.status === "success" ? "green" : log.status === "skipped" ? "gray" : "orange",
+    severity: log.status === "failed" ? "high" : log.status === "needs_review" ? "medium" : "low",
+    businessId: log.business_id,
+    targetType: "sync_log",
+    actionType: "resync_buyer_purchase",
+    beforeStatus: log.status,
+    retryDealId: log.ssawa_deal_id,
+  }));
+  const supplierRows: TodayAdminIssueRow[] = data.today_supplier_sync_logs.map((log) => ({
+    id: log.id,
+    date: log.created_at,
+    type: "공급업체 매출 sync",
+    title: log.ssawa_deal_id || log.supplier_sales_record_id || log.id,
+    desc: `${log.message} · ${todayAdminSafeSummary(log.payload_snapshot_json)}`,
+    status: log.status,
+    tone: log.status === "success" ? "green" : log.status === "skipped" ? "gray" : "orange",
+    severity: log.status === "failed" ? "high" : log.status === "needs_review" ? "medium" : "low",
+    businessId: log.buyer_business_id,
+    supplierBusinessId: log.supplier_business_id,
+    targetType: "supplier_sync_log",
+    actionType: "resync_supplier_sale",
+    beforeStatus: log.status,
+    retryDealId: log.ssawa_deal_id,
+  }));
+  const categoryRows: TodayAdminIssueRow[] = data.today_category_classification_logs.map((log) => ({
+    id: log.id,
+    date: log.created_at,
+    type: "카테고리 분류",
+    title: log.purchase_record_id,
+    desc: `${log.classified_category} · 신뢰도 ${Math.round(log.confidence * 100)}% · ${log.reason}`,
+    status: log.action,
+    tone: log.confidence < 0.7 ? "blue" : "green",
+    severity: log.confidence < 0.7 ? "medium" : "low",
+    businessId: log.business_id,
+    targetType: "sync_log",
+    actionType: "rerun_category_classification",
+    beforeStatus: log.action,
+  }));
+  const requoteRows: TodayAdminIssueRow[] = data.today_requote_logs.map((log) => ({
+    id: log.id,
+    date: log.created_at,
+    type: "재견적 추천",
+    title: log.recommendation_id || log.draft_id || log.id,
+    desc: `${log.message} · ${todayAdminSafeSummary(log.payload_json)}`,
+    status: log.action,
+    tone: log.action === "failed" ? "orange" : "green",
+    severity: log.action === "failed" ? "medium" : "low",
+    businessId: log.business_id,
+    targetType: "sync_log",
+    actionType: "mark_reviewed",
+    beforeStatus: log.action,
+  }));
+  return [...buyerRows, ...supplierRows, ...categoryRows, ...requoteRows].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function getTodayAdminUploadIssues(data: AppData): TodayAdminIssueRow[] {
+  return data.today_upload_batches.map((batch) => ({
+    id: batch.id,
+    date: batch.created_at,
+    type: batch.upload_context === "supplier_today" ? "공급업체 업로드" : "구매자 업로드",
+    title: batch.file_name,
+    desc: `총 ${batch.row_count}행 · 정상 ${batch.valid_count}행 · 오류 ${batch.invalid_count}행 · 중복 ${batch.duplicate_count}행`,
+    status: todayUploadBatchStatusLabels[batch.status],
+    tone: (batch.status === "failed" || batch.invalid_count > 0 ? "orange" : batch.status === "imported" ? "green" : "blue") as "orange" | "blue" | "green" | "gray",
+    severity: (batch.status === "failed" ? "high" : batch.invalid_count > 0 || batch.status === "partially_imported" ? "medium" : "low") as TodayAdminSeverityLevel,
+    businessId: batch.business_id,
+    targetType: "upload_batch" as const,
+    actionType: (batch.status === "failed" || batch.status === "partially_imported" ? "reparse_upload" : "mark_reviewed") as AdminTodayActionType,
+    beforeStatus: batch.status,
+    batchId: batch.id,
+  })).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function getTodayAdminAIIssues(data: AppData): TodayAdminIssueRow[] {
+  return data.today_ai_messages
+    .filter((message) => message.role === "assistant" || message.status !== "success")
+    .map((message) => {
+      const conversation = data.today_ai_conversations.find((entry) => entry.id === message.conversation_id);
+      return {
+        id: message.id,
+        date: message.created_at,
+        type: conversation?.mode === "supplier" ? "공급업체 AI" : conversation?.mode === "admin" ? "관리자 AI" : "구매자 AI",
+        title: conversation?.title || "AI 요청",
+        desc: `${message.status === "blocked" ? "안전가드 차단" : message.error_message || "요약 응답"} · ${todayAdminSafeSummary(message.context_summary_json)}`,
+        status: message.status,
+        tone: (message.status === "success" ? "green" : "orange") as "orange" | "blue" | "green" | "gray",
+        severity: (message.status === "failed" ? "high" : message.status === "blocked" ? "medium" : "low") as TodayAdminSeverityLevel,
+        businessId: message.business_id,
+        supplierBusinessId: message.supplier_business_id,
+        userId: message.user_id,
+        targetType: "ai_message" as const,
+        actionType: "mark_reviewed" as const,
+        beforeStatus: message.status,
+      };
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function getTodayAdminTaxIssues(data: AppData): TodayAdminIssueRow[] {
+  const checkRows: TodayAdminIssueRow[] = data.tax_document_checks
+    .filter((check) => check.status !== "ok")
+    .map((check) => ({
+      id: check.id,
+      date: check.created_at,
+      type: check.check_type === "category_unclassified" ? "미분류 매입" : check.check_type === "tax_invoice_required" ? "세금계산서 확인" : "증빙 확인",
+      title: todayAdminBusinessLabel(data, check.business_id),
+      desc: check.message,
+      status: check.status,
+      tone: check.severity === "high" ? "orange" : "blue",
+      severity: check.severity === "high" ? "high" : check.severity === "medium" ? "medium" : "low",
+      businessId: check.business_id,
+      targetType: "tax_check",
+      actionType: "rerun_tax_checks",
+      beforeStatus: check.status,
+    }));
+  const purchaseRows: TodayAdminIssueRow[] = data.purchase_records
+    .filter((record) => record.evidence_status === "missing" || record.evidence_status === "needs_review" || record.tax_invoice_status === "required" || record.tax_invoice_status === "requested" || record.category_needs_review)
+    .map((record) => ({
+      id: record.id,
+      date: record.created_at,
+      type: record.category_needs_review ? "미분류 매입" : record.tax_invoice_status === "required" || record.tax_invoice_status === "requested" ? "세금계산서 확인" : "증빙 누락",
+      title: record.item_summary || record.purchase_title,
+      desc: `${record.supplier_name} · ${taxInvoiceStatusLabels[record.tax_invoice_status]} · ${todayEvidenceStatusLabel(record.evidence_status)}`,
+      status: record.accounting_status,
+      tone: "orange" as const,
+      severity: record.total_amount >= 500000 ? "high" : "medium",
+      businessId: record.business_id ?? record.buyer_id,
+      amount: record.total_amount,
+      targetType: "tax_check" as const,
+      actionType: "rerun_tax_checks" as const,
+      beforeStatus: record.accounting_status,
+    }));
+  return [...checkRows, ...purchaseRows].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function getTodayAdminSettlementIssues(data: AppData): TodayAdminIssueRow[] {
+  return data.supplier_sales_records
+    .filter((record) => ["held", "failed", "needs_review", "pending", "scheduled"].includes(record.settlement_status))
+    .map((record) => ({
+      id: record.id,
+      date: record.sold_at,
+      type: "공급업체 정산",
+      title: record.item_summary,
+      desc: `${record.buyer_display_name} · ${supplierSettlementLabel(record.settlement_status)} · ${record.sale_status === "disputed" ? "문제신고 확인" : "상태 확인"}`,
+      status: supplierSettlementLabel(record.settlement_status),
+      tone: (record.settlement_status === "failed" || record.settlement_status === "held" ? "orange" : "blue") as "orange" | "blue" | "green" | "gray",
+      severity: (record.settlement_status === "failed" ? "high" : record.settlement_status === "held" || record.settlement_status === "needs_review" ? "medium" : "low") as TodayAdminSeverityLevel,
+      businessId: record.buyer_business_id,
+      supplierBusinessId: record.supplier_business_id,
+      amount: record.total_amount,
+      targetType: "settlement" as const,
+      actionType: "mark_reviewed" as const,
+      beforeStatus: record.settlement_status,
+    })).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function getTodayAdminSecurityIssues(data: AppData): TodayAdminIssueRow[] {
+  const eventRows = data.today_security_events.map((event) => ({
+    id: event.id,
+    date: event.created_at,
+    type: todaySecurityEventLabels[event.event_type],
+    title: event.route,
+    desc: event.message,
+    status: todayAdminSeverityLabels[event.severity],
+    tone: todayAdminSeverityTone(event.severity),
+    severity: event.severity,
+    businessId: event.business_id,
+    supplierBusinessId: event.supplier_business_id,
+    userId: event.user_id,
+    targetType: "security_event" as const,
+    actionType: "mark_reviewed" as const,
+    beforeStatus: event.severity,
+  }));
+  const aiBlockedRows = data.today_ai_messages
+    .filter((message) => message.status === "blocked")
+    .map((message) => ({
+      id: `ai-block-${message.id}`,
+      date: message.created_at,
+      type: "AI 권한 범위 차단",
+      title: message.conversation_id,
+      desc: "사용자 질문이 오늘장사 권한 범위를 벗어나 차단되었습니다.",
+      status: "보통",
+      tone: "blue" as const,
+      severity: "medium" as const,
+      businessId: message.business_id,
+      supplierBusinessId: message.supplier_business_id,
+      userId: message.user_id,
+      targetType: "security_event" as const,
+      actionType: "mark_reviewed" as const,
+      beforeStatus: "blocked",
+    }));
+  return [...eventRows, ...aiBlockedRows].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function getTodayAdminPriorityAlerts(data: AppData) {
+  const syncIssues = getTodayAdminSyncIssues(data);
+  const uploadIssues = getTodayAdminUploadIssues(data);
+  const aiIssues = getTodayAdminAIIssues(data);
+  const taxIssues = getTodayAdminTaxIssues(data);
+  const settlementIssues = getTodayAdminSettlementIssues(data);
+  const securityIssues = getTodayAdminSecurityIssues(data);
+  const envRows = getTodayAdminEnvironmentRows();
+  const alerts = [
+    { severity: "critical" as const, title: "보안/RLS 의심 이벤트", message: "관리자 전용 화면 접근 차단과 권한 범위 밖 이벤트를 확인하세요.", count: securityIssues.filter((row) => row.severity === "critical" || row.severity === "high").length, action_url: "/app/admin/today/security" },
+    { severity: "high" as const, title: "동기화 실패", message: "싸와 거래가 오늘장사 매입/매출에 반영되지 않은 항목입니다.", count: syncIssues.filter((row) => row.status === "failed" || row.severity === "high").length, action_url: "/app/admin/today/sync" },
+    { severity: "high" as const, title: "정산 확인 필요", message: "공급업체 정산 보류, 실패, 확인 필요 항목입니다.", count: settlementIssues.filter((row) => row.severity !== "low").length, action_url: "/app/admin/today/settlements" },
+    { severity: "medium" as const, title: "세무자료 확인", message: "증빙 누락, 세금계산서 확인, 미분류 매입입니다.", count: taxIssues.length, action_url: "/app/admin/today/tax" },
+    { severity: "medium" as const, title: "업로드 오류", message: "파싱 실패, 부분 반영, 중복 후보를 확인하세요.", count: uploadIssues.filter((row) => row.severity !== "low").length, action_url: "/app/admin/today/uploads" },
+    { severity: "medium" as const, title: "AI 오류/차단", message: "provider 오류, 안전가드 차단, 사용량을 확인하세요.", count: aiIssues.filter((row) => row.severity !== "low").length, action_url: "/app/admin/today/ai" },
+    { severity: "low" as const, title: "환경 설정 점검", message: "누락된 환경변수는 값 대신 설정 여부만 표시됩니다.", count: envRows.filter((row) => !row.ok).length, action_url: "/app/admin/today/settings" },
+  ];
+  return alerts.filter((alert) => alert.count > 0).sort((a, b) => ({ critical: 0, high: 1, medium: 2, low: 3 }[a.severity] - { critical: 0, high: 1, medium: 2, low: 3 }[b.severity]));
+}
+
+function getTodayAdminOverview(data: AppData) {
+  const syncIssues = getTodayAdminSyncIssues(data);
+  const uploadIssues = getTodayAdminUploadIssues(data);
+  const aiIssues = getTodayAdminAIIssues(data);
+  const taxIssues = getTodayAdminTaxIssues(data);
+  const settlementIssues = getTodayAdminSettlementIssues(data);
+  const securityIssues = getTodayAdminSecurityIssues(data);
+  const envIssues = getTodayAdminEnvironmentRows().filter((row) => !row.ok).length;
+  const critical = securityIssues.some((row) => row.severity === "critical" || row.severity === "high") || syncIssues.filter((row) => row.severity === "high").length >= 3;
+  const warning = !critical && (syncIssues.length || uploadIssues.length || aiIssues.length || taxIssues.length || settlementIssues.length || envIssues);
+  return {
+    status: critical ? "긴급" : warning ? "주의" : "정상",
+    statusTone: critical ? "orange" as const : warning ? "blue" as const : "green" as const,
+    syncIssues,
+    uploadIssues,
+    aiIssues,
+    taxIssues,
+    settlementIssues,
+    securityIssues,
+    envIssues,
+    alerts: getTodayAdminPriorityAlerts(data),
+  };
+}
+
+function appendAdminTodayAction(data: AppData, input: {
+  adminUserId: string;
+  actionType: AdminTodayActionType;
+  targetType: AdminTodayTargetType;
+  targetId: string;
+  businessId?: string;
+  supplierBusinessId?: string;
+  beforeStatus?: string;
+  afterStatus?: string;
+  memo: string;
+  resultStatus: AdminTodayActionResultStatus;
+  errorMessage?: string;
+}) {
+  return {
+    ...data,
+    admin_today_actions: [{
+      id: makeId("today-admin-action"),
+      admin_user_id: input.adminUserId,
+      action_type: input.actionType,
+      target_type: input.targetType,
+      target_id: input.targetId,
+      business_id: input.businessId,
+      supplier_business_id: input.supplierBusinessId,
+      before_status: input.beforeStatus,
+      after_status: input.afterStatus,
+      memo: input.memo,
+      result_status: input.resultStatus,
+      error_message: input.errorMessage,
+      created_at: new Date().toISOString(),
+    }, ...data.admin_today_actions],
+  };
+}
+
+function runTodayAdminIssueAction(data: AppData, row: TodayAdminIssueRow, adminUserId: string) {
+  let nextData = data;
+  let resultStatus: AdminTodayActionResultStatus = "success";
+  let afterStatus = "reviewed";
+  let memo = "관리자가 운영 항목을 확인했습니다.";
+  let errorMessage: string | undefined;
+
+  if (row.actionType === "resync_buyer_purchase" && row.retryDealId) {
+    const result = syncSsawaDealToTodayPurchase(data, row.retryDealId, { force: true, triggeredBy: "admin", actorUserId: adminUserId });
+    nextData = result.data;
+    resultStatus = result.ok ? "success" : "failed";
+    afterStatus = result.status;
+    memo = `구매자 매입 재동기화: ${result.message}`;
+    errorMessage = result.errorCode;
+  } else if (row.actionType === "resync_supplier_sale" && row.retryDealId) {
+    const result = syncSsawaDealToSupplierSale(data, row.retryDealId, { force: true, triggeredBy: "admin", actorUserId: adminUserId });
+    nextData = result.data;
+    resultStatus = result.ok ? "success" : "failed";
+    afterStatus = result.status;
+    memo = `공급업체 매출 재동기화: ${result.message}`;
+    errorMessage = result.errorCode;
+  } else if (row.actionType === "reparse_upload" && row.batchId) {
+    const result = importUploadRows(data, row.batchId, { validOnly: true, allowWarnings: true, skipDuplicates: true, actorUserId: adminUserId });
+    nextData = result.data;
+    resultStatus = result.error ? "failed" : result.importedCount > 0 ? "success" : "skipped";
+    afterStatus = result.error ? "failed" : "checked";
+    memo = `업로드 정상 행 재반영: 반영 ${result.importedCount}행, 스킵 ${result.skippedCount}행`;
+    errorMessage = result.error;
+  } else if (row.actionType === "rerun_tax_checks") {
+    resultStatus = "skipped";
+    afterStatus = "queued";
+    memo = "세무자료 재점검 요청을 기록했습니다. 실제 알림/재계산은 다음 단계 서버 작업과 연결됩니다.";
+  } else if (row.actionType === "rerun_category_classification") {
+    resultStatus = "skipped";
+    afterStatus = "queued";
+    memo = "카테고리 재분류 요청을 기록했습니다. 중복 반영 없이 검토 큐에 남겼습니다.";
+  }
+
+  return appendAdminTodayAction(nextData, {
+    adminUserId,
+    actionType: row.actionType ?? "mark_reviewed",
+    targetType: row.targetType,
+    targetId: row.id,
+    businessId: row.businessId,
+    supplierBusinessId: row.supplierBusinessId,
+    beforeStatus: row.beforeStatus,
+    afterStatus,
+    memo,
+    resultStatus,
+    errorMessage,
+  });
+}
+
+function TodayAdminPage({ data, navigate, setData, routePath, authSession }: MutatingPageProps & { routePath: string; authSession: AppAuthSession | null }) {
+  const section = getTodayAdminSection(routePath);
+  const adminUserId = authSession?.id ?? "admin-1";
+  const overview = getTodayAdminOverview(data);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("전체");
+
+  function handleAction(row: TodayAdminIssueRow) {
+    setData(runTodayAdminIssueAction(data, row, adminUserId));
+  }
+
+  const pageBySection: Record<TodayAdminSection, ReactNode> = {
+    overview: <TodayAdminOverview data={data} overview={overview} navigate={navigate} onAction={handleAction} />,
+    sync: <TodayAdminIssueTable data={data} title="연동 상태" desc="싸와 거래가 오늘장사 매입/매출/분류/재견적 추천으로 반영되는 흐름입니다." rows={overview.syncIssues} query={query} filter={filter} onQuery={setQuery} onFilter={setFilter} onAction={handleAction} />,
+    uploads: <TodayAdminIssueTable data={data} title="업로드 오류" desc="엑셀/CSV 업로드의 파싱 실패, 부분 반영, 중복 후보를 봅니다." rows={overview.uploadIssues} query={query} filter={filter} onQuery={setQuery} onFilter={setFilter} onAction={handleAction} />,
+    ai: <TodayAdminIssueTable data={data} title="AI 상태" desc="AI 요청 오류, 안전가드 차단, 사용량 상태를 요약 중심으로 봅니다." rows={overview.aiIssues} query={query} filter={filter} onQuery={setQuery} onFilter={setFilter} onAction={handleAction} />,
+    tax: <TodayAdminIssueTable data={data} title="세무자료 확인" desc="증빙 누락, 세금계산서 확인 필요, 미분류 매입을 확인합니다." rows={overview.taxIssues} query={query} filter={filter} onQuery={setQuery} onFilter={setFilter} onAction={handleAction} />,
+    settlements: <TodayAdminIssueTable data={data} title="정산 확인" desc="공급업체 정산 예정, 보류, 실패, 확인 필요 항목입니다. 실제 지급 실행은 하지 않습니다." rows={overview.settlementIssues} query={query} filter={filter} onQuery={setQuery} onFilter={setFilter} onAction={handleAction} />,
+    security: <TodayAdminSecurityPage data={data} rows={overview.securityIssues} query={query} filter={filter} onQuery={setQuery} onFilter={setFilter} onAction={handleAction} />,
+    notifications: <TodayNotificationsPage data={data} setData={setData} navigate={navigate} audience="admin" userId={adminUserId} />,
+    launch: <AdminTodayLaunchPage data={data} setData={setData} navigate={navigate} />,
+    logs: <TodayAdminLogsPage data={data} />,
+    settings: <TodayAdminSettingsPage data={data} setData={setData} adminUserId={adminUserId} />,
+  };
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app/admin")} label="관리자 홈" />
+      <PageTitle eyebrow="관리자 전용" title="오늘장사 운영 상태" desc="싸와 연동, 업로드, AI, 세무자료, 정산, 보안/RLS 상태를 한곳에서 확인합니다." />
+      <div className="todayAdminNav">
+        {todayAdminNav.map((item) => (
+          <button className={section === item.section ? "active" : ""} type="button" key={item.section} onClick={() => navigate(item.path)}>
+            {item.label}
+          </button>
+        ))}
+        <button className={section === "notifications" ? "active" : ""} type="button" onClick={() => navigate("/app/admin/today/notifications")}>알림</button>
+        <button className={section === "launch" ? "active" : ""} type="button" onClick={() => navigate("/app/admin/today/launch")}>출시</button>
+      </div>
+      {pageBySection[section]}
+    </Page>
+  );
+}
+
+function TodayAdminOverview({ data, overview, navigate, onAction }: { data: AppData; overview: ReturnType<typeof getTodayAdminOverview>; navigate: Navigate; onAction: (row: TodayAdminIssueRow) => void }) {
+  const envRows = getTodayAdminEnvironmentRows();
+  const recentRows = [...overview.syncIssues, ...overview.uploadIssues, ...overview.aiIssues, ...overview.taxIssues, ...overview.settlementIssues, ...overview.securityIssues]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 8);
+
+  return (
+    <>
+      <section className="todayAdminStatusPanel">
+        <div>
+          <span className="eyebrow">전체 상태</span>
+          <h2>오늘장사 운영 상태를 확인하세요.</h2>
+          <p>긴급 항목은 권한/RLS 의심, 대량 sync 실패, 정산 실패, 환경 누락 순서로 우선 표시됩니다.</p>
+        </div>
+        <StatusBadge tone={overview.statusTone}>{overview.status}</StatusBadge>
+      </section>
+      <section className="dashboardGrid">
+        <Metric label="연동 실패" value={`${overview.syncIssues.filter((row) => row.severity !== "low").length}건`} desc="구매자 매입/공급업체 매출 sync" icon={<RefreshCcw />} actionLabel="보기" onClick={() => navigate("/app/admin/today/sync")} />
+        <Metric label="업로드 오류" value={`${overview.uploadIssues.filter((row) => row.severity !== "low").length}건`} desc="파싱 실패·부분 반영·중복 후보" icon={<Upload />} actionLabel="보기" onClick={() => navigate("/app/admin/today/uploads")} />
+        <Metric label="AI 오류" value={`${overview.aiIssues.filter((row) => row.severity !== "low").length}건`} desc="provider 오류·안전가드 차단" icon={<MessageCircle />} actionLabel="보기" onClick={() => navigate("/app/admin/today/ai")} />
+        <Metric label="세무자료 확인" value={`${overview.taxIssues.length}건`} desc="증빙 누락·세금계산서 확인" icon={<ReceiptText />} actionLabel="보기" onClick={() => navigate("/app/admin/today/tax")} />
+        <Metric label="정산 확인" value={`${overview.settlementIssues.filter((row) => row.severity !== "low").length}건`} desc="보류·실패·확인 필요" icon={<Landmark />} actionLabel="보기" onClick={() => navigate("/app/admin/today/settlements")} />
+        <Metric label="보안/RLS" value={`${overview.securityIssues.length}건`} desc="권한 차단·의심 접근" icon={<ShieldCheck />} actionLabel="점검" onClick={() => navigate("/app/admin/today/security")} />
+      </section>
+      <SectionHeader title="우선순위 알림" />
+      <div className="todayAdminAlertGrid">
+        {overview.alerts.length ? overview.alerts.map((alert) => (
+          <button className={`todayAdminAlert ${alert.severity}`} type="button" key={alert.title} onClick={() => navigate(alert.action_url)}>
+            <StatusBadge tone={todayAdminSeverityTone(alert.severity)}>{todayAdminSeverityLabels[alert.severity]}</StatusBadge>
+            <strong>{alert.title}</strong>
+            <span>{alert.message}</span>
+            <em>{alert.count}건</em>
+          </button>
+        )) : <EmptyState icon={<Check />} title="긴급 운영 알림이 없습니다." desc="현재 데모 데이터 기준으로 즉시 처리할 항목이 없습니다." variant="compact" />}
+      </div>
+      <div className="todayAdminTwoColumn">
+        <section>
+          <SectionHeader title="최근 실패/확인 이벤트" />
+          <TodayAdminIssueMiniList rows={recentRows} onAction={onAction} />
+        </section>
+        <section>
+          <SectionHeader title="환경 상태" action="설정 보기" onAction={() => navigate("/app/admin/today/settings")} />
+          <div className="todayAdminEnvList">
+            {envRows.map((row) => (
+              <div className="todayAdminEnvRow" key={row.label}>
+                <span>{row.label}</span>
+                <strong>{row.value}</strong>
+                <StatusBadge tone={row.ok ? "green" : "orange"}>{row.ok ? "ok" : "확인 필요"}</StatusBadge>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+      <SectionHeader title="최근 관리자 조치" action="전체 로그" onAction={() => navigate("/app/admin/today/logs")} />
+      <TodayAdminActionList data={data} compact />
+    </>
+  );
+}
+
+function TodayAdminIssueTable({ data, title, desc, rows, query, filter, onQuery, onFilter, onAction }: { data: AppData; title: string; desc: string; rows: TodayAdminIssueRow[]; query: string; filter: string; onQuery: (value: string) => void; onFilter: (value: string) => void; onAction: (row: TodayAdminIssueRow) => void }) {
+  const options = ["전체", "긴급", "높음", "보통", "낮음", "실패", "확인 필요"];
+  const normalized = query.trim().toLowerCase();
+  const filtered = rows.filter((row) => {
+    const matchesFilter = filter === "전체"
+      || todayAdminSeverityLabels[row.severity] === filter
+      || row.status.includes(filter)
+      || row.type.includes(filter);
+    const matchesQuery = !normalized || [row.id, row.title, row.desc, row.businessId, row.supplierBusinessId, row.userId].filter(Boolean).join(" ").toLowerCase().includes(normalized);
+    return matchesFilter && matchesQuery;
+  });
+
+  return (
+    <section className="todayAdminPagePanel">
+      <div className="todayAdminPanelHead">
+        <div>
+          <h2>{title}</h2>
+          <p>{desc}</p>
+        </div>
+        <span>{filtered.length}건</span>
+      </div>
+      <div className="filterPanel todayAdminFilter">
+        <input value={query} onChange={(event) => onQuery(event.target.value)} placeholder="사업장, 거래 ID, batch ID, 상태 검색" />
+      </div>
+      <FilterTabs options={options} active={filter} onChange={onFilter} />
+      <div className="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>발생일</th>
+              <th>유형</th>
+              <th>상태</th>
+              <th>사업장</th>
+              <th>대상</th>
+              <th>메시지</th>
+              <th>조치</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((row) => (
+              <tr key={row.id}>
+                <td>{row.date.slice(0, 10)}</td>
+                <td>{row.type}</td>
+                <td><StatusBadge tone={row.tone}>{row.status}</StatusBadge></td>
+                <td>{row.supplierBusinessId ? todayAdminBusinessLabel(data, row.supplierBusinessId) : todayAdminBusinessLabel(data, row.businessId)}</td>
+                <td>{row.title}<small>{row.amount ? ` · ${money(row.amount)}` : ""}</small></td>
+                <td>{row.desc}</td>
+                <td><button className="ghostButton compact" type="button" onClick={() => onAction(row)}>{row.actionType?.includes("resync") ? "재시도" : "확인 기록"}</button></td>
+              </tr>
+            ))}
+            {!filtered.length && (
+              <tr>
+                <td colSpan={7}><EmptyState icon={<Check />} title="표시할 운영 항목이 없습니다." desc="필터를 조정하거나 새 이벤트가 쌓이면 이곳에 표시됩니다." variant="compact" /></td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function TodayAdminIssueMiniList({ rows, onAction }: { rows: TodayAdminIssueRow[]; onAction: (row: TodayAdminIssueRow) => void }) {
+  if (!rows.length) return <EmptyState icon={<Check />} title="최근 실패 이벤트가 없습니다." desc="새 운영 이벤트가 생기면 이곳에 표시됩니다." variant="compact" />;
+  return (
+    <div className="todayAdminMiniList">
+      {rows.map((row) => (
+        <div className="todayAdminMiniRow" key={`${row.targetType}-${row.id}`}>
+          <StatusBadge tone={todayAdminSeverityTone(row.severity)}>{todayAdminSeverityLabels[row.severity]}</StatusBadge>
+          <span><strong>{row.type}</strong><small>{row.title} · {row.date.slice(0, 10)}</small></span>
+          <button className="ghostButton compact" type="button" onClick={() => onAction(row)}>{row.actionType?.includes("resync") ? "재시도" : "확인"}</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TodayAdminSecurityPage({ data, rows, query, filter, onQuery, onFilter, onAction }: { data: AppData; rows: TodayAdminIssueRow[]; query: string; filter: string; onQuery: (value: string) => void; onFilter: (value: string) => void; onAction: (row: TodayAdminIssueRow) => void }) {
+  const repeatedUsers = data.today_security_events.reduce<Record<string, number>>((acc, event) => {
+    const key = event.user_id ?? "anonymous";
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
+  return (
+    <>
+      <section className="dashboardGrid">
+        <Metric label="보안 이벤트" value={`${rows.length}건`} desc="권한 차단과 의심 접근" icon={<ShieldCheck />} />
+        <Metric label="높음 이상" value={`${rows.filter((row) => row.severity === "critical" || row.severity === "high").length}건`} desc="우선 점검 대상" icon={<Bell />} />
+        <Metric label="AI 차단" value={`${rows.filter((row) => row.type.includes("AI")).length}건`} desc="권한 범위 밖 질문" icon={<MessageCircle />} />
+        <Metric label="반복 시도" value={`${Object.values(repeatedUsers).filter((count) => count >= 2).length}명`} desc="동일 사용자 반복 이벤트" icon={<UsersRound />} />
+      </section>
+      <TodayAdminIssueTable data={data} title="보안/RLS 점검" desc="IP와 user agent는 원문 대신 hash 또는 비저장 기준으로 요약합니다." rows={rows} query={query} filter={filter} onQuery={onQuery} onFilter={onFilter} onAction={onAction} />
+    </>
+  );
+}
+
+function TodayAdminLogsPage({ data }: { data: AppData }) {
+  return (
+    <section className="todayAdminPagePanel">
+      <div className="todayAdminPanelHead">
+        <div>
+          <h2>관리자 조치/운영 로그</h2>
+          <p>재시도, 확인 완료, 환경 점검, 메모 같은 운영 조치를 삭제하지 않는 로그로 남깁니다.</p>
+        </div>
+        <span>{data.admin_today_actions.length}건</span>
+      </div>
+      <TodayAdminActionList data={data} />
+    </section>
+  );
+}
+
+function TodayAdminActionList({ data, compact = false }: { data: AppData; compact?: boolean }) {
+  const actions = [...data.admin_today_actions].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, compact ? 5 : 50);
+  if (!actions.length) return <EmptyState icon={<ClipboardList />} title="관리자 조치 로그가 없습니다." desc="재시도 또는 확인 기록을 남기면 이곳에 표시됩니다." variant="compact" />;
+  return (
+    <div className="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>일시</th>
+            <th>조치</th>
+            <th>대상</th>
+            <th>사업장</th>
+            <th>결과</th>
+            <th>메모</th>
+          </tr>
+        </thead>
+        <tbody>
+          {actions.map((action) => (
+            <tr key={action.id}>
+              <td>{action.created_at.slice(0, 16).replace("T", " ")}</td>
+              <td>{action.action_type}</td>
+              <td>{action.target_type} · {action.target_id}</td>
+              <td>{action.business_id ?? action.supplier_business_id ?? "-"}</td>
+              <td><StatusBadge tone={action.result_status === "success" ? "green" : action.result_status === "failed" ? "orange" : "gray"}>{action.result_status}</StatusBadge></td>
+              <td>{action.memo}{action.error_message ? ` · ${action.error_message}` : ""}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TodayAdminSettingsPage({ data, setData, adminUserId }: { data: AppData; setData: (data: AppData) => void; adminUserId: string }) {
+  function updateSetting(settingId: string, value: string) {
+    const setting = data.today_admin_settings.find((entry) => entry.id === settingId);
+    if (!setting) return;
+    const updatedAt = new Date().toISOString();
+    const nextData = {
+      ...data,
+      today_admin_settings: data.today_admin_settings.map((entry) => entry.id === settingId ? { ...entry, setting_value: value, updated_by: adminUserId, updated_at: updatedAt } : entry),
+    };
+    setData(appendAdminTodayAction(nextData, {
+      adminUserId,
+      actionType: "update_settings",
+      targetType: "settings",
+      targetId: setting.setting_key,
+      beforeStatus: setting.setting_value,
+      afterStatus: value,
+      memo: `${todayAdminSettingLabels[setting.setting_key]} 변경`,
+      resultStatus: "success",
+    }));
+  }
+
+  return (
+    <section className="todayAdminPagePanel">
+      <div className="todayAdminPanelHead">
+        <div>
+          <h2>운영 기준 설정</h2>
+          <p>화면 임계값과 알림 기준입니다. 서버 검증이 필요한 실제 정책은 별도 API와 연결해야 합니다.</p>
+        </div>
+      </div>
+      <div className="todayAdminSettingsGrid">
+        {data.today_admin_settings.map((setting) => (
+          <label className="todayAdminSettingCard" key={setting.id}>
+            <span>{todayAdminSettingLabels[setting.setting_key]}</span>
+            <small>{setting.description}</small>
+            {setting.value_type === "boolean" ? (
+              <select value={setting.setting_value} onChange={(event) => updateSetting(setting.id, event.target.value)}>
+                <option value="true">사용</option>
+                <option value="false">미사용</option>
+              </select>
+            ) : (
+              <input value={setting.setting_value} onChange={(event) => updateSetting(setting.id, event.target.value)} inputMode={setting.value_type === "number" ? "numeric" : "text"} />
+            )}
+          </label>
+        ))}
+      </div>
+      <SectionHeader title="환경/status 요약" />
+      <div className="todayAdminEnvList">
+        {getTodayAdminEnvironmentRows().map((row) => (
+          <div className="todayAdminEnvRow" key={row.label}>
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+            <StatusBadge tone={row.ok ? "green" : "orange"}>{row.ok ? "ok" : "확인 필요"}</StatusBadge>
+          </div>
+        ))}
+      </div>
+      <p className="mutedText">필수 환경변수가 누락되어 일부 기능이 정상 동작하지 않을 수 있습니다. 실제 key 값은 표시하지 않습니다.</p>
+    </section>
+  );
+}
+
+function todayToneFor(value: string): "orange" | "blue" | "green" | "gray" {
+  if (value === "critical" || value === "warning" || value === "blocked" || value === "todo" || value === "new") return "orange";
+  if (value === "success" || value === "done" || value === "resolved") return "green";
+  if (value === "dismissed" || value === "wont_do") return "gray";
+  return "blue";
+}
+
+function TodayNotificationsPage({ data, setData, navigate, audience, userId }: MutatingPageProps & { audience: TodayNotificationAudience; userId: string }) {
+  const [filter, setFilter] = useState("전체");
+  const notifications = getTodayNotifications(data, audience, userId);
+  const filtered = notifications.filter((item) => {
+    if (filter === "전체") return item.status !== "dismissed";
+    if (filter === "미확인") return item.status === "unread";
+    if (filter === "중요") return item.severity === "critical" || item.severity === "warning";
+    if (filter === "조치필요") return Boolean(item.action_url) && item.status !== "done" && item.status !== "dismissed";
+    if (filter === "완료") return item.status === "done";
+    if (filter === "숨김") return item.status === "dismissed";
+    return true;
+  });
+  const unread = getTodayUnreadNotificationCount(data, audience, userId);
+  const basePath = audience === "supplier" ? "/app/today/supplier" : audience === "admin" ? "/app/admin/today" : "/app/today";
+
+  return (
+    <>
+      <PageTitle eyebrow={`${todayNotificationAudienceLabels[audience]} 알림`} title="오늘장사 알림과 리마인더" desc="싸와 연동, 세무자료, 정산, 업로드, AI, 운영 환경에서 놓치면 안 되는 일을 모아 봅니다." />
+      <div className="dashboardGrid">
+        <Metric label="읽지 않은 알림" value={`${unread}건`} icon={<Bell />} />
+        <Metric label="중요 알림" value={`${notifications.filter((item) => item.severity === "critical" || item.severity === "warning").length}건`} icon={<ShieldCheck />} />
+        <Metric label="완료" value={`${notifications.filter((item) => item.status === "done").length}건`} icon={<Check />} />
+        <Metric label="리마인더 규칙" value={`${data.today_reminder_rules.filter((rule) => rule.audience === audience && rule.enabled).length}개`} icon={<CalendarDays />} actionLabel="설정" onClick={() => navigate(`${basePath}/settings/notifications`)} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="알림 목록" action="모두 읽음" onAction={() => setData(markAllTodayNotificationsRead(data, audience, userId))} />
+        <FilterTabs options={["전체", "미확인", "중요", "조치필요", "완료", "숨김"]} active={filter} onChange={setFilter} />
+        <div className="stackList">
+          {filtered.map((item) => (
+            <article className="stackRow" key={item.id}>
+              <div>
+                <StatusBadge tone={todayToneFor(item.severity)}>{todayNotificationCategoryLabels[item.category]}</StatusBadge>
+                <strong>{item.title}</strong>
+                <span>{item.message}</span>
+                <small>{item.created_at.slice(0, 16).replace("T", " ")}{item.amount ? ` · ${money(item.amount)}` : ""}</small>
+              </div>
+              <div className="formActions compactActions">
+                <button className="ghostButton compact" type="button" onClick={() => setData(updateTodayNotificationStatus(data, item.id, item.status === "unread" ? "read" : "unread"))}>{item.status === "unread" ? "읽음" : "미확인"}</button>
+                <button className="ghostButton compact" type="button" onClick={() => setData(updateTodayNotificationStatus(data, item.id, "done"))}>완료</button>
+                <button className="ghostButton compact" type="button" onClick={() => setData(updateTodayNotificationStatus(data, item.id, "dismissed"))}>숨김</button>
+                <button className="primaryButton compact" type="button" onClick={() => navigate(item.action_url)}>{item.action_label}</button>
+              </div>
+            </article>
+          ))}
+          {!filtered.length && <EmptyState icon={<Bell />} title="표시할 알림이 없습니다." desc="필터를 바꾸거나 새 연동 이벤트가 생기면 여기에 표시됩니다." variant="compact" />}
+        </div>
+      </section>
+      <section className="twoColumn">
+        <div className="toolPanel">
+          <SectionHeader title="리마인더 규칙" />
+          <div className="stackList">
+            {data.today_reminder_rules.filter((rule) => rule.audience === audience).map((rule) => (
+              <div className="stackRow" key={rule.id}>
+                <div><strong>{rule.name}</strong><span>{rule.condition_text}</span><small>{rule.channels.join(", ")} · {rule.frequency}</small></div>
+                <StatusBadge tone={rule.enabled ? "green" : "gray"}>{rule.enabled ? "ON" : "OFF"}</StatusBadge>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="toolPanel">
+          <SectionHeader title="발송 로그" />
+          <div className="stackList">
+            {data.today_notification_delivery_logs.slice(0, 4).map((log) => (
+              <div className="stackRow" key={log.id}>
+                <div><strong>{log.channel}</strong><span>{log.message}</span><small>{log.provider}</small></div>
+                <StatusBadge tone={todayToneFor(log.status)}>{log.status}</StatusBadge>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function TodayNotificationSettingsPage({ data, setData, navigate, audience, userId }: MutatingPageProps & { audience: TodayNotificationAudience; userId: string }) {
+  const preferences = data.today_notification_preferences.filter((item) => item.audience === audience && item.user_id === userId);
+  return (
+    <Page>
+      <BackButton onClick={() => navigate(audience === "supplier" ? "/app/today/supplier/notifications" : audience === "admin" ? "/app/admin/today/notifications" : "/app/today/notifications")} label="알림으로" />
+      <PageTitle eyebrow="알림 설정" title="오늘장사 리마인더 설정" desc="현재 베타에서는 인앱 알림이 실제 동작하며, 카카오/SMS/푸시/메일은 설정값과 로그만 준비합니다." />
+      <section className="toolPanel">
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>분류</th><th>인앱</th><th>메일</th><th>SMS</th><th>카카오</th><th>푸시</th><th>주기</th></tr></thead>
+            <tbody>
+              {preferences.map((pref) => (
+                <tr key={pref.id}>
+                  <td>{todayNotificationCategoryLabels[pref.category]}</td>
+                  <td><input type="checkbox" checked={pref.in_app_enabled} onChange={(event) => setData(updateTodayNotificationPreference(data, pref.id, { in_app_enabled: event.target.checked }))} /></td>
+                  <td><input type="checkbox" checked={pref.email_enabled} onChange={(event) => setData(updateTodayNotificationPreference(data, pref.id, { email_enabled: event.target.checked }))} /></td>
+                  <td><input type="checkbox" checked={pref.sms_enabled} onChange={(event) => setData(updateTodayNotificationPreference(data, pref.id, { sms_enabled: event.target.checked }))} /></td>
+                  <td><input type="checkbox" checked={pref.kakao_enabled} onChange={(event) => setData(updateTodayNotificationPreference(data, pref.id, { kakao_enabled: event.target.checked }))} /></td>
+                  <td><input type="checkbox" checked={pref.push_enabled} onChange={(event) => setData(updateTodayNotificationPreference(data, pref.id, { push_enabled: event.target.checked }))} /></td>
+                  <td>{pref.frequency}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+const onboardingStepsByAudience: Record<TodayNotificationAudience, Array<{ id: string; title: string; desc: string; url: string }>> = {
+  buyer: [
+    { id: "connect-ssawa", title: "싸와 구매내역 연결 확인", desc: "완료 거래가 매입 장부 후보로 들어오는지 확인합니다.", url: "/app/today/ssawa" },
+    { id: "review-tax", title: "세무자료 누락 확인", desc: "세금계산서와 영수증 상태를 확인합니다.", url: "/app/today/tax" },
+    { id: "send-requote", title: "재견적 초안 검토", desc: "반복 구매 품목의 견적 초안을 확인합니다.", url: "/app/today/requotes" },
+  ],
+  supplier: [
+    { id: "confirm-sales", title: "싸와 거래 매출 확인", desc: "완료 거래가 공급업체 매출로 반영되는지 봅니다.", url: "/app/today/supplier/sales" },
+    { id: "review-settlement", title: "정산 상태 확인", desc: "정산 예정, 보류, 완료 상태를 점검합니다.", url: "/app/today/supplier/settlements" },
+    { id: "quote-conversion", title: "견적 전환 확인", desc: "응답 가능한 견적과 선택률을 봅니다.", url: "/app/today/supplier/quotes" },
+  ],
+  admin: [
+    { id: "check-env", title: "운영 환경 점검", desc: "대표 URL, 국세청 API, Supabase/Vercel 상태를 확인합니다.", url: "/app/admin/today/settings" },
+    { id: "review-qa", title: "QA/E2E 체크", desc: "베타 출시 전 체크리스트와 권한 흐름을 점검합니다.", url: "/app/admin/qa" },
+    { id: "monitor-alerts", title: "알림 운영 확인", desc: "동기화, 업로드, 보안, 정산 알림을 점검합니다.", url: "/app/admin/today/notifications" },
+    { id: "launch-ready", title: "출시 체크리스트 확인", desc: "약관, 지원, 피드백, 공개 페이지 준비 상태를 확인합니다.", url: "/app/admin/today/launch" },
+  ],
+};
+
+function TodayOnboardingPage({ data, setData, navigate, audience, userId }: MutatingPageProps & { audience: TodayNotificationAudience; userId: string }) {
+  const progress = data.today_onboarding_progress.find((item) => item.audience === audience && item.user_id === userId);
+  const steps = onboardingStepsByAudience[audience];
+  return (
+    <Page>
+      <BackButton onClick={() => navigate(audience === "supplier" ? "/app/today/supplier" : audience === "admin" ? "/app/admin/today" : "/app/today")} label="오늘장사로" />
+      <PageTitle eyebrow={`${todayNotificationAudienceLabels[audience]} 온보딩`} title="베타 시작 체크리스트" desc="처음 쓰는 사람이 바로 확인해야 할 흐름만 단계별로 정리했습니다." />
+      <section className="toolPanel">
+        <div className="stackList">
+          {steps.map((step, index) => {
+            const done = progress?.completed_step_ids.includes(step.id) ?? false;
+            return (
+              <article className="stackRow" key={step.id}>
+                <div><StatusBadge tone={done ? "green" : "blue"}>{index + 1}단계</StatusBadge><strong>{step.title}</strong><span>{step.desc}</span></div>
+                <div className="formActions compactActions">
+                  <button className="ghostButton compact" type="button" onClick={() => navigate(step.url)}>열기</button>
+                  <button className="primaryButton compact" type="button" onClick={() => setData(updateTodayOnboardingProgress(data, audience, userId, step.id))}>{done ? "완료 해제" : "완료"}</button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function TodayHelpPage({ data, setData, navigate, audience, userId }: MutatingPageProps & { audience: TodayNotificationAudience | "common"; userId: string }) {
+  const [query, setQuery] = useState("");
+  const articles = data.today_help_articles.filter((article) => article.audience === "common" || article.audience === audience);
+  const filtered = articles.filter((article) => !query.trim() || [article.title, article.body, article.category, article.tags.join(" ")].join(" ").toLowerCase().includes(query.trim().toLowerCase()));
+  return (
+    <Page>
+      <PageTitle eyebrow="도움말" title="오늘장사 사용 가이드" desc="세무, 정산, AI, 재견적은 안전 문구와 함께 확인 중심으로 안내합니다." />
+      <section className="toolPanel">
+        <div className="filterPanel"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="도움말 검색" /></div>
+        <div className="stackList">
+          {filtered.map((article) => (
+            <article className="stackRow" key={article.id}>
+              <div>
+                <StatusBadge tone="blue">{article.category}</StatusBadge>
+                <strong>{article.title}</strong>
+                <span>{article.body}</span>
+                <small>{article.safe_copy}</small>
+              </div>
+              <div className="formActions compactActions">
+                <button className="ghostButton compact" type="button" onClick={() => navigate(article.route_hint)}>관련 화면</button>
+                {audience !== "common" && <button className="ghostButton compact" type="button" onClick={() => setData(dismissTodayGuide(data, audience, userId, article.id))}>숨김</button>}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function TodayPublicLandingPage({ data, navigate, audience }: PageProps & { audience: "buyer" | "supplier" }) {
+  const plan = data.today_pricing_plans.find((item) => item.audience === audience);
+  return (
+    <Page>
+      <section className="todayHero v4">
+        <div>
+          <span className="eyebrow">오늘장사 x 싸와 베타</span>
+          <h1>{audience === "supplier" ? "공급업체 매출과 정산을 싸와 거래에서 바로 정리하세요" : "싸와 구매내역을 오늘장사 장부로 정리하세요"}</h1>
+          <p>{plan?.description}</p>
+        </div>
+        <div className="todayHeroActions">
+          <button className="primaryButton" type="button" onClick={() => navigate(audience === "supplier" ? "/supplier/apply" : "/beta/apply")}>베타 신청</button>
+          <button className="secondaryButton" type="button" onClick={() => navigate("/pricing")}>요금 보기</button>
+        </div>
+      </section>
+      <section className="dashboardGrid">
+        {(plan?.features ?? []).map((feature) => <Metric key={feature} label={feature} value="준비됨" icon={<Check />} />)}
+      </section>
+    </Page>
+  );
+}
+
+function TodayPricingPage({ data, navigate }: PageProps) {
+  return (
+    <Page>
+      <PageTitle eyebrow="요금" title="베타 출시 요금제" desc="베타 기간에는 핵심 기능을 무료로 검증하고, 정식 과금은 별도 고지 후 전환합니다." />
+      <div className="twoColumn">
+        {data.today_pricing_plans.map((plan) => (
+          <section className="toolPanel" key={plan.id}>
+            <SectionHeader title={plan.name} action="신청" onAction={() => navigate(plan.audience === "supplier" ? "/supplier/apply" : "/beta/apply")} />
+            <Metric label={plan.beta_badge} value={plan.price_label} icon={<BadgeCheck />} />
+            <p className="mutedText">{plan.description}</p>
+            <div className="stackList">{plan.features.map((feature) => <div className="stackRow" key={feature}><strong>{feature}</strong><StatusBadge tone="green">포함</StatusBadge></div>)}</div>
+          </section>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
+function TodayBetaApplyPage({ data, setData, navigate, applicationType }: MutatingPageProps & { applicationType: "buyer" | "supplier" }) {
+  const [draft, setDraft] = useState({ business_name: "", contact_name: "", phone: "", email: "", region: "", memo: "", consent_marketing: true });
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    setData(createTodayBetaApplication(data, { ...draft, application_type: applicationType }));
+    navigate("/support");
+  }
+  return (
+    <Page>
+      <PageTitle eyebrow="베타 신청" title={applicationType === "supplier" ? "공급업체 베타 신청" : "오늘장사 베타 신청"} desc="신청 내용은 관리자 베타 운영 화면에서 확인합니다." />
+      <form className="toolPanel" onSubmit={submit}>
+        <input required value={draft.business_name} onChange={(event) => setDraft({ ...draft, business_name: event.target.value })} placeholder="상호명" />
+        <input required value={draft.contact_name} onChange={(event) => setDraft({ ...draft, contact_name: event.target.value })} placeholder="담당자" />
+        <input required value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="연락처" />
+        <input required value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="이메일" />
+        <input value={draft.region} onChange={(event) => setDraft({ ...draft, region: event.target.value })} placeholder="지역" />
+        <textarea value={draft.memo} onChange={(event) => setDraft({ ...draft, memo: event.target.value })} placeholder="테스트하고 싶은 흐름" />
+        <Toggle checked={draft.consent_marketing} label="베타 안내 연락에 동의합니다" onChange={(checked) => setDraft({ ...draft, consent_marketing: checked })} />
+        <button className="primaryButton" type="submit">신청 완료</button>
+      </form>
+    </Page>
+  );
+}
+
+function TodaySupportPage({ data, setData, navigate, role }: MutatingPageProps & { role: TodayNotificationAudience | "common" }) {
+  const [draft, setDraft] = useState({ title: "", description: "" });
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    setData(createTodaySupportTicket(data, { user_role: role, title: draft.title, description: draft.description, page_url: window.location.pathname }));
+    setDraft({ title: "", description: "" });
+  }
+  return (
+    <Page>
+      <PageTitle eyebrow="지원" title="베타 지원과 문의" desc="사용 중 막힌 흐름, 데이터 오류, 안전 문구가 필요한 지점을 남겨주세요." />
+      <form className="toolPanel" onSubmit={submit}>
+        <input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="문의 제목" />
+        <textarea required value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="상세 내용" />
+        <button className="primaryButton" type="submit">문의 접수</button>
+      </form>
+      <section className="toolPanel">
+        <SectionHeader title="최근 문의" />
+        <div className="stackList">{data.today_support_tickets.slice(0, 5).map((ticket) => <div className="stackRow" key={ticket.id}><div><strong>{ticket.title}</strong><span>{ticket.description}</span></div><StatusBadge tone={todayToneFor(ticket.status)}>{ticket.status}</StatusBadge></div>)}</div>
+      </section>
+    </Page>
+  );
+}
+
+function TodayNoticePage({ navigate, path }: { navigate: Navigate; path: string }) {
+  const title = path.includes("ai") ? "AI 안내" : path.includes("settlement") ? "세무/정산 고지" : "세무자료 고지";
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/landing")} label="소개로" />
+      <PageTitle eyebrow="고지" title={title} desc="오늘장사는 사업 운영 판단을 돕는 도구이며, 세무 신고·정산 지급·AI 판단을 자동 확정하지 않습니다." />
+      <InfoPanel title="안전 기준" items={["세무자료는 신고 전 담당자 또는 세무사 확인이 필요합니다.", "정산 금액은 거래 상태 기반 참고값이며 실제 입금 여부와 다를 수 있습니다.", "AI 추천과 재견적 초안은 사용자가 검토한 뒤 적용합니다."]} />
+    </Page>
+  );
+}
+
+function AdminTodayLaunchPage({ data, setData, navigate }: MutatingPageProps) {
+  const done = data.today_launch_checklist.filter((item) => item.status === "done").length;
+  return (
+    <>
+      <PageTitle eyebrow="베타 출시" title="출시 전 패키징 체크리스트" desc="공개 페이지, 정책, 지원, QA, 피드백 루프를 출시 전에 확인합니다." />
+      <div className="dashboardGrid">
+        <Metric label="완료" value={`${done}/${data.today_launch_checklist.length}`} icon={<Check />} />
+        <Metric label="베타 신청" value={`${data.today_beta_applications.length}건`} icon={<UsersRound />} actionLabel="사용자 보기" onClick={() => navigate("/app/admin/beta/users")} />
+        <Metric label="지원 티켓" value={`${data.today_support_tickets.length}건`} icon={<MessageCircle />} />
+        <Metric label="공개 페이지" value="준비" icon={<BadgeCheck />} actionLabel="보기" onClick={() => navigate("/landing")} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="체크리스트" />
+        <div className="stackList">
+          {data.today_launch_checklist.map((item) => (
+            <div className="stackRow" key={item.id}>
+              <div><StatusBadge tone={todayToneFor(item.status)}>{item.category}</StatusBadge><strong>{item.title}</strong><span>{item.description}</span><small>{item.evidence_url}</small></div>
+              <select value={item.status} onChange={(event) => setData(updateTodayLaunchChecklist(data, item.id, event.target.value as typeof item.status))}>
+                <option value="todo">todo</option><option value="doing">doing</option><option value="done">done</option><option value="blocked">blocked</option>
+              </select>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function AdminTodayBetaAnalyticsPage({ data, navigate }: PageProps) {
+  const events = data.today_product_events;
+  const byName = events.reduce<Record<string, number>>((acc, event) => ({ ...acc, [event.event_name]: (acc[event.event_name] ?? 0) + 1 }), {});
+  const avgScore = data.today_beta_survey_responses.length ? Math.round(data.today_beta_survey_responses.reduce((sum, item) => sum + item.score, 0) / data.today_beta_survey_responses.length * 10) / 10 : 0;
+  return (
+    <Page>
+      <PageTitle eyebrow="베타 분석" title="사용 이벤트와 만족도" desc="업로드, 재견적, 알림 클릭, 도움말 검색, 피드백 제출 이벤트를 개인정보 없이 집계합니다." />
+      <div className="dashboardGrid">
+        <Metric label="이벤트" value={`${events.length}건`} icon={<ClipboardList />} />
+        <Metric label="평균 만족도" value={`${avgScore}/5`} icon={<BadgeCheck />} />
+        <Metric label="백로그" value={`${data.today_beta_backlog.length}건`} icon={<SearchCheck />} actionLabel="보기" onClick={() => navigate("/app/admin/beta/backlog")} />
+        <Metric label="피드백" value={`${data.feedbacks.length + data.today_beta_survey_responses.length}건`} icon={<Bell />} actionLabel="보기" onClick={() => navigate("/app/admin/beta/feedback")} />
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="이벤트 분포" />
+        <div className="stackList">{Object.entries(byName).map(([name, count]) => <div className="stackRow" key={name}><strong>{name}</strong><span>{count}건</span></div>)}</div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminTodayBetaFeedbackPage({ data, setData }: MutatingPageProps) {
+  const [draft, setDraft] = useState({ score: 4, nps_score: 8, comment: "", pain_point: "" });
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    setData(createTodayBetaSurveyResponse(data, { user_id: "buyer-1", user_role: "buyer", ...draft }));
+    setDraft({ score: 4, nps_score: 8, comment: "", pain_point: "" });
+  }
+  return (
+    <Page>
+      <PageTitle eyebrow="피드백" title="베타 피드백 수집" desc="간단 만족도와 NPS를 백로그로 자동 연결합니다." />
+      <form className="toolPanel" onSubmit={submit}>
+        <input type="number" min={1} max={5} value={draft.score} onChange={(event) => setDraft({ ...draft, score: Number(event.target.value) })} />
+        <input type="number" min={0} max={10} value={draft.nps_score} onChange={(event) => setDraft({ ...draft, nps_score: Number(event.target.value) })} />
+        <input value={draft.pain_point} onChange={(event) => setDraft({ ...draft, pain_point: event.target.value })} placeholder="불편한 영역" />
+        <textarea value={draft.comment} onChange={(event) => setDraft({ ...draft, comment: event.target.value })} placeholder="피드백 내용" />
+        <button className="primaryButton" type="submit">피드백 저장</button>
+      </form>
+      <section className="toolPanel">
+        <SectionHeader title="최근 응답" />
+        <div className="stackList">{data.today_beta_survey_responses.map((item) => <div className="stackRow" key={item.id}><div><strong>{item.pain_point || "베타 피드백"}</strong><span>{item.comment}</span></div><StatusBadge tone="blue">{item.score}/5 · NPS {item.nps_score}</StatusBadge></div>)}</div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminTodayBetaBacklogPage({ data, setData }: MutatingPageProps) {
+  return (
+    <Page>
+      <PageTitle eyebrow="개선 백로그" title="피드백 기반 개선 우선순위" desc="영향도, 빈도, 노력도를 기준으로 베타 개선 순서를 관리합니다." />
+      <section className="toolPanel">
+        <div className="stackList">
+          {data.today_beta_backlog.map((item) => (
+            <article className="stackRow" key={item.id}>
+              <div><StatusBadge tone={todayToneFor(item.status)}>{todayBacklogStatusLabels[item.status]}</StatusBadge><strong>{item.title}</strong><span>{item.description}</span><small>우선순위 {item.priority_score} · {item.user_segment}</small></div>
+              <select value={item.status} onChange={(event) => setData(updateTodayBacklogItem(data, item.id, { status: event.target.value as typeof item.status }))}>
+                <option value="new">new</option><option value="triaged">triaged</option><option value="planned">planned</option><option value="in_progress">in_progress</option><option value="done">done</option><option value="wont_do">wont_do</option>
+              </select>
+            </article>
+          ))}
+        </div>
+      </section>
+    </Page>
+  );
+}
+
+function AdminTodayBetaUsersPage({ data }: PageProps) {
+  return (
+    <Page>
+      <PageTitle eyebrow="베타 사용자" title="신청자와 세그먼트" desc="구매자, 공급업체, 운영자 세그먼트별 활성화와 리스크를 봅니다." />
+      <div className="dashboardGrid">
+        {data.today_beta_segments.map((segment) => <Metric key={segment.id} label={segment.label} value={`${segment.user_count}명`} icon={<UsersRound />} desc={`활성 ${segment.activation_rate}% · 유지 ${segment.retention_rate}%`} />)}
+      </div>
+      <section className="toolPanel">
+        <SectionHeader title="베타 신청" />
+        <div className="stackList">{data.today_beta_applications.map((item) => <div className="stackRow" key={item.id}><div><strong>{item.business_name}</strong><span>{item.contact_name} · {item.region}</span><small>{item.memo}</small></div><StatusBadge tone={todayToneFor(item.status)}>{item.status}</StatusBadge></div>)}</div>
+      </section>
     </Page>
   );
 }

@@ -42,7 +42,7 @@ export type SupplierDocumentType = "business_license" | "bankbook" | "store_phot
 
 export type SupplierDocumentStatus = "uploaded" | "pending_review" | "approved" | "rejected";
 
-export type TaxInvoiceStatus = "none" | "requested" | "issued" | "pending" | "rejected";
+export type TaxInvoiceStatus = "none" | "required" | "requested" | "received" | "not_needed" | "unknown" | "issued" | "pending" | "rejected";
 
 export type ReceiptStatus = "none" | "uploaded" | "pending" | "confirmed";
 
@@ -59,6 +59,38 @@ export type PurchaseDocumentStatus = "uploaded" | "pending_review" | "confirmed"
 export type AccountingEntryType = "purchase" | "expense" | "refund" | "adjustment";
 
 export type AccountingSyncStatus = "pending" | "synced" | "failed" | "excluded";
+export type TodayPurchaseSource = "ssawa" | "manual" | "upload" | "card" | "hometax";
+export type TodayEvidenceStatus = "complete" | "missing" | "needs_review" | "not_required";
+export type TodaySsawaSyncAction = "auto_sync" | "manual_sync" | "resync" | "skip" | "fail";
+export type TodaySsawaSyncStatus = "success" | "failed" | "skipped" | "needs_review";
+export type TodaySsawaSyncTrigger = "system" | "buyer" | "admin";
+export type TodayCategoryRuleType = "item_contains" | "supplier_contains" | "request_category" | "source_category";
+export type TodayCategoryRuleSource = "system" | "user";
+export type TodayCategoryClassificationAction = "auto_classified" | "user_confirmed" | "user_changed" | "reclassified";
+export type TodaySalesSource = "manual" | "upload" | "card" | "delivery_app" | "pos";
+export type TodaySalesType = "매장 매출" | "배달앱 매출" | "카드 매출" | "현금 매출" | "기타 매출";
+export type TodaySalesPaymentMethod = "card" | "cash" | "transfer" | "delivery_app" | "mixed" | "unknown";
+export type TodaySalesChannel = "store" | "baemin" | "yogiyo" | "coupang_eats" | "naver" | "phone_order" | "etc";
+export type TodayExpenseType = "임대료" | "인건비" | "공과금" | "배달수수료" | "광고비" | "소모품" | "통신비" | "보험료" | "수리비" | "기타";
+export type TodayExpensePaymentMethod = "card" | "cash" | "transfer" | "auto_withdrawal" | "unknown";
+export type TodayRecurringRecordType = "expense" | "sales";
+export type TodayRecurringRepeatType = "monthly" | "weekly" | "yearly";
+export type TaxDocumentSourceType = "purchase" | "sales" | "expense" | "ssawa_deal" | "manual";
+export type TaxDocumentType = "tax_invoice" | "receipt" | "card_receipt" | "cash_receipt" | "transaction_statement" | "quote" | "delivery_confirmation" | "bank_transfer" | "invoice" | "contract" | "etc";
+export type TaxDocumentStatus = "attached" | "missing" | "needs_review" | "verified" | "rejected";
+export type TaxDocumentCheckType = "tax_invoice_required" | "receipt_missing" | "evidence_missing" | "category_unclassified" | "amount_missing" | "supplier_info_missing" | "ssawa_document_available" | "duplicate_possible" | "refund_or_dispute_review";
+export type TaxDocumentCheckStatus = "ok" | "warning" | "missing" | "needs_review";
+export type TaxDocumentCheckSeverity = "low" | "medium" | "high";
+export type TaxExportRequestStatus = "draft" | "generated" | "failed";
+export type TaxExportType = "summary" | "csv" | "zip" | "accountant_package";
+export type SupplierSaleSource = "ssawa" | "manual" | "upload";
+export type SupplierSaleStatus = "pending" | "confirmed" | "completed" | "cancelled" | "refunded" | "disputed" | "needs_review";
+export type SupplierSettlementStatus = "not_applicable" | "pending" | "scheduled" | "paid" | "held" | "failed" | "needs_review";
+export type SupplierTaxInvoiceStatus = "not_needed" | "required" | "issued" | "requested" | "unknown";
+export type SupplierSalePaymentMethod = "direct" | "bank_transfer" | "card" | "ssawa_safe" | "unknown";
+export type TodaySupplierSyncAction = "auto_sync" | "manual_sync" | "resync" | "skip" | "fail";
+export type TodaySupplierSyncStatus = "success" | "failed" | "skipped" | "needs_review";
+export type TodaySupplierSyncTrigger = "system" | "supplier" | "admin";
 
 export type AnalysisSourceType = "invoice" | "quotation" | "receipt" | "delivery_note" | "tax_invoice" | "photo" | "excel" | "text" | "etc";
 
@@ -694,15 +726,27 @@ export interface DealAttachment {
 
 export interface PurchaseRecord {
   id: string;
+  business_id?: string;
+  source?: TodayPurchaseSource;
+  source_id?: string;
   deal_id?: string;
   quote_request_id?: string;
   buyer_id: string;
   supplier_id: string;
   supplier_name: string;
+  supplier_business_id?: string;
   supplier_business_number?: string;
   purchase_title: string;
   purchase_date: string;
   category_name: string;
+  item_summary?: string;
+  auto_category?: string;
+  category_confidence?: number;
+  category_reason?: string;
+  category_needs_review?: boolean;
+  category_confirmed_by_user?: boolean;
+  category_confirmed_at?: string;
+  category_rule_id?: string;
   accounting_category: string;
   sub_category?: string;
   item_count: number;
@@ -718,13 +762,234 @@ export interface PurchaseRecord {
   tax_invoice_status: TaxInvoiceStatus;
   receipt_status: ReceiptStatus;
   delivery_note_status: DeliveryNoteStatus;
+  evidence_status?: TodayEvidenceStatus;
+  evidence_files_json?: string;
   accounting_status: AccountingStatus;
   sync_target: SyncTarget;
+  ssawa_deal_id?: string;
+  ssawa_quote_request_id?: string;
+  ssawa_supplier_id?: string;
   memo: string;
   user_memo?: string;
   admin_memo?: string;
+  created_by?: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
+}
+
+export interface TodayCategory {
+  id: string;
+  business_id?: string;
+  name: string;
+  description: string;
+  sort_order: number;
+  is_default: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodayCategoryRule {
+  id: string;
+  business_id?: string;
+  category_name: string;
+  rule_type: TodayCategoryRuleType;
+  pattern: string;
+  confidence: number;
+  source: TodayCategoryRuleSource;
+  use_count: number;
+  last_used_at?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodayCategoryClassificationLog {
+  id: string;
+  business_id?: string;
+  purchase_record_id: string;
+  previous_category?: string;
+  classified_category: string;
+  confidence: number;
+  reason: string;
+  rule_id?: string;
+  action: TodayCategoryClassificationAction;
+  actor_user_id?: string;
+  created_at: string;
+}
+
+export interface TodaySalesRecord {
+  id: string;
+  business_id: string;
+  source: TodaySalesSource;
+  sales_type: TodaySalesType;
+  payment_method: TodaySalesPaymentMethod;
+  sales_channel: TodaySalesChannel;
+  amount: number;
+  sales_date: string;
+  memo: string;
+  evidence_status: TodayEvidenceStatus;
+  evidence_files_json?: string;
+  source_id?: string;
+  upload_batch_id?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+export interface TodayExpenseRecord {
+  id: string;
+  business_id: string;
+  expense_type: TodayExpenseType;
+  payment_method: TodayExpensePaymentMethod;
+  vendor_name: string;
+  source?: "manual" | "upload" | "card" | "hometax";
+  source_id?: string;
+  upload_batch_id?: string;
+  amount: number;
+  expense_date: string;
+  memo: string;
+  evidence_status: TodayEvidenceStatus;
+  evidence_files_json?: string;
+  is_recurring: boolean;
+  recurring_rule_id?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+export interface TodayRecurringRule {
+  id: string;
+  business_id: string;
+  record_type: TodayRecurringRecordType;
+  title: string;
+  amount: number;
+  category: string;
+  payment_method: string;
+  repeat_type: TodayRecurringRepeatType;
+  day_of_month?: number;
+  day_of_week?: number;
+  start_date: string;
+  end_date?: string;
+  is_active: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaxDocument {
+  id: string;
+  business_id: string;
+  source_type: TaxDocumentSourceType;
+  source_id: string;
+  document_type: TaxDocumentType;
+  document_name: string;
+  file_url?: string;
+  file_path?: string;
+  file_mime_type?: string;
+  file_size?: number;
+  amount?: number;
+  issued_at?: string;
+  supplier_name?: string;
+  memo?: string;
+  status: TaxDocumentStatus;
+  uploaded_by?: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+export interface TaxDocumentCheck {
+  id: string;
+  business_id: string;
+  source_type: TaxDocumentSourceType;
+  source_id: string;
+  check_type: TaxDocumentCheckType;
+  status: TaxDocumentCheckStatus;
+  message: string;
+  severity: TaxDocumentCheckSeverity;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaxExportRequest {
+  id: string;
+  business_id: string;
+  period_start: string;
+  period_end: string;
+  status: TaxExportRequestStatus;
+  export_type: TaxExportType;
+  file_url?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierSalesRecord {
+  id: string;
+  supplier_business_id: string;
+  buyer_business_id: string;
+  buyer_display_name: string;
+  source: SupplierSaleSource;
+  source_id: string;
+  ssawa_deal_id?: string;
+  ssawa_quote_request_id?: string;
+  ssawa_quote_id?: string;
+  ssawa_product_id?: string;
+  item_summary: string;
+  category: string;
+  total_amount: number;
+  supply_amount?: number;
+  vat_amount?: number;
+  payment_method: SupplierSalePaymentMethod;
+  sale_status: SupplierSaleStatus;
+  settlement_status: SupplierSettlementStatus;
+  tax_invoice_status: SupplierTaxInvoiceStatus;
+  evidence_status: TodayEvidenceStatus;
+  sold_at: string;
+  completed_at?: string;
+  settled_at?: string;
+  memo: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+export interface TodaySupplierSyncLog {
+  id: string;
+  supplier_business_id: string;
+  buyer_business_id?: string;
+  ssawa_deal_id?: string;
+  supplier_sales_record_id?: string;
+  action: TodaySupplierSyncAction;
+  status: TodaySupplierSyncStatus;
+  message: string;
+  error_code?: string;
+  error_detail?: string;
+  triggered_by: TodaySupplierSyncTrigger;
+  triggered_user_id?: string;
+  payload_snapshot_json: string;
+  created_at: string;
+}
+
+export interface TodaySsawaSyncLog {
+  id: string;
+  business_id: string;
+  ssawa_deal_id: string;
+  purchase_record_id?: string;
+  action: TodaySsawaSyncAction;
+  status: TodaySsawaSyncStatus;
+  message: string;
+  error_code?: string;
+  error_detail?: string;
+  triggered_by: TodaySsawaSyncTrigger;
+  triggered_user_id?: string;
+  payload_snapshot_json: string;
+  created_at: string;
 }
 
 export interface PurchaseRecordItem {
@@ -1700,6 +1965,577 @@ export interface DealStatusLog {
   created_at: string;
 }
 
+export type TodayRequoteRecommendationType = "category" | "item" | "supplier" | "purchase_record" | "mixed";
+export type TodayRequoteRecommendationStatus = "active" | "dismissed" | "draft_created" | "request_submitted" | "expired";
+export type TodayRequoteRecommendationLevel = "low" | "medium" | "high";
+export type TodaySsawaQuoteDraftCreatedFrom = "today_requote" | "today_purchase" | "manual";
+export type TodaySsawaQuoteDraftStatus = "draft" | "opened" | "submitted" | "cancelled" | "expired";
+export type TodayRequoteLogAction = "recommendation_created" | "dismissed" | "draft_created" | "draft_opened" | "request_submitted" | "failed";
+export type TodayUploadType = "sales" | "expense" | "purchase" | "mixed" | "unknown";
+export type TodayUploadContext = "buyer_today" | "supplier_today";
+export type TodayUploadBatchStatus = "uploaded" | "parsed" | "mapping_needed" | "ready_to_import" | "imported" | "partially_imported" | "failed" | "cancelled";
+export type TodayUploadRecordType = "sales" | "expense" | "purchase" | "unknown";
+export type TodayUploadFinalRecordType = TodayUploadRecordType | "skip";
+export type TodayUploadValidationStatus = "valid" | "warning" | "invalid" | "duplicate" | "skipped" | "imported";
+export type TodayUploadLogAction = "uploaded" | "parsed" | "mapping_changed" | "row_updated" | "imported" | "failed" | "cancelled";
+export type TodayUploadTargetField =
+  | "date"
+  | "amount"
+  | "record_type"
+  | "category"
+  | "counterparty_name"
+  | "item_summary"
+  | "payment_method"
+  | "memo"
+  | "tax_invoice_status"
+  | "evidence_status"
+  | "ignore";
+export type SupplierProductEventType = "view" | "inquiry" | "quote_request" | "order_request" | "deal_created" | "deal_completed";
+export type SupplierProductEventSource = "ssawa" | "today";
+export type SupplierTodayInsightType = "sales_up" | "sales_down" | "quote_conversion_low" | "response_delay" | "settlement_needs_review" | "tax_invoice_needed" | "product_performing" | "product_info_missing";
+export type SupplierTodayInsightSeverity = "low" | "medium" | "high";
+export type SupplierTaskType = "quote_send" | "delivery_complete" | "buyer_confirmation_wait" | "settlement_check" | "tax_invoice_check" | "product_info_update" | "inquiry_reply";
+export type SupplierTaskStatus = "open" | "done" | "dismissed";
+export type TodayAIMode = "buyer" | "supplier" | "admin";
+export type TodayAIMessageRole = "user" | "assistant" | "system";
+export type TodayAIMessageStatus = "success" | "failed" | "blocked";
+export type TodayAIInsightMode = "buyer" | "supplier";
+export type TodayAIInsightSeverity = "low" | "medium" | "high";
+export type TodayAIInsightStatus = "active" | "dismissed" | "resolved" | "expired";
+export type TodaySecurityEventType =
+  | "unauthorized_access_attempt"
+  | "forbidden_business_access"
+  | "forbidden_supplier_access"
+  | "admin_route_denied"
+  | "storage_access_denied"
+  | "ai_scope_blocked"
+  | "rls_violation_detected"
+  | "suspicious_repeated_attempt";
+export type TodaySecuritySeverity = "low" | "medium" | "high" | "critical";
+export type AdminTodayActionType =
+  | "resync_buyer_purchase"
+  | "resync_supplier_sale"
+  | "rerun_category_classification"
+  | "rerun_tax_checks"
+  | "reparse_upload"
+  | "import_upload_rows"
+  | "dismiss_alert"
+  | "mark_reviewed"
+  | "create_admin_memo"
+  | "request_user_action"
+  | "check_environment"
+  | "view_sensitive_summary"
+  | "update_settings";
+export type AdminTodayActionResultStatus = "success" | "failed" | "skipped";
+export type AdminTodayTargetType =
+  | "sync_log"
+  | "supplier_sync_log"
+  | "upload_batch"
+  | "ai_message"
+  | "tax_check"
+  | "settlement"
+  | "security_event"
+  | "environment"
+  | "settings"
+  | "business"
+  | "supplier";
+export type TodayAdminSettingKey =
+  | "sync_failure_threshold"
+  | "upload_error_threshold"
+  | "large_amount_threshold"
+  | "tax_missing_high_amount"
+  | "ai_daily_request_limit"
+  | "security_repeat_threshold"
+  | "settlement_review_threshold"
+  | "admin_alerts_enabled";
+export type TodayAIInsightType =
+  | "profit_summary"
+  | "profit_drop_reason"
+  | "cost_increase"
+  | "requote_suggestion"
+  | "missing_evidence"
+  | "tax_invoice_check"
+  | "data_quality_warning"
+  | "supplier_sales_summary"
+  | "quote_conversion"
+  | "product_performance"
+  | "settlement_risk"
+  | "tax_invoice_issue"
+  | "customer_repeat"
+  | "task_priority";
+
+export interface TodayRequoteRecommendation {
+  id: string;
+  business_id: string;
+  recommendation_type: TodayRequoteRecommendationType;
+  status: TodayRequoteRecommendationStatus;
+  period_key: string;
+  category: string;
+  item_keyword: string;
+  supplier_name?: string;
+  related_purchase_record_ids_json: string;
+  current_amount: number;
+  previous_amount: number;
+  delta_amount: number;
+  delta_rate: number;
+  score: number;
+  recommendation_level: TodayRequoteRecommendationLevel;
+  reason: string;
+  action_label: string;
+  action_url?: string;
+  ssawa_quote_draft_id?: string;
+  ssawa_quote_request_id?: string;
+  dismissed_at?: string;
+  expires_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodaySsawaQuoteDraft {
+  id: string;
+  business_id: string;
+  created_from: TodaySsawaQuoteDraftCreatedFrom;
+  recommendation_id?: string;
+  source_purchase_record_ids_json: string;
+  category: string;
+  title: string;
+  description: string;
+  items_json: string;
+  preferred_delivery_date?: string;
+  delivery_address_snapshot: string;
+  region: string;
+  attachments_json: string;
+  memo: string;
+  status: TodaySsawaQuoteDraftStatus;
+  ssawa_quote_request_id?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  expires_at?: string;
+}
+
+export interface TodayRequoteLog {
+  id: string;
+  business_id: string;
+  recommendation_id?: string;
+  draft_id?: string;
+  quote_request_id?: string;
+  action: TodayRequoteLogAction;
+  message: string;
+  payload_json: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface TodayUploadBatch {
+  id: string;
+  business_id: string;
+  upload_context: TodayUploadContext;
+  upload_type: TodayUploadType;
+  status: TodayUploadBatchStatus;
+  file_name: string;
+  file_mime_type: string;
+  file_size: number;
+  original_header_json: string;
+  detected_mapping_json: string;
+  row_count: number;
+  valid_count: number;
+  warning_count: number;
+  invalid_count: number;
+  duplicate_count: number;
+  imported_count: number;
+  skipped_count: number;
+  error_message?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  imported_at?: string;
+  cancelled_at?: string;
+}
+
+export interface TodayUploadRow {
+  id: string;
+  business_id: string;
+  batch_id: string;
+  row_index: number;
+  row_hash: string;
+  raw_json: string;
+  mapped_json: string;
+  detected_record_type: TodayUploadRecordType;
+  final_record_type: TodayUploadFinalRecordType;
+  validation_status: TodayUploadValidationStatus;
+  validation_messages_json: string;
+  duplicate_candidate_json: string;
+  import_target_table?: "sales_records" | "expense_records" | "purchase_records";
+  import_target_id?: string;
+  imported_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodayUploadColumnMapping {
+  id: string;
+  business_id: string;
+  batch_id: string;
+  source_column_name: string;
+  target_field: TodayUploadTargetField;
+  confidence: number;
+  sample_values_json: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodayUploadLog {
+  id: string;
+  business_id: string;
+  batch_id: string;
+  row_id?: string;
+  action: TodayUploadLogAction;
+  message: string;
+  payload_json: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface SupplierProductEvent {
+  id: string;
+  supplier_business_id: string;
+  product_id?: string;
+  buyer_business_id?: string;
+  event_type: SupplierProductEventType;
+  source: SupplierProductEventSource;
+  metadata_json: string;
+  created_at: string;
+}
+
+export interface SupplierTodayInsight {
+  id: string;
+  supplier_business_id: string;
+  type: SupplierTodayInsightType;
+  severity: SupplierTodayInsightSeverity;
+  title: string;
+  message: string;
+  action_label: string;
+  action_url: string;
+  related_id?: string;
+  created_at: string;
+}
+
+export interface SupplierTask {
+  id: string;
+  supplier_business_id: string;
+  task_type: SupplierTaskType;
+  title: string;
+  message: string;
+  status: SupplierTaskStatus;
+  related_type?: string;
+  related_id?: string;
+  due_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodayAIConversation {
+  id: string;
+  business_id?: string;
+  supplier_business_id?: string;
+  user_id: string;
+  mode: TodayAIMode;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+export interface TodayAIMessage {
+  id: string;
+  conversation_id: string;
+  business_id?: string;
+  supplier_business_id?: string;
+  user_id: string;
+  role: TodayAIMessageRole;
+  message_text: string;
+  context_summary_json: string;
+  evidence_json: string;
+  actions_json: string;
+  safety_warnings_json: string;
+  model_name?: string;
+  token_usage_json?: string;
+  status: TodayAIMessageStatus;
+  error_message?: string;
+  created_at: string;
+}
+
+export interface TodayAIInsight {
+  id: string;
+  business_id?: string;
+  supplier_business_id?: string;
+  mode: TodayAIInsightMode;
+  insight_type: TodayAIInsightType;
+  severity: TodayAIInsightSeverity;
+  title: string;
+  message: string;
+  evidence_json: string;
+  actions_json: string;
+  status: TodayAIInsightStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodayAIUsage {
+  id: string;
+  business_id?: string;
+  supplier_business_id?: string;
+  user_id: string;
+  mode: TodayAIMode;
+  request_count: number;
+  token_count?: number;
+  date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodaySecurityEvent {
+  id: string;
+  user_id?: string;
+  role?: UserRole;
+  business_id?: string;
+  supplier_business_id?: string;
+  event_type: TodaySecurityEventType;
+  severity: TodaySecuritySeverity;
+  route: string;
+  resource_type: string;
+  resource_id?: string;
+  message: string;
+  ip_hash?: string;
+  user_agent_hash?: string;
+  created_at: string;
+}
+
+export interface AdminTodayAction {
+  id: string;
+  admin_user_id: string;
+  action_type: AdminTodayActionType;
+  target_type: AdminTodayTargetType;
+  target_id: string;
+  business_id?: string;
+  supplier_business_id?: string;
+  before_status?: string;
+  after_status?: string;
+  memo: string;
+  result_status: AdminTodayActionResultStatus;
+  error_message?: string;
+  created_at: string;
+}
+
+export interface TodayAdminSetting {
+  id: string;
+  setting_key: TodayAdminSettingKey;
+  setting_value: string;
+  value_type: "number" | "boolean" | "string";
+  description: string;
+  updated_by?: string;
+  updated_at: string;
+  created_at: string;
+}
+
+export type TodayNotificationAudience = "buyer" | "supplier" | "admin";
+export type TodayNotificationStatus = "unread" | "read" | "done" | "dismissed";
+export type TodayNotificationSeverity = "info" | "warning" | "critical" | "success";
+export type TodayNotificationCategory = "tax" | "evidence" | "category" | "cost" | "requote" | "upload" | "ai" | "sync" | "quote" | "deal" | "settlement" | "security" | "env" | "feedback";
+export type TodayNotificationChannel = "in_app" | "email" | "sms" | "kakao" | "push";
+export type TodayReminderFrequency = "instant" | "daily" | "weekly" | "manual";
+export type TodayGuideAudience = "common" | TodayNotificationAudience;
+export type TodayLaunchChecklistStatus = "todo" | "doing" | "done" | "blocked";
+export type TodayBetaApplicationType = "buyer" | "supplier";
+export type TodayBetaApplicationStatus = "submitted" | "contacted" | "accepted" | "rejected";
+export type TodaySupportTicketStatus = "open" | "reviewing" | "resolved";
+export type TodayProductEventName = "page_view" | "cta_click" | "notification_action" | "onboarding_step" | "help_search" | "feedback_submit" | "beta_apply" | "upload_import" | "requote_draft";
+export type TodayBacklogStatus = "new" | "triaged" | "planned" | "in_progress" | "done" | "wont_do";
+
+export interface TodayNotification {
+  id: string;
+  audience: TodayNotificationAudience;
+  user_id: string;
+  business_id?: string;
+  supplier_business_id?: string;
+  category: TodayNotificationCategory;
+  severity: TodayNotificationSeverity;
+  status: TodayNotificationStatus;
+  title: string;
+  message: string;
+  action_label: string;
+  action_url: string;
+  amount?: number;
+  due_at?: string;
+  group_key: string;
+  dedupe_key: string;
+  generated_from: string;
+  created_at: string;
+  read_at?: string;
+  completed_at?: string;
+  dismissed_at?: string;
+}
+
+export interface TodayNotificationPreference {
+  id: string;
+  audience: TodayNotificationAudience;
+  user_id: string;
+  category: TodayNotificationCategory;
+  in_app_enabled: boolean;
+  email_enabled: boolean;
+  sms_enabled: boolean;
+  kakao_enabled: boolean;
+  push_enabled: boolean;
+  frequency: TodayReminderFrequency;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
+  updated_at: string;
+}
+
+export interface TodayReminderRule {
+  id: string;
+  audience: TodayNotificationAudience;
+  category: TodayNotificationCategory;
+  name: string;
+  condition_text: string;
+  frequency: TodayReminderFrequency;
+  channels: TodayNotificationChannel[];
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodayNotificationDeliveryLog {
+  id: string;
+  notification_id: string;
+  channel: TodayNotificationChannel;
+  status: "queued" | "skipped" | "sent" | "failed";
+  provider: string;
+  message: string;
+  created_at: string;
+}
+
+export interface TodayOnboardingProgress {
+  id: string;
+  audience: TodayNotificationAudience;
+  user_id: string;
+  completed_step_ids: string[];
+  dismissed_guide_ids: string[];
+  last_opened_at: string;
+  completed_at?: string;
+  updated_at: string;
+}
+
+export interface TodayHelpArticle {
+  id: string;
+  audience: TodayGuideAudience;
+  category: string;
+  title: string;
+  body: string;
+  tags: string[];
+  safe_copy: string;
+  route_hint: string;
+  updated_at: string;
+}
+
+export interface TodayLaunchChecklistItem {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  owner: string;
+  status: TodayLaunchChecklistStatus;
+  evidence_url: string;
+  updated_at: string;
+}
+
+export interface TodayPricingPlan {
+  id: string;
+  audience: TodayBetaApplicationType;
+  name: string;
+  price_label: string;
+  description: string;
+  features: string[];
+  beta_badge: string;
+}
+
+export interface TodayBetaApplication {
+  id: string;
+  application_type: TodayBetaApplicationType;
+  business_name: string;
+  contact_name: string;
+  phone: string;
+  email: string;
+  region: string;
+  memo: string;
+  consent_marketing: boolean;
+  status: TodayBetaApplicationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodaySupportTicket {
+  id: string;
+  user_role: TodayGuideAudience;
+  user_id?: string;
+  title: string;
+  description: string;
+  page_url: string;
+  status: TodaySupportTicketStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodayProductEvent {
+  id: string;
+  user_id?: string;
+  user_role: TodayGuideAudience;
+  event_name: TodayProductEventName;
+  page_url: string;
+  metadata_json: string;
+  created_at: string;
+}
+
+export interface TodayBetaSurveyResponse {
+  id: string;
+  user_id: string;
+  user_role: TodayNotificationAudience;
+  score: number;
+  nps_score: number;
+  comment: string;
+  pain_point: string;
+  created_at: string;
+}
+
+export interface TodayBetaBacklogItem {
+  id: string;
+  source_type: "feedback" | "survey" | "analytics" | "operator";
+  source_id: string;
+  title: string;
+  description: string;
+  user_segment: string;
+  impact_score: number;
+  effort_score: number;
+  priority_score: number;
+  status: TodayBacklogStatus;
+  owner: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodayBetaSegment {
+  id: string;
+  label: string;
+  audience: TodayNotificationAudience;
+  user_count: number;
+  activation_rate: number;
+  retention_rate: number;
+  feedback_count: number;
+  risk_note: string;
+}
+
 export interface AppData {
   environment: DemoEnvironment;
   is_demo: boolean;
@@ -1730,6 +2566,18 @@ export interface AppData {
   purchase_records: PurchaseRecord[];
   purchase_record_items: PurchaseRecordItem[];
   purchase_documents: PurchaseDocument[];
+  tax_documents: TaxDocument[];
+  tax_document_checks: TaxDocumentCheck[];
+  tax_export_requests: TaxExportRequest[];
+  supplier_sales_records: SupplierSalesRecord[];
+  today_supplier_sync_logs: TodaySupplierSyncLog[];
+  sales_records: TodaySalesRecord[];
+  expense_records: TodayExpenseRecord[];
+  recurring_rules: TodayRecurringRule[];
+  today_categories: TodayCategory[];
+  today_category_rules: TodayCategoryRule[];
+  today_category_classification_logs: TodayCategoryClassificationLog[];
+  today_ssawa_sync_logs: TodaySsawaSyncLog[];
   accounting_entries: AccountingEntry[];
   analysis_jobs: AnalysisJob[];
   analysis_items: AnalysisItem[];
@@ -1782,6 +2630,37 @@ export interface AppData {
   category_playbooks: CategoryPlaybook[];
   roadmap_items: RoadmapItem[];
   deal_status_logs: DealStatusLog[];
+  today_requote_recommendations: TodayRequoteRecommendation[];
+  today_ssawa_quote_drafts: TodaySsawaQuoteDraft[];
+  today_requote_logs: TodayRequoteLog[];
+  today_upload_batches: TodayUploadBatch[];
+  today_upload_rows: TodayUploadRow[];
+  today_upload_column_mappings: TodayUploadColumnMapping[];
+  today_upload_logs: TodayUploadLog[];
+  supplier_product_events: SupplierProductEvent[];
+  supplier_today_insights: SupplierTodayInsight[];
+  supplier_tasks: SupplierTask[];
+  today_ai_conversations: TodayAIConversation[];
+  today_ai_messages: TodayAIMessage[];
+  today_ai_insights: TodayAIInsight[];
+  today_ai_usage: TodayAIUsage[];
+  today_security_events: TodaySecurityEvent[];
+  admin_today_actions: AdminTodayAction[];
+  today_admin_settings: TodayAdminSetting[];
+  today_notifications: TodayNotification[];
+  today_notification_preferences: TodayNotificationPreference[];
+  today_reminder_rules: TodayReminderRule[];
+  today_notification_delivery_logs: TodayNotificationDeliveryLog[];
+  today_onboarding_progress: TodayOnboardingProgress[];
+  today_help_articles: TodayHelpArticle[];
+  today_launch_checklist: TodayLaunchChecklistItem[];
+  today_pricing_plans: TodayPricingPlan[];
+  today_beta_applications: TodayBetaApplication[];
+  today_support_tickets: TodaySupportTicket[];
+  today_product_events: TodayProductEvent[];
+  today_beta_survey_responses: TodayBetaSurveyResponse[];
+  today_beta_backlog: TodayBetaBacklogItem[];
+  today_beta_segments: TodayBetaSegment[];
 }
 
 export interface AnalysisJobInput {
