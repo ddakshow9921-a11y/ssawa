@@ -1016,6 +1016,7 @@ export default function App() {
     navigate("/login");
   }
 
+  const currentRoutePath = path.split("?")[0];
   const routeRole = getRouteRole(path);
   const shellRole = authSession && routeRole && routeRole !== authSession.role ? authSession.role : getShellRole(path, authSession);
   const navItems = navItemsByRole[shellRole];
@@ -1029,10 +1030,12 @@ export default function App() {
   const primaryAction = getPrimaryAction(shellRole);
   const PrimaryActionIcon = primaryAction.icon;
   const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole, handleSignOut);
-  const showChatShortcut = Boolean(authSession && isProtectedAppPath(path) && !isNavItemActive(path, chatPath));
+  const hasTodayFloatingActions = Boolean(authSession && (currentRoutePath === "/app/today" || currentRoutePath.startsWith("/app/today/")));
+  const showChatShortcut = Boolean(authSession && isProtectedAppPath(path) && !isNavItemActive(path, chatPath) && !hasTodayFloatingActions);
   const showMobileNav = Boolean(authSession && isProtectedAppPath(path));
   const showMobileMore = Boolean(showMobileNav && mobileMoreItems.length > 0);
   const mobileMoreActive = mobileMoreItems.some((item) => isNavItemActive(path, item.path));
+  const shellClassName = `appShell${hasTodayFloatingActions ? " hasTodayFloatingActions" : ""}`;
 
   function navBadgeCount(itemPath: string) {
     if (!authSession) return 0;
@@ -1053,7 +1056,7 @@ export default function App() {
   return (
     <>
       {showLaunchScreen && <LaunchScreen />}
-      <div className="appShell" aria-hidden={showLaunchScreen ? true : undefined}>
+      <div className={shellClassName} aria-hidden={showLaunchScreen ? true : undefined}>
       <aside className="sidebar" aria-label="주요 메뉴">
         <button className="brandButton" type="button" onClick={() => navigate("/app")}>
           <img src="/아이콘.png" alt="" className="brandIcon" />

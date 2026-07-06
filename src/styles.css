@@ -333,6 +333,10 @@ button:disabled {
   background: #162b43;
 }
 
+.hasTodayFloatingActions .chatShortcutButton {
+  display: none;
+}
+
 .page {
   width: min(1180px, calc(100% - 64px));
   max-width: 100%;
