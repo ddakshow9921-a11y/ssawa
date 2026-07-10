@@ -13932,26 +13932,41 @@ function quoteToDraft(quote: Quote, supplier: SupplierProfile): QuoteDraft {
   };
 }
 
+function addDaysToDateString(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function quoteDefaultDeliveryDate(request?: QuoteRequest) {
+  const todayDate = today;
+  const requestedDate = request?.desired_delivery_date?.slice(0, 10) || todayDate;
+  return requestedDate.localeCompare(todayDate) >= 0 ? requestedDate : todayDate;
+}
+
 function SupplierRequestDetailPage({ data, navigate, setData, requestId, quoteId, authSession }: MutatingPageProps & { requestId: string; quoteId?: string; authSession?: AppAuthSession | null }) {
   const request = data.quote_requests.find((entry) => entry.id === requestId);
   const supplier = getActiveSupplier(data, authSession);
   const existingQuote = quoteId
     ? data.quotes.find((entry) => entry.id === quoteId && entry.supplier_id === supplier.id)
     : request ? data.quotes.find((entry) => entry.quote_request_id === request.id && entry.supplier_id === supplier.id) : undefined;
+  const defaultDeliveryDate = quoteDefaultDeliveryDate(request);
+  const defaultValidUntil = addDaysToDateString(defaultDeliveryDate, Math.max(1, supplier.default_quote_valid_days ?? 3));
   const [isEditingExistingQuote, setIsEditingExistingQuote] = useState(false);
   const [draft, setDraft] = useState<QuoteDraft>(() => existingQuote ? quoteToDraft(existingQuote, supplier) : {
     supplier_id: supplier.id,
     quote_mode: "summary",
     total_amount: 0,
     delivery_fee: supplier.free_delivery_min_amount ? 0 : 30000,
-    available_delivery_date: "2026-07-08",
+    available_delivery_date: defaultDeliveryDate,
     tax_invoice_available: supplier.tax_invoice_available,
     card_payment_available: supplier.card_payment_available,
     alternative_proposal: "",
     item_price_memo: "",
     item_prices: [],
     memo: "",
-    valid_until: "2026-07-09",
+    valid_until: defaultValidUntil,
   });
   const [error, setError] = useState("");
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
