@@ -1,8 +1,16 @@
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Headers": "authorization,content-type,x-client-info,apikey",
+  "Access-Control-Max-Age": "86400",
+};
+
 export function jsonResult(status, body) {
   return {
     status,
     body,
     headers: {
+      ...CORS_HEADERS,
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
     },
@@ -10,7 +18,8 @@ export function jsonResult(status, body) {
 }
 
 export function toWebResponse(result) {
-  return new Response(JSON.stringify(result.body), {
+  const body = result.status === 204 || result.status === 304 ? undefined : JSON.stringify(result.body);
+  return new Response(body, {
     status: result.status,
     headers: result.headers,
   });
@@ -21,7 +30,7 @@ export function sendNodeResponse(response, result) {
   for (const [key, value] of Object.entries(result.headers)) {
     response.setHeader(key, value);
   }
-  response.end(JSON.stringify(result.body));
+  response.end(result.status === 204 || result.status === 304 ? undefined : JSON.stringify(result.body));
 }
 
 export async function readJsonBody(request) {

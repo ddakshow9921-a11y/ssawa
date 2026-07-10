@@ -58,6 +58,7 @@ import {
   createSalesRecord,
   createReport,
   createQuote,
+  updateQuote,
   createDealFromQuote,
   createProductInquiry,
   createProductOrderRequest,
@@ -94,7 +95,6 @@ import {
   getMatchedSuppliersForRequest,
   getNotificationsForUser,
   getOperationsSummary,
-  getPlatformFeesBySupplier,
   getProductCategoryName,
   getPurchaseCategorySummary,
   getQuoteRequestOpsInsights,
@@ -142,6 +142,7 @@ import {
   notificationEntityLabels,
   notificationPriorityLabels,
   notificationTypeLabels,
+  normalizeData,
   operatorTaskStatusLabels,
   operatorTaskTypeLabels,
   operationalStatusLabels,
@@ -203,7 +204,6 @@ import {
   supplierDocumentStatusLabels,
   supplierDocumentTypeLabels,
   supplierSubscriptionStatusLabels,
-  supplierSubCategoryOptions,
   taxInvoiceStatusLabels,
   testLoginAccounts,
   todayUploadBatchStatusLabels,
@@ -270,18 +270,32 @@ import {
   createTodaySupportTicket,
   dismissTodayGuide,
 } from "./data/sawaData";
-import type { AccountingStatus, AdminTodayActionResultStatus, AdminTodayActionType, AdminTodayTargetType, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, BusinessManualReviewRequest, BusinessManualReviewStatus, BusinessOperatingStatus, BusinessVerification, BusinessVerificationStatus, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, ProductInquiryDraft, ProductOrderRequestDraft, ProductStockStatus, Profile, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProduct, SupplierProductDraft, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, TodayAdminSettingKey, TodayEvidenceStatus, TodayNotificationAudience, TodayNotificationStatus, TodayRequoteRecommendation, TodaySecurityEventType, TodaySecuritySeverity, TodaySsawaQuoteDraft, TodayUploadFinalRecordType, TodayUploadTargetField, TodayUploadType, UserRole } from "./types";
+import type { AccountingStatus, AdminTodayActionResultStatus, AdminTodayActionType, AdminTodayTargetType, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, BusinessManualReviewRequest, BusinessManualReviewStatus, BusinessOperatingStatus, BusinessVerification, BusinessVerificationStatus, Category, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, ProductInquiryDraft, ProductOrderRequestDraft, ProductStockStatus, Profile, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReply, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProduct, SupplierProductDraft, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, TodayAdminSettingKey, TodayEvidenceStatus, TodayNotificationAudience, TodayNotificationStatus, TodayRequoteRecommendation, TodaySecurityEventType, TodaySecuritySeverity, TodaySsawaQuoteDraft, TodayUploadFinalRecordType, TodayUploadTargetField, TodayUploadType, UserRole } from "./types";
 import { appConfig, environmentLabel, isLiveModeReady } from "./lib/env";
 import { getSupabaseClient, isSupabaseConfigured, SUPABASE_PROJECT_URL } from "./lib/supabase/client";
-import { ensureProfile, getCurrentProfile, signOut as signOutSupabase } from "./lib/supabase/auth";
+import { ensureProfile, getCurrentProfile, getCurrentUser, signOut as signOutSupabase } from "./lib/supabase/auth";
 import { storageBuckets, uploadAppFile, validateUploadFile } from "./lib/supabase/storage";
-import { liveFeatureMatrix } from "./services/liveDataService";
+import { createLiveDealReview, createLiveQuote, createLiveQuoteRequest, createLiveReviewReply, ensureLiveQuoteRequestExists, listLiveQuotesForRequests, listLiveQuoteRequestItemsForRequests, listLiveReviewRepliesForReviews, listLiveReviewsForSupplier, listLiveSupplierProfiles, listMyLiveNotifications, listMyLiveQuoteRequests, listMyLiveReviews, listMyLiveSupplierQuotes, listVisibleLiveQuoteRequests, liveFeatureMatrix, updateLiveQuote, updateLiveSupplierApprovalStatus, updateLiveSupplierSettings } from "./services/liveDataService";
+import { getLastCloudAppStateUpdatedAt, markCloudAppStateSynced, pullCloudAppStateSnapshot, pushCloudAppStateSnapshot } from "./services/cloudAppStateSyncService";
 
 const today = "2026-07-06";
 const NOTIFICATION_SOUND_SRC = "/sounds/ssawa_quote_arrived_notification.wav";
+const MERGED_CONSTRUCTION_CATEGORY = "건축/설비/닥트/환기자재";
+const IMAGE_ANALYSIS_TIMEOUT_MS = 90000;
+const SUPPLIER_BETA_FREE_ENABLED = true;
+const SUPPLIER_BETA_END_LABEL = "정식 출시 전까지";
 
 function apiEndpoint(path: string) {
-  if (/^https?:\/\//i.test(path) || !appConfig.apiBaseUrl) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (typeof window !== "undefined" && path.startsWith("/api/")) {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1" || host === "::1") return path;
+    if (Capacitor.isNativePlatform()) {
+      const nativeApiBaseUrl = appConfig.apiBaseUrl || appConfig.appUrl || window.location.origin;
+      return `${nativeApiBaseUrl.replace(/\/app\/?$/, "").replace(/\/$/, "")}${path}`;
+    }
+  }
+  if (!appConfig.apiBaseUrl) return path;
   return `${appConfig.apiBaseUrl}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
@@ -301,6 +315,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "거래", path: "/app/deals", icon: ReceiptText },
     { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
     { label: "오늘장사", mobileLabel: "장부", path: "/app/today", icon: Landmark },
+    { label: "후기", path: "/app/reviews", icon: BadgeCheck },
     { label: "내 사업장", mobileLabel: "사업장", path: "/app/buyer/profile", icon: ShieldCheck },
   ],
   supplier: [
@@ -309,8 +324,10 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "견적", path: "/app/supplier/quotes", icon: ClipboardList },
     { label: "거래", path: "/app/supplier/deals", icon: PackageCheck },
     { label: "내 상품", mobileLabel: "상품", path: "/app/supplier/products", icon: Boxes },
+    { label: "후기", path: "/app/supplier/reputation", icon: BadgeCheck },
     { label: "문의", path: "/app/supplier/chats", icon: MessageCircle },
-    { label: "정산", path: "/app/supplier/settlements", icon: Landmark },
+    { label: "입금/증빙", mobileLabel: "입금", path: "/app/supplier/settlements", icon: Landmark },
+    { label: "구독", path: "/app/supplier/billing", icon: RefreshCcw },
     { label: "업체 정보", path: "/app/supplier/profile", icon: Building2 },
   ],
   admin: [
@@ -365,6 +382,20 @@ const emptyItem = {
 
 type ReceiptAnalysisPreview = ReturnType<typeof analyzeReceiptPhotoForQuoteRequest>;
 type ReceiptAnalysisSource = "gemini" | "mock" | "";
+type TodayAiEntryMode = "receipt" | "voice";
+
+type TodayAiPurchaseItemDraft = ManualPurchaseDraft["items"][number] & {
+  confidence_score?: number;
+  needs_review?: boolean;
+  review_reason?: string;
+};
+
+type TodayAiPurchaseDraft = Omit<ManualPurchaseDraft, "items"> & {
+  items: TodayAiPurchaseItemDraft[];
+  source: TodayAiEntryMode;
+  raw_text: string;
+  confidence_score: number;
+};
 
 type AppAuthSession = {
   id: string;
@@ -379,11 +410,12 @@ type AppAuthSession = {
 };
 
 function getRouteRole(path: string): UserRole | null {
-  if (path.startsWith("/app/admin")) return "admin";
-  if (path === "/app/today/supplier" || path.startsWith("/app/today/supplier/")) return "supplier";
-  if (path.startsWith("/app/supplier") || path === "/partners" || path === "/supplier/apply") return "supplier";
-  if (path.startsWith("/app/buyer")) return "buyer";
-  if (path.startsWith("/app/chats")) return "buyer";
+  const routePath = path.split("?")[0];
+  if (routePath === "/app/admin" || routePath.startsWith("/app/admin/")) return "admin";
+  if (routePath === "/app/today/supplier" || routePath.startsWith("/app/today/supplier/")) return "supplier";
+  if (routePath === "/app/supplier" || routePath.startsWith("/app/supplier/") || routePath === "/partners" || routePath === "/supplier/apply") return "supplier";
+  if (routePath === "/app/buyer" || routePath.startsWith("/app/buyer/")) return "buyer";
+  if (routePath === "/app/chats" || routePath.startsWith("/app/chats/")) return "buyer";
   return null;
 }
 
@@ -413,10 +445,59 @@ function getRoleLabel(role: UserRole) {
   return "구매자";
 }
 
-function getNotificationUserId(role: UserRole) {
+function getNotificationUserId(role: UserRole, session?: AppAuthSession | null) {
+  if (session?.role === role) return session.id;
   if (role === "supplier") return "sup-1-user";
   if (role === "admin") return "admin-1";
   return "buyer-1";
+}
+
+function getNotificationUserIds(data: AppData, role: UserRole, session?: AppAuthSession | null) {
+  if (role === "buyer") {
+    const buyerIds = Array.from(getBuyerIdsForSession(data, session));
+    return buyerIds.length ? buyerIds : [getNotificationUserId(role, session)];
+  }
+  const ids = [getNotificationUserId(role, session)];
+  if (role === "supplier") {
+    const supplier = getActiveSupplier(data, session);
+    ids.push(supplier.user_id, supplierUserIdForUi(data, supplier.id));
+  }
+  return Array.from(new Set(ids.filter(Boolean)));
+}
+
+function canonicalSupplierCategoryName(value: string) {
+  const compact = value.trim().replace(/\s+/g, "");
+  if (compact === "설비/닥트/환기자재" || compact === "건축자재" || compact === MERGED_CONSTRUCTION_CATEGORY.replace(/\s+/g, "")) {
+    return MERGED_CONSTRUCTION_CATEGORY;
+  }
+  return value.trim();
+}
+
+function uniqueSupplierCategories(values: string[]) {
+  return Array.from(new Set(values.map(canonicalSupplierCategoryName).filter(Boolean)));
+}
+
+function supplierCategoryChoices(categories: Category[]) {
+  const seen = new Set<string>();
+  return categories.flatMap((category) => {
+    const name = canonicalSupplierCategoryName(category.name);
+    if (seen.has(name)) return [];
+    seen.add(name);
+    return [{ ...category, name }];
+  });
+}
+
+function hasSupplierCategory(categories: string[], categoryName: string) {
+  const canonicalName = canonicalSupplierCategoryName(categoryName);
+  return categories.some((category) => canonicalSupplierCategoryName(category) === canonicalName);
+}
+
+function toggleSupplierCategory(categories: string[], categoryName: string) {
+  const canonicalName = canonicalSupplierCategoryName(categoryName);
+  const canonicalCategories = uniqueSupplierCategories(categories);
+  return canonicalCategories.includes(canonicalName)
+    ? canonicalCategories.filter((category) => category !== canonicalName)
+    : [...canonicalCategories, canonicalName];
 }
 
 function getNotificationPath(role: UserRole) {
@@ -431,30 +512,41 @@ function getChatPath(role: UserRole) {
   return "/app/chats";
 }
 
-function getChatUnreadCountForRole(data: AppData, role: UserRole) {
-  const threads = getThreadsForRole(data, role);
-  const userId = getNotificationUserId(role);
-  return threads.reduce((sum, thread) => sum + getThreadUnreadCount(data, thread.id, role === "admin" ? undefined : userId), 0);
+function getChatUnreadCountForRole(data: AppData, role: UserRole, session?: AppAuthSession | null) {
+  const threads = getThreadsForRole(data, role, session);
+  const supplierUserId = role === "supplier" ? supplierThreadUserIdForUi(getActiveSupplier(data, session).id) : "";
+  return threads.reduce((sum, thread) => {
+    const userId = role === "admin" ? undefined : role === "supplier" ? supplierUserId : thread.buyer_id;
+    return sum + getThreadUnreadCount(data, thread.id, userId);
+  }, 0);
 }
 
 function supplierUserIdForUi(data: AppData, supplierId: string) {
   return data.supplier_profiles.find((supplier) => supplier.id === supplierId)?.user_id ?? `${supplierId}-user`;
 }
 
-function getThreadsForRole(data: AppData, role: UserRole) {
-  if (role === "admin") return data.message_threads.filter((thread) => thread.status !== "archived");
-  if (role === "supplier") {
-    const supplier = getActiveSupplier(data);
-    return data.message_threads.filter((thread) => thread.supplier_id === supplier.id && thread.status !== "archived");
-  }
-  return data.message_threads.filter((thread) => thread.buyer_id === "buyer-1" && thread.status !== "archived");
+function supplierThreadUserIdForUi(supplierId: string) {
+  return `${supplierId}-user`;
 }
 
-function canAccessMessageThread(data: AppData, thread: MessageThread | undefined, role: UserRole) {
+function getThreadsForRole(data: AppData, role: UserRole, session?: AppAuthSession | null) {
+  if (role === "admin") return data.message_threads.filter((thread) => thread.status !== "archived");
+  if (role === "supplier") {
+    const supplier = getActiveSupplier(data, session);
+    return data.message_threads.filter((thread) => thread.supplier_id === supplier.id && thread.status !== "archived");
+  }
+  const buyerIds = getBuyerIdsForSession(data, session);
+  if (buyerIds.size === 0) buyerIds.add("buyer-1");
+  return data.message_threads.filter((thread) => buyerIds.has(thread.buyer_id) && thread.status !== "archived");
+}
+
+function canAccessMessageThread(data: AppData, thread: MessageThread | undefined, role: UserRole, session?: AppAuthSession | null) {
   if (!thread) return false;
   if (role === "admin") return true;
-  if (role === "supplier") return thread.supplier_id === getActiveSupplier(data).id;
-  return thread.buyer_id === "buyer-1";
+  if (role === "supplier") return thread.supplier_id === getActiveSupplier(data, session).id;
+  const buyerIds = getBuyerIdsForSession(data, session);
+  if (buyerIds.size === 0) buyerIds.add("buyer-1");
+  return buyerIds.has(thread.buyer_id);
 }
 
 function getThreadUnreadCount(data: AppData, threadId: string, userId?: string) {
@@ -609,6 +701,10 @@ declare global {
 }
 
 const AUTH_STORAGE_KEY = "ssawa-auth-session-v2";
+const AUTH_SESSION_STORAGE_KEY = "ssawa-auth-session-current";
+const AUTH_AUTO_LOGIN_KEY = "ssawa-auto-login-enabled";
+const LIVE_QUOTE_SYNC_STORAGE_KEY = "ssawa-live-quote-request-sync-map-v1";
+const APP_DATA_STORAGE_KEYS = ["ssawa-production-data-v1", "ssawa-mvp-data-v7"] as const;
 const LAUNCH_SCREEN_MIN_MS = 700;
 const EXIT_CONFIRM_MESSAGE = "싸와! 앱을 종료하시겠습니까?";
 
@@ -787,20 +883,48 @@ function normalizeStoredSession(value: unknown): AppAuthSession | null {
   };
 }
 
+function isAutoLoginEnabled() {
+  try {
+    return window.localStorage.getItem(AUTH_AUTO_LOGIN_KEY) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+function setAutoLoginEnabled(enabled: boolean) {
+  try {
+    window.localStorage.setItem(AUTH_AUTO_LOGIN_KEY, enabled ? "true" : "false");
+    if (!enabled) window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors; the active in-memory session still works.
+  }
+}
+
 function loadStoredAuthSession() {
   try {
-    return normalizeStoredSession(JSON.parse(window.localStorage.getItem(AUTH_STORAGE_KEY) ?? "null"));
+    const storage = isAutoLoginEnabled() ? window.localStorage : window.sessionStorage;
+    const session = normalizeStoredSession(JSON.parse(storage.getItem(isAutoLoginEnabled() ? AUTH_STORAGE_KEY : AUTH_SESSION_STORAGE_KEY) ?? "null"));
+    if (session?.source === "local" && isLiveModeReady()) return null;
+    return session;
   } catch {
     return null;
   }
 }
 
-function persistAuthSession(session: AppAuthSession | null) {
+function persistAuthSession(session: AppAuthSession | null, autoLogin = isAutoLoginEnabled()) {
   if (!session) {
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    window.sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
     return;
   }
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  const serialized = JSON.stringify(session);
+  if (autoLogin) {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, serialized);
+    window.sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+    return;
+  }
+  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  window.sessionStorage.setItem(AUTH_SESSION_STORAGE_KEY, serialized);
 }
 
 function authSessionFromProfile(profile: Profile, supplier?: SupplierProfile | null, source: AppAuthSession["source"] = "local"): AppAuthSession {
@@ -814,6 +938,776 @@ function authSessionFromProfile(profile: Profile, supplier?: SupplierProfile | n
     verificationStatus: profile.business_verification_status ?? "not_started",
     supplierApprovalStatus: supplier?.approval_status,
     source,
+  };
+}
+
+function parseMoneyInput(value: string) {
+  const digits = value.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+  return digits ? Number(digits) : 0;
+}
+
+function formatMoneyInput(value: number) {
+  const amount = Math.max(0, Math.round(Number(value) || 0));
+  return amount > 0 ? amount.toLocaleString("ko-KR") : "";
+}
+
+function normalizeTodayPurchaseCategoryName(value: string) {
+  const text = value.trim();
+  if (todayPurchaseCategoryNames.includes(text as (typeof todayPurchaseCategoryNames)[number])) return text;
+  if (text.includes("식자재")) return "식자재비";
+  if (text.includes("포장")) return "포장재비";
+  if (text.includes("소모")) return "소모품비";
+  if (text.includes("주방")) return "주방용품";
+  if (text.includes("설비") || text.includes("닥트") || text.includes("환기")) return "설비자재";
+  if (text.includes("건축")) return "건축자재";
+  if (text.includes("공구") || text.includes("산업")) return "공구/산업자재";
+  if (text.includes("배송")) return "배송비";
+  return "기타 매입";
+}
+
+function guessTodayPurchaseCategory(text: string) {
+  const source = text.toLowerCase();
+  if (/(달걀|계란|대파|양파|마늘|쌀|고기|육류|생선|채소|과일|식자재|소스|양념|분말|냉동|식품)/.test(source)) return "식자재비";
+  if (/(봉투|용기|컵|빨대|포장|박스|랩|호일|비닐)/.test(source)) return "포장재비";
+  if (/(세제|장갑|휴지|청소|소독|마스크|소모품)/.test(source)) return "소모품비";
+  if (/(냄비|팬|칼|도마|주방|집기|그릇|식기)/.test(source)) return "주방용품";
+  if (/(닥트|환기|필터|배관|설비|수리|부품)/.test(source)) return "설비자재";
+  if (/(시멘트|타일|목재|페인트|건축)/.test(source)) return "건축자재";
+  if (/(공구|드릴|산업|볼트|나사)/.test(source)) return "공구/산업자재";
+  if (/(배송|택배|퀵|운임)/.test(source)) return "배송비";
+  return "기타 매입";
+}
+
+function findMoneyMentions(text: string) {
+  const amounts: number[] = [];
+  const compact = text.replace(/,/g, "");
+  const moneyPattern = /(\d+(?:\.\d+)?)\s*(만원|만|천원|천|원)?/g;
+  let match: RegExpExecArray | null;
+  while ((match = moneyPattern.exec(compact))) {
+    const raw = Number(match[1]);
+    if (!Number.isFinite(raw)) continue;
+    const unit = match[2] ?? "";
+    const previous = compact[Math.max(0, match.index - 1)] ?? "";
+    const next = compact[match.index + match[0].length] ?? "";
+    if (!unit && raw < 1000) continue;
+    if (!unit && /[개박봉단팩통병장롤포망kg킬]/.test(next)) continue;
+    if (/[a-zA-Z가-힣]/.test(previous) && !unit) continue;
+    if (unit === "만원" || unit === "만") amounts.push(Math.round(raw * 10000));
+    else if (unit === "천원" || unit === "천") amounts.push(Math.round(raw * 1000));
+    else amounts.push(Math.round(raw));
+  }
+  const complexMatch = compact.match(/(?:(\d+(?:\.\d+)?)만)\s*(?:(\d+(?:\.\d+)?)천)?/);
+  if (complexMatch) {
+    const man = Number(complexMatch[1] ?? 0);
+    const cheon = Number(complexMatch[2] ?? 0);
+    const amount = Math.round(man * 10000 + cheon * 1000);
+    if (amount > 0 && !amounts.includes(amount)) amounts.push(amount);
+  }
+  return amounts;
+}
+
+const koreanDigitValues: Record<string, number> = {
+  공: 0,
+  영: 0,
+  한: 1,
+  하나: 1,
+  일: 1,
+  두: 2,
+  둘: 2,
+  이: 2,
+  세: 3,
+  셋: 3,
+  삼: 3,
+  네: 4,
+  넷: 4,
+  사: 4,
+  다섯: 5,
+  오: 5,
+  여섯: 6,
+  육: 6,
+  일곱: 7,
+  칠: 7,
+  여덟: 8,
+  팔: 8,
+  아홉: 9,
+  구: 9,
+};
+
+function parseKoreanQuantityNumber(raw: string) {
+  const text = raw.trim().replace(/,/g, "");
+  if (!text) return 0;
+  const numeric = Number(text);
+  if (Number.isFinite(numeric)) return numeric;
+
+  const simple = koreanDigitValues[text];
+  if (simple !== undefined) return simple;
+
+  let total = 0;
+  let section = 0;
+  let current = 0;
+  const digitPattern = /(하나|둘|셋|넷|다섯|여섯|일곱|여덟|아홉|한|두|세|네|일|이|삼|사|오|육|칠|팔|구|공|영|십|백|천|만)/g;
+  const tokens = text.match(digitPattern) ?? [];
+  for (const token of tokens) {
+    if (token === "만") {
+      section += current;
+      total += Math.max(section, 1) * 10000;
+      section = 0;
+      current = 0;
+      continue;
+    }
+    if (token === "천" || token === "백" || token === "십") {
+      const multiplier = token === "천" ? 1000 : token === "백" ? 100 : 10;
+      section += Math.max(current, 1) * multiplier;
+      current = 0;
+      continue;
+    }
+    current = koreanDigitValues[token] ?? current;
+  }
+  return total + section + current;
+}
+
+function parseVoiceOrderLocally(transcript: string): TodayAiPurchaseDraft {
+  const cleaned = transcript.trim();
+  const createdAt = new Date().toISOString();
+  const dateMatch = cleaned.match(/(20\d{2}[-./년]\s*\d{1,2}[-./월]\s*\d{1,2})/);
+  const purchaseDate = dateMatch ? dateMatch[1].replace(/[년./]/g, "-").replace(/월/g, "-").replace(/일/g, "").replace(/\s/g, "").replace(/-+/g, "-").replace(/-$/, "") : today;
+  const supplierMatch = cleaned.match(/^([가-힣A-Za-z0-9\s]{2,30})(?:에서|한테|에게)\s+/) ?? cleaned.match(/([가-힣A-Za-z0-9\s]{2,30})(?:에서|한테|에게)\s*(?:주문|발주|샀|구매|결제)/);
+  const supplierName = supplierMatch?.[1]?.trim().replace(/^(오늘|이번|그리고)\s*/, "") || "음성 주문";
+  const quantityPattern = /(\d+(?:,\d+)*(?:\.\d+)?|하나|둘|셋|넷|다섯|여섯|일곱|여덟|아홉|한|두|세|네|[일이삼사오육칠팔구공영십백천만]+)\s*(박스|box|kg|킬로|키로|개|봉|단|팩|통|병|장|롤|포|망|묶음|세트|판)/i;
+  const segments = cleaned
+    .split(/\n|,|;|ㆍ| 그리고 | 추가로 | plus /i)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  const sourceSegments = segments.length ? segments : [cleaned || "품목 확인 필요"];
+  const items = sourceSegments.map((segment) => {
+    const quantityMatch = segment.match(quantityPattern);
+    const quantity = quantityMatch ? Math.max(0.01, parseKoreanQuantityNumber(quantityMatch[1])) : 1;
+    const unit = quantityMatch ? quantityMatch[2].replace(/box/i, "박스").replace(/킬로|키로/i, "kg") : "개";
+    const amount = findMoneyMentions(segment).pop() ?? 0;
+    const withoutMoney = segment
+      .replace(/(?:(\d+(?:\.\d+)?)만)\s*(?:(\d+(?:\.\d+)?)천)?원?/g, " ")
+      .replace(/\d[\d,]*(?:\.\d+)?\s*(?:만원|만|천원|천|원)/g, " ");
+    const name = withoutMoney
+      .replace(/^([가-힣A-Za-z0-9\s]{2,30})(?:에서|한테|에게)\s+/, " ")
+      .replace(quantityPattern, " ")
+      .replace(/(오늘|내일|주문|발주|구매|결제|해주세요|해줘|샀어|샀습니다|했어|했어요|했습니다|해|에서|한테|에게|그리고|추가로)/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return {
+      item_name: name || "품목 확인 필요",
+      spec: "",
+      quantity,
+      unit,
+      unit_price: quantity > 0 && amount > 0 ? Math.round(amount / quantity) : amount,
+      total_price: amount,
+      memo: segment,
+      confidence_score: name && amount > 0 ? 78 : 58,
+      needs_review: !name || amount <= 0,
+      review_reason: !name ? "품목명을 확인해 주세요." : amount <= 0 ? "금액을 확인해 주세요." : "",
+    } satisfies TodayAiPurchaseItemDraft;
+  });
+  const itemTotalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
+  const totalAmount = itemTotalAmount || findMoneyMentions(cleaned).pop() || 0;
+  const category = guessTodayPurchaseCategory(cleaned);
+  return {
+    source: "voice",
+    raw_text: cleaned,
+    confidence_score: items.some((item) => item.needs_review) ? 64 : 78,
+    purchase_title: `${items[0]?.item_name ?? "음성 주문"} 외 ${Math.max(0, items.length - 1)}건`,
+    supplier_name: supplierName,
+    supplier_business_number: "000-00-00000",
+    purchase_date: purchaseDate.length >= 10 ? purchaseDate.slice(0, 10) : today,
+    category_name: category,
+    accounting_category: category,
+    sub_category: "",
+    total_amount: totalAmount,
+    supply_amount: 0,
+    vat_amount: 0,
+    delivery_fee: 0,
+    discount_amount: 0,
+    payment_method: "undecided",
+    tax_invoice_status: "none",
+    receipt_status: "none",
+    delivery_note_status: "none",
+    memo: `음성 주문 자동 입력\n${cleaned}\n${createdAt}`,
+    items,
+  };
+}
+
+function normalizeTodayAiPayload(payload: Record<string, unknown>, source: TodayAiEntryMode, rawTextFallback: string, fileName = ""): TodayAiPurchaseDraft {
+  const rawItems = Array.isArray(payload.items) ? payload.items : [];
+  const items = rawItems.slice(0, 30).map((entry) => {
+    const item = entry && typeof entry === "object" ? entry as Record<string, unknown> : {};
+    const quantity = positiveNumber(item.quantity, 1) || 1;
+    const unitPrice = positiveNumber(item.unitPrice, positiveNumber(item.unit_price, 0));
+    const totalPrice = positiveNumber(item.totalPrice, positiveNumber(item.total_price, unitPrice * quantity));
+    const confidence = clampScore(positiveNumber(item.confidenceScore, positiveNumber(item.confidence_score, 76)));
+    return {
+      item_name: stringValue(item.itemName) || stringValue(item.item_name) || "품목 확인 필요",
+      spec: stringValue(item.spec),
+      quantity,
+      unit: stringValue(item.unit) || "개",
+      unit_price: unitPrice || (quantity > 0 ? Math.round(totalPrice / quantity) : totalPrice),
+      total_price: totalPrice,
+      memo: stringValue(item.memo),
+      confidence_score: confidence,
+      needs_review: Boolean(item.needsReview ?? item.needs_review) || confidence < 75 || totalPrice <= 0,
+      review_reason: stringValue(item.reviewReason) || stringValue(item.review_reason),
+    } satisfies TodayAiPurchaseItemDraft;
+  });
+  const fallbackDraft = source === "voice" ? parseVoiceOrderLocally(rawTextFallback) : null;
+  const normalizedItems = items.length ? items : fallbackDraft?.items ?? [{
+    item_name: "품목 확인 필요",
+    spec: "",
+    quantity: 1,
+    unit: "개",
+    unit_price: 0,
+    total_price: 0,
+    memo: rawTextFallback,
+    confidence_score: 50,
+    needs_review: true,
+    review_reason: "AI가 품목을 충분히 추출하지 못했습니다.",
+  }];
+  const rawText = stringValue(payload.rawText) || stringValue(payload.raw_text) || rawTextFallback;
+  const category = normalizeTodayPurchaseCategoryName(stringValue(payload.categoryName) || stringValue(payload.category_name) || guessTodayPurchaseCategory(rawText));
+  const totalAmount = positiveNumber(payload.totalAmount, positiveNumber(payload.total_amount, normalizedItems.reduce((sum, item) => sum + item.total_price, 0)));
+  const firstItemName = normalizedItems[0]?.item_name || (source === "voice" ? "음성 주문" : "영수증");
+  return {
+    source,
+    raw_text: rawText,
+    confidence_score: clampScore(positiveNumber(payload.confidenceScore, positiveNumber(payload.confidence_score, normalizedItems.some((item) => item.needs_review) ? 62 : 82))),
+    purchase_title: stringValue(payload.purchaseTitle) || stringValue(payload.purchase_title) || `${firstItemName} 외 ${Math.max(0, normalizedItems.length - 1)}건`,
+    supplier_name: stringValue(payload.supplierName) || stringValue(payload.supplier_name) || fallbackDraft?.supplier_name || (source === "voice" ? "음성 주문" : "이미지 영수증"),
+    supplier_business_number: stringValue(payload.supplierBusinessNumber) || stringValue(payload.supplier_business_number) || "000-00-00000",
+    purchase_date: stringValue(payload.purchaseDate) || stringValue(payload.purchase_date) || today,
+    category_name: category,
+    accounting_category: category,
+    sub_category: "",
+    total_amount: totalAmount,
+    supply_amount: 0,
+    vat_amount: 0,
+    delivery_fee: 0,
+    discount_amount: 0,
+    payment_method: "undecided",
+    tax_invoice_status: "none",
+    receipt_status: source === "receipt" ? "uploaded" : "none",
+    delivery_note_status: "none",
+    memo: `${source === "receipt" ? "이미지 영수증" : "음성 주문"} 자동 입력${fileName ? `: ${fileName}` : ""}\n${rawText}`,
+    items: normalizedItems,
+  };
+}
+
+function toManualPurchaseDraft(draft: TodayAiPurchaseDraft): ManualPurchaseDraft {
+  return {
+    purchase_title: draft.purchase_title,
+    supplier_name: draft.supplier_name,
+    supplier_business_number: draft.supplier_business_number,
+    purchase_date: draft.purchase_date,
+    category_name: draft.category_name,
+    accounting_category: draft.accounting_category,
+    sub_category: draft.sub_category,
+    total_amount: draft.total_amount,
+    supply_amount: draft.supply_amount,
+    vat_amount: draft.vat_amount,
+    delivery_fee: draft.delivery_fee,
+    discount_amount: draft.discount_amount,
+    payment_method: draft.payment_method,
+    tax_invoice_status: draft.tax_invoice_status,
+    receipt_status: draft.receipt_status,
+    delivery_note_status: draft.delivery_note_status,
+    memo: draft.memo,
+    items: draft.items.map((item) => ({
+      item_name: item.item_name,
+      spec: item.spec,
+      quantity: item.quantity,
+      unit: item.unit,
+      unit_price: item.unit_price,
+      total_price: item.total_price,
+      memo: item.memo,
+    })),
+  };
+}
+
+function readLiveQuoteSyncMap(): Record<string, string> {
+  try {
+    return JSON.parse(window.localStorage.getItem(LIVE_QUOTE_SYNC_STORAGE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function writeLiveQuoteSyncMap(map: Record<string, string>) {
+  try {
+    window.localStorage.setItem(LIVE_QUOTE_SYNC_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // Local sync metadata is a convenience only; live data remains the source of truth.
+  }
+}
+
+function readStoredAppDataSnapshots(currentData: AppData) {
+  const snapshots: AppData[] = [currentData];
+  const seen = new Set<string>();
+
+  for (const key of APP_DATA_STORAGE_KEYS) {
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (!raw || seen.has(raw)) continue;
+      seen.add(raw);
+      snapshots.push(normalizeData(JSON.parse(raw) as Partial<AppData>));
+    } catch {
+      // Ignore corrupt legacy local data; the current production state remains usable.
+    }
+  }
+
+  return snapshots;
+}
+
+function mergeQuoteRequestState(data: AppData, liveRequests: QuoteRequest[], liveItems: QuoteRequestItem[], liveQuotes: Quote[] = [], liveSuppliers: SupplierProfile[] = [], liveReviews: Review[] = [], liveReviewReplies: ReviewReply[] = [], liveNotifications: Notification[] = []) {
+  const liveRequestIds = new Set(liveRequests.map((request) => request.id));
+  const liveItemIds = new Set(liveItems.map((item) => item.id));
+  const liveQuoteIds = new Set(liveQuotes.map((quote) => quote.id));
+  const liveSupplierIds = new Set(liveSuppliers.map((supplier) => supplier.id));
+  const liveReviewIds = new Set(liveReviews.map((review) => review.id));
+  const liveReviewDealIds = new Set(liveReviews.map((review) => review.deal_id));
+  const liveReviewReplyIds = new Set(liveReviewReplies.map((reply) => reply.id));
+  const liveReviewReplyReviewIds = new Set(liveReviewReplies.map((reply) => reply.review_id));
+  const liveNotificationIds = new Set(liveNotifications.map((notification) => notification.id));
+  const syncedLocalRequestIds = new Set(Object.keys(readLiveQuoteSyncMap()));
+  const keepLocalQuoteFlow = !isLiveModeReady();
+  const nextData: AppData = {
+    ...data,
+    supplier_profiles: [
+      ...liveSuppliers,
+      ...data.supplier_profiles.filter((supplier) =>
+        !liveSupplierIds.has(supplier.id)
+        && !liveSuppliers.some((liveSupplier) =>
+          liveSupplier.user_id === supplier.user_id
+          || cleanBusinessNumber(liveSupplier.business_number) === cleanBusinessNumber(supplier.business_number),
+        ),
+      ),
+    ],
+    quote_requests: keepLocalQuoteFlow ? [
+      ...liveRequests,
+      ...data.quote_requests.filter((request) =>
+        !liveRequestIds.has(request.id)
+        && !syncedLocalRequestIds.has(request.id)
+        && !liveRequests.some((liveRequest) => isLikelySameLiveRequest(request, liveRequest)),
+      ),
+    ] : liveRequests,
+    quote_request_items: keepLocalQuoteFlow ? [
+      ...liveItems,
+      ...data.quote_request_items.filter((item) => !liveItemIds.has(item.id) && !liveRequestIds.has(item.quote_request_id) && !syncedLocalRequestIds.has(item.quote_request_id)),
+    ] : liveItems,
+    quotes: keepLocalQuoteFlow ? [
+      ...liveQuotes,
+      ...data.quotes.filter((quote) => !liveQuoteIds.has(quote.id) && !liveRequestIds.has(quote.quote_request_id)),
+    ] : liveQuotes,
+    reviews: [
+      ...liveReviews,
+      ...data.reviews.filter((review) => !liveReviewIds.has(review.id) && !liveReviewDealIds.has(review.deal_id)),
+    ],
+    review_replies: [
+      ...liveReviewReplies,
+      ...data.review_replies.filter((reply) => !liveReviewReplyIds.has(reply.id) && !liveReviewReplyReviewIds.has(reply.review_id)),
+    ],
+    notifications: [
+      ...liveNotifications,
+      ...data.notifications.filter((notification) => !liveNotificationIds.has(notification.id)),
+    ],
+  };
+  saveData(nextData);
+  return nextData;
+}
+
+function clearLocalQuoteFlowForLiveMode(data: AppData): AppData {
+  if (!isLiveModeReady()) return data;
+  return {
+    ...data,
+    quote_requests: [],
+    quote_request_items: [],
+    quotes: [],
+  };
+}
+
+const cloudSyncedDataKeys = [
+  "deals",
+  "deal_items",
+  "deal_attachments",
+  "purchase_records",
+  "purchase_record_items",
+  "purchase_documents",
+  "tax_documents",
+  "tax_document_checks",
+  "tax_export_requests",
+  "supplier_sales_records",
+  "today_supplier_sync_logs",
+  "sales_records",
+  "expense_records",
+  "recurring_rules",
+  "today_category_classification_logs",
+  "today_ssawa_sync_logs",
+  "accounting_entries",
+  "analysis_jobs",
+  "analysis_items",
+  "analysis_attachments",
+  "analysis_raw_results",
+  "analysis_conversions",
+  "notifications",
+  "notification_events",
+  "notification_settings",
+  "message_threads",
+  "messages",
+  "message_read_states",
+  "message_reports",
+  "supplier_store_profiles",
+  "supplier_products",
+  "product_inquiries",
+  "product_order_requests",
+  "product_favorites",
+  "product_quote_items",
+  "product_reports",
+  "quote_attachments",
+  "reports",
+  "report_attachments",
+  "report_actions",
+  "report_comments",
+  "reviews",
+  "review_replies",
+  "review_reports",
+  "supplier_reputation_scores",
+  "user_sanctions",
+  "blacklist_entries",
+  "favorite_item_groups",
+  "favorite_items",
+  "deal_status_logs",
+  "today_requote_recommendations",
+  "today_ssawa_quote_drafts",
+  "today_requote_logs",
+  "today_upload_batches",
+  "today_upload_rows",
+  "today_upload_column_mappings",
+  "today_upload_logs",
+  "supplier_product_events",
+  "supplier_today_insights",
+  "supplier_tasks",
+  "today_ai_conversations",
+  "today_ai_messages",
+  "today_ai_insights",
+  "today_ai_usage",
+  "today_security_events",
+  "admin_today_actions",
+  "today_notifications",
+  "today_notification_preferences",
+  "today_reminder_rules",
+  "today_notification_delivery_logs",
+  "today_onboarding_progress",
+  "today_beta_applications",
+  "today_support_tickets",
+  "today_product_events",
+  "today_beta_survey_responses",
+  "today_beta_backlog",
+] as const satisfies ReadonlyArray<keyof AppData>;
+
+function mergeCloudAppState(current: AppData, payload: Partial<AppData>): AppData {
+  const mergedPayload: Record<string, unknown> = { ...current };
+
+  for (const [key, incoming] of Object.entries(payload) as Array<[keyof AppData, unknown]>) {
+    if (key === "local_auth_accounts") continue;
+    const existing = current[key];
+    if (Array.isArray(incoming)) {
+      mergedPayload[key] = mergeRecordArrays(Array.isArray(existing) ? existing as unknown[] : [], incoming as unknown[]);
+    } else if (incoming !== undefined) {
+      mergedPayload[key] = incoming;
+    }
+  }
+
+  mergedPayload.local_auth_accounts = current.local_auth_accounts;
+  const merged = normalizeData(mergedPayload as Partial<AppData>);
+  return clearLocalQuoteFlowForLiveMode(merged);
+}
+
+const cloudRelatedDataKeys = [
+  "profiles",
+  "supplier_profiles",
+  "quote_requests",
+  "quote_request_items",
+  "quotes",
+  "quote_attachments",
+  "deals",
+  "deal_items",
+  "deal_attachments",
+  "deal_status_logs",
+  "purchase_records",
+  "purchase_record_items",
+  "purchase_documents",
+  "tax_documents",
+  "tax_document_checks",
+  "accounting_entries",
+  "reviews",
+  "review_replies",
+  "review_reports",
+  "message_threads",
+  "messages",
+  "message_read_states",
+  "notifications",
+  "notification_events",
+  "supplier_sales_records",
+  "today_supplier_sync_logs",
+  "today_ssawa_sync_logs",
+  "platform_fees",
+  "settlement_items",
+  "settlements",
+  "supplier_reputation_scores",
+  "supplier_stats",
+] as const satisfies ReadonlyArray<keyof AppData>;
+
+function mergeCloudRelatedAppState(current: AppData, payload: Partial<AppData>): AppData {
+  const merged: Record<string, unknown> = { ...current };
+
+  for (const key of cloudRelatedDataKeys) {
+    const incoming = payload[key];
+    if (!Array.isArray(incoming) || incoming.length === 0) continue;
+    const existing = current[key];
+    merged[key] = mergeRecordArrays(Array.isArray(existing) ? existing as unknown[] : [], incoming as unknown[]);
+  }
+
+  merged.local_auth_accounts = current.local_auth_accounts;
+  return normalizeData(merged as Partial<AppData>);
+}
+
+function mergeRecordArrays(existing: unknown[], incoming: unknown[]) {
+  const byId = new Map<string, unknown>();
+  const upsert = (record: unknown) => {
+    const key = recordKey(record);
+    const current = byId.get(key);
+    if (!current || shouldPreferMergedRecord(record, current)) byId.set(key, record);
+  };
+  existing.forEach(upsert);
+  incoming.forEach(upsert);
+  return [...byId.values()];
+}
+
+function shouldPreferMergedRecord(candidate: unknown, current: unknown) {
+  const candidateTime = recordMergeTime(candidate);
+  const currentTime = recordMergeTime(current);
+  if (candidateTime || currentTime) return candidateTime >= currentTime;
+  return true;
+}
+
+function recordMergeTime(record: unknown) {
+  if (!record || typeof record !== "object") return 0;
+  return ["updated_at", "paid_at", "completed_at", "created_at"].reduce((latest, field) => {
+    const value = (record as Record<string, unknown>)[field];
+    if (typeof value !== "string" || !value) return latest;
+    const time = Date.parse(value);
+    return Number.isFinite(time) ? Math.max(latest, time) : latest;
+  }, 0);
+}
+
+function recordKey(record: unknown) {
+  if (record && typeof record === "object" && "id" in record) {
+    const id = (record as { id?: unknown }).id;
+    if (typeof id === "string" && id) return id;
+  }
+  return JSON.stringify(record);
+}
+
+function countCloudSyncedRecords(data: Partial<AppData>) {
+  return cloudSyncedDataKeys.reduce((sum, key) => {
+    const value = data[key];
+    return sum + (Array.isArray(value) ? value.length : 0);
+  }, 0);
+}
+
+function countCloudRelatedRecords(data: Partial<AppData>) {
+  return cloudRelatedDataKeys.reduce((sum, key) => {
+    const value = data[key];
+    return sum + (Array.isArray(value) ? value.length : 0);
+  }, 0);
+}
+
+function isAfterDate(value: string | undefined, base: string | undefined) {
+  if (!value) return false;
+  if (!base) return true;
+  return new Date(value).getTime() > new Date(base).getTime();
+}
+
+function quoteRequestDraftFromRecord(data: AppData, request: QuoteRequest): QuoteRequestDraft {
+  const items = data.quote_request_items
+    .filter((item) => item.quote_request_id === request.id)
+    .map((item) => ({
+      item_name: item.item_name,
+      spec: item.spec,
+      quantity: item.quantity,
+      unit: item.unit,
+      memo: item.memo,
+      is_required: item.is_required ?? true,
+      allow_alternative: item.allow_alternative ?? true,
+      confidence_score: item.confidence_score,
+      needs_review: item.needs_review ?? false,
+      review_reason: item.review_reason ?? "",
+    }));
+  return {
+    title: request.title,
+    category_id: request.category_id,
+    delivery_region: request.delivery_region,
+    delivery_address: request.delivery_address ?? "",
+    desired_delivery_date: request.desired_delivery_date,
+    need_tax_invoice: request.need_tax_invoice,
+    card_payment_required: request.card_payment_required,
+    description: request.description,
+    attachment_note: request.attachment_note ?? "",
+    previous_amount: request.previous_amount ?? 0,
+    input_method: request.input_method ?? "manual",
+    original_text_input: request.original_text_input ?? "",
+    template_name: request.template_name ?? "",
+    previous_request_id: request.previous_request_id ?? "",
+    urgent: request.urgent ?? false,
+    preferred_delivery_time: request.preferred_delivery_time ?? "",
+    budget_min: request.budget_min ?? 0,
+    budget_max: request.budget_max ?? 0,
+    preferred_brand: request.preferred_brand ?? "",
+    allow_alternatives: request.allow_alternatives ?? true,
+    include_delivery_fee: request.include_delivery_fee ?? true,
+    items: items.length ? items : [{ ...emptyItem }],
+    attachments: data.quote_attachments
+      .filter((attachment) => attachment.quote_request_id === request.id)
+      .map((attachment) => ({
+        file_name: attachment.file_name,
+        file_type: attachment.file_type,
+        analysis_status: attachment.analysis_status ?? "uploaded",
+        extracted_text: attachment.extracted_text ?? "",
+        extracted_items_json: attachment.extracted_items_json ?? "",
+      })),
+  };
+}
+
+function isLikelySameLiveRequest(localRequest: QuoteRequest, liveRequest: QuoteRequest) {
+  return localRequest.title === liveRequest.title
+    && localRequest.delivery_region === liveRequest.delivery_region
+    && localRequest.desired_delivery_date === liveRequest.desired_delivery_date
+    && localRequest.category_name === liveRequest.category_name;
+}
+
+function getBuyerIdsForSession(data: AppData, session: AppAuthSession | null | undefined) {
+  const ids = new Set<string>();
+  if (!session) return ids;
+  ids.add(session.id);
+  const email = session.email.trim().toLowerCase();
+  const businessName = session.businessName.trim();
+  const businessNumber = cleanBusinessNumber(session.businessNumber);
+  data.profiles
+    .filter((profile) => profile.role === "buyer")
+    .filter((profile) =>
+      profile.id === session.id
+      || profile.email.trim().toLowerCase() === email
+      || (businessName && profile.business_name === businessName)
+      || (businessNumber && cleanBusinessNumber(profile.business_number) === businessNumber),
+    )
+    .forEach((profile) => ids.add(profile.id));
+  if (isKnownBuyerCompatibilitySession(session)) ids.add("buyer-1");
+  return ids;
+}
+
+function isKnownBuyerCompatibilitySession(session: AppAuthSession) {
+  const email = session.email.trim().toLowerCase();
+  const businessName = session.businessName.trim();
+  return email === "koreaz01@naver.com" || businessName === "팬닥터";
+}
+
+function getPrimaryBuyerIdForSession(data: AppData, session: AppAuthSession | null | undefined) {
+  const ids = getBuyerIdsForSession(data, session);
+  const exactId = session?.role === "buyer" ? session.id : "";
+  if (exactId && ids.has(exactId) && hasBuyerOwnedRecords(data, exactId)) return exactId;
+  const recordOwnerId = Array.from(ids).find((id) => hasBuyerOwnedRecords(data, id));
+  return recordOwnerId ?? exactId ?? Array.from(ids)[0] ?? "buyer-1";
+}
+
+function hasBuyerOwnedRecords(data: AppData, buyerId: string) {
+  return data.quote_requests.some((entry) => entry.buyer_id === buyerId)
+    || data.deals.some((entry) => entry.buyer_id === buyerId)
+    || data.purchase_records.some((entry) => entry.buyer_id === buyerId)
+    || data.reviews.some((entry) => entry.buyer_id === buyerId)
+    || data.message_threads.some((entry) => entry.buyer_id === buyerId);
+}
+
+function isLocalUserCreatedQuoteRequest(request: QuoteRequest) {
+  return !["req-1", "req-2", "req-3"].includes(request.id) && request.buyer_id !== "buyer-1" && request.buyer_id !== "buyer-2";
+}
+
+function isLiveRecordId(value: string | undefined) {
+  return Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
+}
+
+function getSupplierQuoteRequestSource(data: AppData) {
+  if (!isLiveModeReady()) return data.quote_requests;
+  return data.quote_requests.filter((request) => isLiveRecordId(request.id));
+}
+
+function collectLocalQuoteSyncCandidates(dataSources: AppData[], session: AppAuthSession, liveRequests: QuoteRequest[], syncMap: Record<string, string>) {
+  const candidates: Array<{ data: AppData; request: QuoteRequest }> = [];
+  const seenIds = new Set<string>();
+
+  for (const sourceData of dataSources) {
+    const buyerIds = getBuyerIdsForSession(sourceData, session);
+    for (const request of sourceData.quote_requests) {
+      if (seenIds.has(request.id)) continue;
+      if (!isLocalUserCreatedQuoteRequest(request)) continue;
+      if (!buyerIds.has(request.buyer_id)) continue;
+      if (syncMap[request.id]) continue;
+      if (liveRequests.some((liveRequest) => isLikelySameLiveRequest(request, liveRequest))) continue;
+
+      candidates.push({ data: sourceData, request });
+      seenIds.add(request.id);
+    }
+  }
+
+  return candidates;
+}
+
+function metadataString(metadata: Record<string, unknown> | undefined, ...keys: string[]) {
+  for (const key of keys) {
+    const value = metadata?.[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function normalizeUserRole(value: unknown, fallback: UserRole = "buyer"): UserRole {
+  return value === "supplier" || value === "admin" || value === "buyer" ? value : fallback;
+}
+
+function profileFromSupabaseUser(user: { id: string; email?: string | null; created_at?: string; user_metadata?: Record<string, unknown> } | null | undefined, fallback?: Partial<Profile> | null): Profile | null {
+  if (!user?.id) return null;
+  const metadata = user.user_metadata ?? {};
+  const email = (user.email ?? fallback?.email ?? metadataString(metadata, "email")).trim();
+  if (!email) return null;
+  const role = normalizeUserRole(metadata.role, fallback?.role ?? "buyer");
+  const name = metadataString(metadata, "name", "manager_name", "full_name") || fallback?.name || email.split("@")[0] || "사용자";
+  const businessName = metadataString(metadata, "business_name", "businessName") || fallback?.business_name || name;
+  const businessNumber = metadataString(metadata, "business_number", "businessNumber") || fallback?.business_number || "";
+  const phone = metadataString(metadata, "phone", "manager_phone") || fallback?.phone || "";
+  const region = metadataString(metadata, "region", "service_region") || fallback?.region || "";
+  return {
+    id: user.id,
+    name,
+    email,
+    role,
+    business_name: businessName,
+    business_number: businessNumber,
+    phone,
+    region,
+    representative_name: metadataString(metadata, "representative_name", "representativeName") || fallback?.representative_name,
+    business_opening_date: metadataString(metadata, "business_opening_date", "opening_date", "openingDate") || fallback?.business_opening_date,
+    business_address: metadataString(metadata, "business_address", "businessAddress", "address") || fallback?.business_address,
+    business_status: (metadataString(metadata, "business_status") || fallback?.business_status) as BusinessOperatingStatus | undefined,
+    business_tax_type: metadataString(metadata, "business_tax_type", "tax_type") || fallback?.business_tax_type,
+    business_verification_status: (metadataString(metadata, "business_verification_status", "verification_status") || fallback?.business_verification_status || "verified") as BusinessVerificationStatus,
+    business_verified_at: metadataString(metadata, "business_verified_at") || fallback?.business_verified_at,
+    onboarding_completed: fallback?.onboarding_completed ?? false,
+    onboarding_completed_at: fallback?.onboarding_completed_at,
+    is_test_user: false,
+    created_at: fallback?.created_at || user.created_at || new Date().toISOString(),
   };
 }
 
@@ -838,7 +1732,7 @@ function loginErrorMessage() {
 
 export default function App() {
   const [path, setPath] = useState(normalizePath(window.location.pathname));
-  const [data, setData] = useState<AppData>(() => loadData());
+  const [data, setData] = useState<AppData>(() => clearLocalQuoteFlowForLiveMode(loadData()));
   const [authSession, setAuthSession] = useState<AppAuthSession | null>(() => loadStoredAuthSession());
   const [authReady, setAuthReady] = useState(false);
   const [showLaunchScreen, setShowLaunchScreen] = useState(true);
@@ -848,6 +1742,12 @@ export default function App() {
   const launchStartedAtRef = useRef(typeof performance !== "undefined" ? performance.now() : Date.now());
   const pathRef = useRef(path);
   const authSessionRef = useRef(authSession);
+  const dataRef = useRef(data);
+  const liveQuoteSyncRunningRef = useRef(false);
+  const cloudAppStateReadyRef = useRef(false);
+  const cloudAppStateApplyingRef = useRef(false);
+  const cloudAppStatePushTimerRef = useRef<number | undefined>(undefined);
+  const cloudAppStateMissingTableWarnedRef = useRef(false);
   const exitConfirmOpenRef = useRef(false);
 
   useEffect(() => {
@@ -867,6 +1767,205 @@ export default function App() {
   useEffect(() => {
     authSessionRef.current = authSession;
   }, [authSession]);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
+  useEffect(() => {
+    if (!authReady || !authSession?.id || !isLiveModeReady()) {
+      cloudAppStateReadyRef.current = false;
+      return;
+    }
+    let cancelled = false;
+    cloudAppStateReadyRef.current = false;
+
+    async function syncCloudAppStateOnLogin() {
+      const previousCloudUpdatedAt = getLastCloudAppStateUpdatedAt();
+      const result = await pullCloudAppStateSnapshot();
+      if (cancelled) return;
+
+      if (!result.ok) {
+        if (result.missingTable && !cloudAppStateMissingTableWarnedRef.current) {
+          cloudAppStateMissingTableWarnedRef.current = true;
+          console.warn("[ssawa-cloud-sync] app_state_snapshots table is not ready");
+        } else if (!result.missingTable) {
+          console.warn("[ssawa-cloud-sync] pull failed", result.error);
+        }
+        cloudAppStateReadyRef.current = false;
+        return;
+      }
+
+      const snapshot = result.data;
+      const relatedSnapshot = result.relatedData;
+      const currentData = dataRef.current;
+      let nextData = currentData;
+      let appliedRemote = false;
+      const localCount = countCloudSyncedRecords(currentData);
+      const remoteCount = countCloudSyncedRecords(snapshot?.payload ?? {});
+      const remoteIsNewer = isAfterDate(snapshot?.updated_at, previousCloudUpdatedAt);
+      const shouldApplyRemote = Boolean(snapshot?.payload) && (remoteIsNewer || remoteCount > localCount);
+
+      if (snapshot?.payload && shouldApplyRemote) {
+        nextData = mergeCloudAppState(nextData, snapshot.payload);
+        appliedRemote = true;
+        markCloudAppStateSynced(snapshot.updated_at);
+      }
+
+      const relatedCount = countCloudRelatedRecords(relatedSnapshot?.payload ?? {});
+      if (relatedSnapshot?.payload && relatedCount > 0) {
+        const beforeRelatedCount = countCloudRelatedRecords(nextData);
+        const relatedNextData = mergeCloudRelatedAppState(nextData, relatedSnapshot.payload);
+        const afterRelatedCount = countCloudRelatedRecords(relatedNextData);
+        if (afterRelatedCount > beforeRelatedCount || isAfterDate(relatedSnapshot.updated_at, previousCloudUpdatedAt)) {
+          nextData = relatedNextData;
+          appliedRemote = true;
+        }
+      }
+
+      if (appliedRemote) {
+        cloudAppStateApplyingRef.current = true;
+        saveData(nextData);
+        dataRef.current = nextData;
+        setData(nextData);
+        window.setTimeout(() => {
+          cloudAppStateApplyingRef.current = false;
+        }, 0);
+      } else if (localCount > remoteCount) {
+        const pushResult = await pushCloudAppStateSnapshot(nextData);
+        if (pushResult.ok && pushResult.data?.updated_at) markCloudAppStateSynced(pushResult.data.updated_at);
+      } else if (snapshot?.updated_at) {
+        markCloudAppStateSynced(snapshot.updated_at);
+      } else if (localCount > 0) {
+        const pushResult = await pushCloudAppStateSnapshot(nextData);
+        if (pushResult.ok && pushResult.data?.updated_at) markCloudAppStateSynced(pushResult.data.updated_at);
+      }
+
+      cloudAppStateReadyRef.current = true;
+    }
+
+    void syncCloudAppStateOnLogin();
+    return () => {
+      cancelled = true;
+      if (cloudAppStatePushTimerRef.current) window.clearTimeout(cloudAppStatePushTimerRef.current);
+    };
+  }, [authReady, authSession?.id]);
+
+  useEffect(() => {
+    if (!authReady || !authSession?.id || !isLiveModeReady() || !cloudAppStateReadyRef.current || cloudAppStateApplyingRef.current) return;
+    if (cloudAppStatePushTimerRef.current) window.clearTimeout(cloudAppStatePushTimerRef.current);
+    cloudAppStatePushTimerRef.current = window.setTimeout(() => {
+      void pushCloudAppStateSnapshot(dataRef.current).then((result) => {
+        if (result.ok && result.data?.updated_at) {
+          markCloudAppStateSynced(result.data.updated_at);
+          return;
+        }
+        if (!result.ok && result.missingTable && !cloudAppStateMissingTableWarnedRef.current) {
+          cloudAppStateMissingTableWarnedRef.current = true;
+          console.warn("[ssawa-cloud-sync] app_state_snapshots table is not ready");
+        } else if (!result.ok && !result.missingTable) {
+          console.warn("[ssawa-cloud-sync] push failed", result.error);
+        }
+      });
+    }, 1200);
+    return () => {
+      if (cloudAppStatePushTimerRef.current) window.clearTimeout(cloudAppStatePushTimerRef.current);
+    };
+  }, [data, authReady, authSession?.id]);
+
+  useEffect(() => {
+    if (!authReady || !authSession?.id || !isLiveModeReady()) return;
+    let cancelled = false;
+
+    async function syncBuyerQuoteRequests() {
+      if (!authSession?.id || liveQuoteSyncRunningRef.current) return;
+      liveQuoteSyncRunningRef.current = true;
+      try {
+        let currentData = dataRef.current;
+        let liveRequestsResult = authSession.role === "buyer"
+          ? await listMyLiveQuoteRequests(authSession.id)
+          : await listVisibleLiveQuoteRequests();
+        if (!liveRequestsResult.ok) return;
+
+        if (authSession.role === "buyer") {
+          const syncMap = readLiveQuoteSyncMap();
+          const syncSources = readStoredAppDataSnapshots(currentData);
+          const localCandidates = collectLocalQuoteSyncCandidates(syncSources, authSession, liveRequestsResult.data, syncMap);
+
+          for (const candidate of localCandidates) {
+            const draft = quoteRequestDraftFromRecord(candidate.data, candidate.request);
+            const createResult = await createLiveQuoteRequest(authSession.id, draft);
+            if (createResult.ok && createResult.data?.id) {
+              syncMap[candidate.request.id] = createResult.data.id;
+            } else if (!createResult.ok) {
+              console.warn("[ssawa-live-sync] quote_request sync failed", createResult.error, candidate.request.id);
+            }
+          }
+          writeLiveQuoteSyncMap(syncMap);
+          liveRequestsResult = await listMyLiveQuoteRequests(authSession.id);
+          if (!liveRequestsResult.ok) return;
+        }
+
+        const liveItemsResult = await listLiveQuoteRequestItemsForRequests(liveRequestsResult.data.map((request) => request.id));
+        if (!liveItemsResult.ok) return;
+        const liveQuotesResult = await listLiveQuotesForRequests(liveRequestsResult.data.map((request) => request.id));
+        if (!liveQuotesResult.ok) {
+          console.warn("[ssawa-live-sync] quotes fetch failed", liveQuotesResult.error);
+          return;
+        }
+        const liveSuppliersResult = await listLiveSupplierProfiles();
+        if (!liveSuppliersResult.ok) {
+          console.warn("[ssawa-live-sync] supplier_profiles fetch failed", liveSuppliersResult.error);
+        }
+        const liveSuppliers = liveSuppliersResult.ok ? liveSuppliersResult.data : [];
+        let liveQuotes = liveQuotesResult.data;
+        if (authSession.role === "supplier") {
+          const activeSupplier = liveSuppliers.find((supplier) => supplier.user_id === authSession.id) ?? getActiveSupplier(currentData, authSession);
+          const supplierQuotesResult = await listMyLiveSupplierQuotes(activeSupplier.id);
+          if (supplierQuotesResult.ok) {
+            const byId = new Map(liveQuotes.map((quote) => [quote.id, quote]));
+            supplierQuotesResult.data.forEach((quote) => byId.set(quote.id, quote));
+            liveQuotes = [...byId.values()];
+          } else {
+            console.warn("[ssawa-live-sync] supplier quotes fetch failed", supplierQuotesResult.error);
+          }
+        }
+        const supplierForReviews = authSession.role === "supplier"
+          ? liveSuppliers.find((supplier) => supplier.user_id === authSession.id) ?? getActiveSupplier(currentData, authSession)
+          : null;
+        const liveReviewsResult = authSession.role === "buyer"
+          ? await listMyLiveReviews(authSession.id)
+          : supplierForReviews
+            ? await listLiveReviewsForSupplier(supplierForReviews.id)
+            : null;
+        if (liveReviewsResult && !liveReviewsResult.ok) {
+          console.warn("[ssawa-live-sync] reviews fetch failed", liveReviewsResult.error);
+        }
+        const liveReviews = liveReviewsResult?.ok ? liveReviewsResult.data : [];
+        const liveReviewRepliesResult = liveReviews.length ? await listLiveReviewRepliesForReviews(liveReviews.map((review) => review.id)) : null;
+        if (liveReviewRepliesResult && !liveReviewRepliesResult.ok) {
+          console.warn("[ssawa-live-sync] review replies fetch failed", liveReviewRepliesResult.error);
+        }
+        const liveReviewReplies = liveReviewRepliesResult?.ok ? liveReviewRepliesResult.data : [];
+        const liveNotificationsResult = await listMyLiveNotifications(authSession.id);
+        if (!liveNotificationsResult.ok) {
+          console.warn("[ssawa-live-sync] notifications fetch failed", liveNotificationsResult.error);
+        }
+        const liveNotifications = liveNotificationsResult.ok ? liveNotificationsResult.data : [];
+
+        currentData = dataRef.current;
+        const nextData = mergeQuoteRequestState(currentData, liveRequestsResult.data, liveItemsResult.data, liveQuotes, liveSuppliers, liveReviews, liveReviewReplies, liveNotifications);
+        if (!cancelled) setData(nextData);
+      } finally {
+        liveQuoteSyncRunningRef.current = false;
+      }
+    }
+
+    void syncBuyerQuoteRequests();
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, authSession?.id, authSession?.role]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -924,6 +2023,13 @@ export default function App() {
   }, [authReady, authSession, path]);
 
   useEffect(() => {
+    if (!authReady || !authSession || normalizePath(path) !== "/login") return;
+    const homePath = getRoleHomePath(authSession.role);
+    window.history.replaceState({}, "", homePath);
+    setPath(homePath);
+  }, [authReady, authSession, path]);
+
+  useEffect(() => {
     const warmUpAudio = () => {
       const audio = getNotificationAudio(notificationAudioRef);
       const originalVolume = audio.volume;
@@ -960,7 +2066,24 @@ export default function App() {
         return;
       }
 
-      const profile = (await getCurrentProfile()) as Profile | null;
+      if (!isAutoLoginEnabled() && !stored) {
+        await client.auth.signOut();
+        if (mounted) setAuthReady(true);
+        return;
+      }
+
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        if (isLiveModeReady()) {
+          persistAuthSession(null);
+          if (mounted) setAuthSession(null);
+        }
+        if (mounted) setAuthReady(true);
+        return;
+      }
+
+      let profile = (await getCurrentProfile()) as Profile | null;
+      if (!profile) profile = profileFromSupabaseUser(currentUser, stored);
       if (profile && mounted) {
         const supplier = data.supplier_profiles.find((entry) => entry.user_id === profile.id);
         const nextSession = authSessionFromProfile(profile, supplier, "supabase");
@@ -974,19 +2097,26 @@ export default function App() {
     const listener = client?.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
         if (mounted) {
-          setAuthSession(loadStoredAuthSession());
+          if (isLiveModeReady()) {
+            persistAuthSession(null);
+            setAuthSession(null);
+          } else {
+            setAuthSession(loadStoredAuthSession());
+          }
           setAuthReady(true);
         }
         return;
       }
-      void getCurrentProfile().then((profile) => {
+      void (async () => {
+        let profile = (await getCurrentProfile()) as Profile | null;
+        if (!profile) profile = profileFromSupabaseUser(session.user, authSessionRef.current);
         if (!mounted || !profile) return;
         const typedProfile = profile as Profile;
         const supplier = data.supplier_profiles.find((entry) => entry.user_id === typedProfile.id);
         const nextSession = authSessionFromProfile(typedProfile, supplier, "supabase");
         setAuthSession(nextSession);
         persistAuthSession(nextSession);
-      });
+      })();
     });
 
     return () => {
@@ -1024,10 +2154,12 @@ export default function App() {
   const mobileNavItems = mobileNavItemsByRole[shellRole];
   const mobileMoreItems = getMobileMoreItems(shellRole, Boolean(authSession));
   const notificationPath = getNotificationPath(shellRole);
-  const notificationUserId = getNotificationUserId(shellRole);
-  const unreadNotifications = authSession ? getUnreadNotificationCount(data, notificationUserId) : 0;
+  const notificationUserIds = getNotificationUserIds(data, shellRole, authSession);
+  const notificationUserId = notificationUserIds[0] ?? getNotificationUserId(shellRole, authSession);
+  const notificationUserKey = notificationUserIds.join("|") || notificationUserId;
+  const unreadNotifications = authSession ? getUnreadNotificationCount(data, notificationUserIds) : 0;
   const chatPath = getChatPath(shellRole);
-  const unreadChats = authSession ? getChatUnreadCountForRole(data, shellRole) : 0;
+  const unreadChats = authSession ? getChatUnreadCountForRole(data, shellRole, authSession) : 0;
   const primaryAction = getPrimaryAction(shellRole);
   const PrimaryActionIcon = primaryAction.icon;
   const page = renderRoute(path, data, navigate, replaceData, authSession, applyAuthSession, shellRole, handleSignOut);
@@ -1047,12 +2179,12 @@ export default function App() {
 
   useEffect(() => {
     if (!authSession) return;
-    const previousUnread = previousUnreadByUserRef.current[notificationUserId];
+    const previousUnread = previousUnreadByUserRef.current[notificationUserKey];
     if (previousUnread !== undefined && unreadNotifications > previousUnread) {
       void playNotificationSound(notificationAudioRef);
     }
-    previousUnreadByUserRef.current[notificationUserId] = unreadNotifications;
-  }, [authSession, notificationUserId, unreadNotifications]);
+    previousUnreadByUserRef.current[notificationUserKey] = unreadNotifications;
+  }, [authSession, notificationUserKey, unreadNotifications]);
 
   return (
     <>
@@ -1060,7 +2192,7 @@ export default function App() {
       <div className={shellClassName} aria-hidden={showLaunchScreen ? true : undefined}>
       <aside className="sidebar" aria-label="주요 메뉴">
         <button className="brandButton" type="button" onClick={() => navigate("/app")}>
-          <img src="/아이콘.png" alt="" className="brandIcon" />
+          <img src="/icon.png" alt="" className="brandIcon" />
           <span>
             <strong>싸와!</strong>
             <small>자재 견적구매</small>
@@ -1092,7 +2224,7 @@ export default function App() {
       <main className="mainPane">
         <header className="topbar">
           <button className="mobileBrand" type="button" onClick={() => navigate("/app")} aria-label="홈으로 이동">
-            <img src="/아이콘.png" alt="" />
+            <img src="/icon.png" alt="" />
             <span>싸와!</span>
           </button>
           <div className="topbarActions">
@@ -1213,7 +2345,7 @@ function LaunchScreen() {
   return (
     <div className="launchScreen" role="status" aria-label="싸와 앱을 여는 중">
       <div className="launchScreenInner">
-        <img src="/로고.png" alt="싸와!" className="launchLogo" />
+        <img src="/logo.png" alt="싸와!" className="launchLogo" />
         <div className="launchPulse" aria-hidden="true" />
       </div>
     </div>
@@ -1234,6 +2366,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/beta") return <BetaNoticePage navigate={navigate} appMode={false} />;
   if (path === "/beta-notice") return <BetaNoticePage navigate={navigate} appMode={false} />;
   if (path === "/partners" || path === "/supplier/apply") return <PartnersPage navigate={navigate} />;
+  if (routePath.startsWith("/suppliers/")) return <SupplierPublicProfilePage data={data} navigate={navigate} supplierId={routePath.split("/")[2] ?? ""} publicView />;
   if (path.startsWith("/app") && !authSession) return <LoginPage data={data} navigate={navigate} setData={setData} onAuthChange={onAuthChange} />;
   const restrictedRole = getRouteRole(path);
   if (isProtectedAppPath(path) && authSession && restrictedRole && restrictedRole !== authSession.role) {
@@ -1241,8 +2374,8 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   }
   if (path === "/app" || path === "/") {
     if (shellRole === "admin") return <AdminDashboard data={data} navigate={navigate} />;
-    if (shellRole === "supplier") return <SupplierDashboard data={data} navigate={navigate} />;
-    return <HomePage data={data} navigate={navigate} />;
+    if (shellRole === "supplier") return <SupplierDashboard data={data} navigate={navigate} authSession={authSession} />;
+    return <HomePage data={data} navigate={navigate} authSession={authSession} />;
   }
   if (routePath === "/app/buyer/profile") return <BuyerProfilePage data={data} navigate={navigate} setData={setData} authSession={authSession} onAuthChange={onAuthChange} onSignOut={onSignOut} />;
   if (path === "/app/onboarding" || path === "/app/buyer/onboarding") return <OnboardingPage data={data} navigate={navigate} setData={setData} role="buyer" onSignOut={onSignOut} />;
@@ -1265,8 +2398,8 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/admin/today/onboarding") return <TodayOnboardingPage data={data} setData={setData} navigate={navigate} audience="admin" userId="admin-1" />;
   if (path === "/app/admin/today/help" || path === "/app/today/help/admin") return <TodayHelpPage data={data} setData={setData} navigate={navigate} audience="admin" userId="admin-1" />;
   if (path === "/app/admin/today/settings/notifications") return <TodayNotificationSettingsPage data={data} setData={setData} navigate={navigate} audience="admin" userId="admin-1" />;
-  if (path === "/app/quick-reorder") return <QuickReorderPage data={data} navigate={navigate} setData={setData} />;
-  if (path === "/app/favorites/items") return <FavoriteItemsPage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/quick-reorder") return <QuickReorderPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
+  if (path === "/app/favorites/items") return <FavoriteItemsPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
   if (path === "/app/today/supplier" || path.startsWith("/app/today/supplier/")) {
     const currentRole = authSession?.role ?? shellRole;
     if (currentRole === "buyer") {
@@ -1278,64 +2411,67 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
     if (authSession?.role === "supplier") {
       return <TodaySupplierPage data={data} navigate={navigate} setData={setData} routePath="/app/today/supplier" role="supplier" />;
     }
-    return <TodayJangsaV4Page data={data} navigate={navigate} setData={setData} routePath={path} section={getTodaySection(path)} role={authSession?.role ?? shellRole} />;
+    return <TodayJangsaV4Page data={data} navigate={navigate} setData={setData} routePath={path} section={getTodaySection(path)} role={authSession?.role ?? shellRole} authSession={authSession} />;
   }
-  if (path === "/app/products") return <ProductsPage data={data} navigate={navigate} setData={setData} />;
-  if (path.startsWith("/app/products/")) return <ProductDetailPage data={data} navigate={navigate} setData={setData} productId={path.split("/").pop() ?? ""} />;
-  if (path === "/app/feedback") return <FeedbackPage data={data} navigate={navigate} setData={setData} />;
-  if (path === "/app/notifications/settings") return <NotificationSettingsPage data={data} setData={setData} userId="buyer-1" navigate={navigate} />;
-  if (path === "/app/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId="buyer-1" userRole="buyer" />;
-  if (path === "/app/chats") return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="buyer" />;
-  if (path.startsWith("/app/chats/")) return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="buyer" selectedThreadId={path.split("/").pop() ?? ""} />;
+  if (path === "/app/products") return <ProductsPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
+  if (path.startsWith("/app/products/")) return <ProductDetailPage data={data} navigate={navigate} setData={setData} productId={path.split("/").pop() ?? ""} authSession={authSession} />;
+  if (path === "/app/feedback") return <FeedbackPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
+  if (path === "/app/notifications/settings") return <NotificationSettingsPage data={data} setData={setData} userId={getPrimaryBuyerIdForSession(data, authSession)} navigate={navigate} />;
+  if (path === "/app/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId={getNotificationUserIds(data, "buyer", authSession)} userRole="buyer" />;
+  if (path === "/app/chats") return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="buyer" authSession={authSession} />;
+  if (path.startsWith("/app/chats/")) return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="buyer" selectedThreadId={path.split("/").pop() ?? ""} authSession={authSession} />;
   if (path === "/app/analyze") return <AnalyzePage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/analyze/history") return <AnalysisHistoryPage data={data} navigate={navigate} />;
   if (path.startsWith("/app/analyze/")) return <AnalysisDetailPage data={data} navigate={navigate} setData={setData} analysisId={path.split("/").pop() ?? ""} />;
-  if (path.startsWith("/app/requests/new/from-analysis/")) return <AnalysisToRequestPage data={data} navigate={navigate} setData={setData} analysisId={path.split("/").pop() ?? ""} />;
-  if (routePath === "/app/requests/new") return <NewRequestPage data={data} navigate={navigate} setData={setData} routePath={path} />;
-  if (path === "/app/requests") return <RequestsPage data={data} navigate={navigate} />;
-  if (path.startsWith("/app/requests/") && path.endsWith("/messages")) return <RequestMessagesPage data={data} navigate={navigate} setData={setData} requestId={path.split("/")[3] ?? ""} role="buyer" />;
+  if (path.startsWith("/app/requests/new/from-analysis/")) return <AnalysisToRequestPage data={data} navigate={navigate} setData={setData} analysisId={path.split("/").pop() ?? ""} authSession={authSession} />;
+  if (routePath === "/app/requests/new") return <NewRequestPage data={data} navigate={navigate} setData={setData} routePath={path} authSession={authSession} />;
+  if (path === "/app/requests") return <RequestsPage data={data} navigate={navigate} authSession={authSession} />;
+  if (path.startsWith("/app/requests/") && path.endsWith("/messages")) return <RequestMessagesPage data={data} navigate={navigate} setData={setData} requestId={path.split("/")[3] ?? ""} role={authSession?.role === "supplier" ? "supplier" : "buyer"} />;
+  if (path.startsWith("/app/requests/") && authSession?.role === "supplier") return <SupplierRequestDetailPage data={data} navigate={navigate} setData={setData} requestId={path.split("/").pop() ?? ""} authSession={authSession} />;
   if (path.startsWith("/app/requests/")) return <RequestDetailPage data={data} navigate={navigate} setData={setData} requestId={path.split("/").pop() ?? ""} />;
-  if (path.startsWith("/app/purchases/from-analysis/")) return <AnalysisToPurchasePage data={data} navigate={navigate} setData={setData} analysisId={path.split("/").pop() ?? ""} />;
-  if (path === "/app/purchases/new") return <NewPurchasePage data={data} navigate={navigate} setData={setData} />;
-  if (path === "/app/purchases") return <PurchasesPage data={data} navigate={navigate} />;
-  if (path.startsWith("/app/purchases/")) return <PurchaseDetailPage data={data} navigate={navigate} setData={setData} purchaseId={path.split("/").pop() ?? ""} />;
+  if (path.startsWith("/app/purchases/from-analysis/")) return <AnalysisToPurchasePage data={data} navigate={navigate} setData={setData} analysisId={path.split("/").pop() ?? ""} authSession={authSession} />;
+  if (path === "/app/purchases/new") return <NewPurchasePage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
+  if (path === "/app/purchases") return <PurchasesPage data={data} navigate={navigate} authSession={authSession} />;
+  if (path.startsWith("/app/purchases/")) return <PurchaseDetailPage data={data} navigate={navigate} setData={setData} purchaseId={path.split("/").pop() ?? ""} authSession={authSession} />;
   if (path === "/app/reports/new") return <NewReportPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/reports") return <UserReportsPage data={data} navigate={navigate} />;
   if (path.startsWith("/app/reports/") && !path.startsWith("/app/reports/purchases") && !path.startsWith("/app/reports/savings")) return <UserReportDetailPage data={data} navigate={navigate} setData={setData} reportId={path.split("/").pop() ?? ""} />;
-  if (path === "/app/reports/purchases") return <PurchaseReportPage data={data} navigate={navigate} />;
-  if (path === "/app/reports/savings") return <SavingsReportPage data={data} navigate={navigate} />;
-  if (path === "/app/accounting") return <AccountingDashboardPage data={data} navigate={navigate} setData={setData} />;
-  if (path === "/app/accounting/pending") return <AccountingPendingPage data={data} navigate={navigate} setData={setData} />;
-  if (path === "/app/deals") return <BuyerDealsPage data={data} navigate={navigate} />;
+  if (path === "/app/reports/purchases") return <PurchaseReportPage data={data} navigate={navigate} authSession={authSession} />;
+  if (path === "/app/reports/savings") return <SavingsReportPage data={data} navigate={navigate} authSession={authSession} />;
+  if (path === "/app/accounting") return <AccountingDashboardPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
+  if (path === "/app/accounting/pending") return <AccountingPendingPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
+  if (path === "/app/reviews") return <BuyerReviewsPage data={data} navigate={navigate} authSession={authSession} />;
+  if (path === "/app/deals") return <BuyerDealsPage data={data} navigate={navigate} authSession={authSession} />;
   if (path.startsWith("/app/deals/") && path.endsWith("/messages")) return <DealMessagesPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[3] ?? ""} />;
-  if (path.startsWith("/app/deals/") && path.endsWith("/review")) return <DealReviewPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[3] ?? ""} />;
+  if (path.startsWith("/app/deals/") && path.endsWith("/review")) return <DealReviewPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[3] ?? ""} authSession={authSession} />;
   if (path.startsWith("/app/deals/")) return <DealDetailPage data={data} navigate={navigate} setData={setData} dealId={path.split("/").pop() ?? ""} role="buyer" />;
   if (path.startsWith("/app/suppliers/") && path.endsWith("/store")) return <SupplierStorePage data={data} navigate={navigate} setData={setData} supplierId={path.split("/")[3] ?? ""} />;
   if (path.startsWith("/app/suppliers/")) return <SupplierPublicProfilePage data={data} navigate={navigate} supplierId={path.split("/").pop() ?? ""} />;
-  if (path === "/app/supplier") return <SupplierDashboard data={data} navigate={navigate} />;
-  if (path === "/app/supplier/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId="sup-1-user" userRole="supplier" />;
-  if (path === "/app/supplier/chats") return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="supplier" />;
-  if (path.startsWith("/app/supplier/chats/")) return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="supplier" selectedThreadId={path.split("/").pop() ?? ""} />;
-  if (path === "/app/supplier/reputation") return <SupplierReputationPage data={data} navigate={navigate} setData={setData} />;
-  if (path === "/app/supplier/billing") return <SupplierBillingPage data={data} navigate={navigate} setData={setData} />;
-  if (path === "/app/supplier/usage") return <SupplierUsagePage data={data} navigate={navigate} />;
-  if (path === "/app/supplier/settlements") return <SupplierSettlementsPage data={data} navigate={navigate} setData={setData} />;
+  if (path === "/app/supplier") return <SupplierDashboard data={data} navigate={navigate} authSession={authSession} />;
+  if (path === "/app/supplier/notifications") return <NotificationsPage data={data} navigate={navigate} setData={setData} userId={getNotificationUserIds(data, "supplier", authSession)} userRole="supplier" />;
+  if (path === "/app/supplier/chats") return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="supplier" authSession={authSession} />;
+  if (path.startsWith("/app/supplier/chats/")) return <ChatInboxPage data={data} navigate={navigate} setData={setData} role="supplier" selectedThreadId={path.split("/").pop() ?? ""} authSession={authSession} />;
+  if (path === "/app/supplier/reputation") return <SupplierReputationPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
+  if (path === "/app/supplier/billing") return <SupplierBillingPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
+  if (path === "/app/supplier/usage") return <SupplierUsagePage data={data} navigate={navigate} authSession={authSession} />;
+  if (path === "/app/supplier/settlements") return <SupplierSettlementsPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
   if (path === "/app/supplier/beta-guide") return <SupplierBetaGuidePage navigate={navigate} />;
   if (path === "/app/supplier/response-guide") return <SupplierResponseGuidePage data={data} navigate={navigate} />;
   if (path === "/app/supplier/apply") return <SupplierApplyPage data={data} navigate={navigate} setData={setData} />;
-  if (path === "/app/supplier/profile") return <SupplierProfilePage data={data} navigate={navigate} setData={setData} onSignOut={onSignOut} />;
+  if (path === "/app/supplier/profile") return <SupplierProfilePage data={data} navigate={navigate} setData={setData} authSession={authSession} onSignOut={onSignOut} />;
   if (path === "/app/supplier/products") return <SupplierProductsPage data={data} navigate={navigate} setData={setData} />;
   if (path === "/app/supplier/products/new") return <SupplierProductFormPage data={data} navigate={navigate} setData={setData} />;
   if (path.startsWith("/app/supplier/products/") && path.endsWith("/edit")) return <SupplierProductFormPage data={data} navigate={navigate} setData={setData} productId={path.split("/")[4] ?? ""} />;
-  if (path === "/app/supplier/store") return <SupplierStorePage data={data} navigate={navigate} setData={setData} supplierId={getActiveSupplier(data).id} editable />;
-  if (path === "/app/supplier/settings") return <SupplierSettingsPage data={data} navigate={navigate} setData={setData} />;
-  if (path === "/app/supplier/deals") return <SupplierDealsPage data={data} navigate={navigate} />;
+  if (path === "/app/supplier/store") return <SupplierStorePage data={data} navigate={navigate} setData={setData} supplierId={getActiveSupplier(data, authSession).id} editable />;
+  if (path === "/app/supplier/settings") return <SupplierSettingsPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
+  if (path === "/app/supplier/deals") return <SupplierDealsPage data={data} navigate={navigate} authSession={authSession} />;
   if (path.startsWith("/app/supplier/deals/") && path.endsWith("/messages")) return <DealMessagesPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[4] ?? ""} role="supplier" />;
   if (path.startsWith("/app/supplier/deals/")) return <DealDetailPage data={data} navigate={navigate} setData={setData} dealId={path.split("/").pop() ?? ""} role="supplier" />;
-  if (path === "/app/supplier/requests") return <SupplierRequestsPage data={data} navigate={navigate} />;
+  if (path === "/app/supplier/requests") return <SupplierRequestsPage data={data} navigate={navigate} authSession={authSession} />;
   if (path.startsWith("/app/supplier/requests/") && path.endsWith("/messages")) return <RequestMessagesPage data={data} navigate={navigate} setData={setData} requestId={path.split("/")[4] ?? ""} role="supplier" />;
-  if (path.startsWith("/app/supplier/requests/")) return <SupplierRequestDetailPage data={data} navigate={navigate} setData={setData} requestId={path.split("/").pop() ?? ""} />;
-  if (path === "/app/supplier/quotes") return <SupplierQuotesPage data={data} navigate={navigate} />;
+  if (path.startsWith("/app/supplier/quotes/")) return <SupplierQuoteDetailPage data={data} navigate={navigate} setData={setData} quoteId={path.split("/").pop() ?? ""} authSession={authSession} />;
+  if (path.startsWith("/app/supplier/requests/")) return <SupplierRequestDetailPage data={data} navigate={navigate} setData={setData} requestId={path.split("/").pop() ?? ""} authSession={authSession} />;
+  if (path === "/app/supplier/quotes") return <SupplierQuotesPage data={data} navigate={navigate} authSession={authSession} />;
   if (path === "/app/admin/today" || path.startsWith("/app/admin/today/") || ((path === "/app/today" || path.startsWith("/app/today/")) && authSession?.role === "admin")) {
     return <TodayAdminPage data={data} navigate={navigate} setData={setData} routePath={path} authSession={authSession} />;
   }
@@ -1496,6 +2632,9 @@ const todayNavItems: Array<{ section: TodaySection; path: string; icon: (props: 
   { section: "notifications", path: "/app/today/notifications", icon: Bell },
   { section: "settings", path: "/app/today/settings", icon: Building2 },
 ];
+
+const todayPrimaryNavItems = todayNavItems.filter((item) => ["home", "ledger", "sales", "purchases", "expenses", "profit"].includes(item.section));
+const todayUtilityNavItems = todayNavItems.filter((item) => !todayPrimaryNavItems.some((primary) => primary.section === item.section));
 
 const todaySalesRecords: TodaySalesRecord[] = [
   { id: "today-sale-1", business_id: "buyer-1", source: "manual", sales_type: "매장 매출", amount: 680000, sales_date: "2026-07-04", memo: "점심/저녁 매장 매출 샘플", evidence_status: "not_required" },
@@ -2093,7 +3232,7 @@ function TodayTaxUploadSheet({ data, setData, target, onClose }: { data: AppData
   const [memo, setMemo] = useState("");
   const [error, setError] = useState("");
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     const result = createTaxDocument(data, {
       business_id: "buyer-1",
@@ -3041,9 +4180,11 @@ function safeJsonParse<T>(value: string, fallback: T): T {
   }
 }
 
-function TodayJangsaV4Page({ data, navigate, setData, routePath, section, role }: MutatingPageProps & { routePath: string; section: TodaySection; role: UserRole }) {
-  const businessId = "buyer-1";
+function TodayJangsaV4Page({ data, navigate, setData, routePath, section, role, authSession }: MutatingPageProps & { routePath: string; section: TodaySection; role: UserRole; authSession?: AppAuthSession | null }) {
   const isAdmin = role === "admin";
+  const businessIds = getBuyerIdsForSession(data, authSession);
+  const businessId = isAdmin ? "buyer-1" : getPrimaryBuyerIdForSession(data, authSession);
+  if (!isAdmin && businessIds.size === 0) businessIds.add(businessId);
   const profile = data.profiles.find((entry) => entry.id === businessId) ?? data.profiles.find((entry) => entry.role === "buyer");
   const [period, setPeriod] = useState<TodayV4Period>("month");
   const [customRange, setCustomRange] = useState<TodayV4Range>({ start: "2026-07-01", end: "2026-07-31" });
@@ -3051,10 +4192,10 @@ function TodayJangsaV4Page({ data, navigate, setData, routePath, section, role }
   const [editing, setEditing] = useState<{ mode: TodayQuickMode; id: string } | null>(null);
   const [entryFilter, setEntryFilter] = useState<TodayV4EntryType>("all");
 
-  const purchases = data.purchase_records.filter((record) => !record.deleted_at && (isAdmin || record.buyer_id === businessId || record.business_id === businessId));
-  const sales = data.sales_records.filter((record) => !record.deleted_at && (isAdmin || record.business_id === businessId));
-  const expenses = data.expense_records.filter((record) => !record.deleted_at && (isAdmin || record.business_id === businessId));
-  const taxDocuments = data.tax_documents.filter((document) => !document.deleted_at && (isAdmin || document.business_id === businessId));
+  const purchases = data.purchase_records.filter((record) => !record.deleted_at && (isAdmin || businessIds.has(record.buyer_id) || businessIds.has(record.business_id ?? "")));
+  const sales = data.sales_records.filter((record) => !record.deleted_at && (isAdmin || businessIds.has(record.business_id)));
+  const expenses = data.expense_records.filter((record) => !record.deleted_at && (isAdmin || businessIds.has(record.business_id)));
+  const taxDocuments = data.tax_documents.filter((document) => !document.deleted_at && (isAdmin || businessIds.has(document.business_id)));
   const periodRange = getTodayV4PeriodRange(period, customRange);
   const periodPurchases = purchases.filter((record) => isDateInRange(record.purchase_date, periodRange));
   const periodSales = sales.filter((record) => isDateInRange(record.sales_date, periodRange));
@@ -3103,9 +4244,9 @@ function TodayJangsaV4Page({ data, navigate, setData, routePath, section, role }
           )}
           {section === "sales" && <TodayV4Sales period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} records={periodSales} allRecords={sales} summary={summary} onOpen={() => setQuickMode("sales")} onEdit={(id) => setEditing({ mode: "sales", id })} onDelete={(id) => setData(deleteSalesRecord(data, id))} />}
           {section === "expenses" && <TodayV4Expenses period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} records={periodExpenses} allRecords={expenses} summary={summary} recurringRules={data.recurring_rules} onOpen={() => setQuickMode("expense")} onEdit={(id) => setEditing({ mode: "expense", id })} onDelete={(id) => setData(deleteExpenseRecord(data, id))} />}
-          {section === "purchases" && <TodayV4Purchases data={data} records={periodPurchases} allRecords={purchases} period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} navigate={navigate} setData={setData} onOpen={() => setQuickMode("purchase")} onEdit={(id) => setEditing({ mode: "purchase", id })} />}
+          {section === "purchases" && <TodayV4Purchases data={data} records={periodPurchases} allRecords={purchases} period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} navigate={navigate} setData={setData} onOpen={() => setQuickMode("purchase")} onEdit={(id) => setEditing({ mode: "purchase", id })} businessId={businessId} />}
           {section === "profit" && <TodayV4Profit analysis={analysis} aiAnswer={aiAnswer} period={period} setPeriod={setPeriod} customRange={customRange} setCustomRange={setCustomRange} navigate={navigate} />}
-          {section === "requotes" && <TodayRequotesPage data={data} setData={setData} navigate={navigate} routePath={routePath} />}
+          {section === "requotes" && <TodayRequotesPage data={data} setData={setData} navigate={navigate} routePath={routePath} businessId={businessId} />}
           {section === "uploads" && <TodayUploadsRouter data={data} setData={setData} navigate={navigate} routePath={routePath} businessId={businessId} />}
           {section === "ai" && <TodayBuyerAIPage data={data} setData={setData} navigate={navigate} businessId={businessId} period={period} customRange={customRange} />}
           {section === "notifications" && <TodayNotificationsPage data={data} setData={setData} navigate={navigate} audience="buyer" userId={businessId} />}
@@ -3124,7 +4265,7 @@ function TodayJangsaV4Page({ data, navigate, setData, routePath, section, role }
           <button type="button" onClick={() => setQuickMode("purchase")}>매입 입력</button>
         </div>
       </div>
-      {quickContext && <TodayQuickEntrySheet data={data} setData={setData} mode={quickContext.mode} editId={"id" in quickContext ? quickContext.id : undefined} onClose={closeQuick} />}
+      {quickContext && <TodayQuickEntrySheet data={data} setData={setData} mode={quickContext.mode} editId={"id" in quickContext ? quickContext.id : undefined} onClose={closeQuick} businessId={businessId} />}
     </Page>
   );
 }
@@ -3134,9 +4275,8 @@ function TodayQuickButtons({ onOpen, navigate }: { onOpen: (mode: TodayQuickMode
     <div className="todayHeroActions">
       <button className="primaryButton" type="button" onClick={() => onOpen("sales")}><Plus size={16} />매출 입력</button>
       <button className="secondaryButton" type="button" onClick={() => onOpen("expense")}><FilePlus2 size={16} />지출 입력</button>
-      <button className="ghostButton" type="button" onClick={() => onOpen("purchase")}>매입 입력</button>
-      <button className="ghostButton" type="button" onClick={() => navigate("/app/today/uploads")}><Upload size={16} />파일 업로드</button>
-      <button className="ghostButton" type="button" onClick={() => navigate("/app/requests/new")}>싸와 견적받기</button>
+      <button className="secondaryButton" type="button" onClick={() => onOpen("purchase")}><PackageCheck size={16} />매입 입력</button>
+      <button className="ghostButton" type="button" onClick={() => navigate("/app/today/uploads/ai?mode=receipt")}><Upload size={16} />영수증·음성</button>
     </div>
   );
 }
@@ -3152,21 +4292,42 @@ function TodayV4Frame({ section, navigate, children }: { section: TodaySection; 
     tax: "세무자료",
     ssawa: "싸와 구매",
     uploads: "파일 업로드",
+    ai: "AI 도우미",
+    requotes: "재견적",
+    notifications: "알림",
     settings: "설정",
   };
+  const activeUtility = todayUtilityNavItems.find((item) => item.section === section);
   return (
     <>
       <nav className="todayNav" aria-label="오늘장사 메뉴">
-        {todayNavItems.map((item) => {
+        {todayPrimaryNavItems.map((item) => {
           const Icon = item.icon;
           return (
             <button className={item.section === section ? "todayNavButton active" : "todayNavButton"} type="button" onClick={() => navigate(item.path)} key={item.section}>
               <Icon size={17} />
-              <span>{item.section === "requotes" ? "재견적" : item.section === "notifications" ? "알림" : navLabels[item.section]}</span>
+              <span>{navLabels[item.section]}</span>
             </button>
           );
         })}
       </nav>
+      <details className="todayMoreMenu" open={Boolean(activeUtility)}>
+        <summary>
+          <span>{activeUtility ? `현재: ${navLabels[activeUtility.section]}` : "더보기"}</span>
+          <small>세무자료 · 업로드 · 알림 · 설정 등</small>
+        </summary>
+        <div className="todayUtilityNav" aria-label="오늘장사 보조 메뉴">
+          {todayUtilityNavItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button className={item.section === section ? "todayUtilityButton active" : "todayUtilityButton"} type="button" onClick={() => navigate(item.path)} key={item.section}>
+                <Icon size={16} />
+                <span>{navLabels[item.section]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </details>
       {children}
     </>
   );
@@ -3174,8 +4335,9 @@ function TodayV4Frame({ section, navigate, children }: { section: TodaySection; 
 
 function TodayUploadsRouter({ data, setData, navigate, routePath, businessId }: MutatingPageProps & { routePath: string; businessId: string }) {
   const previewMatch = routePath.match(/\/app\/today\/uploads\/([^/?]+)(?:\/preview)?/);
+  if (routePath.startsWith("/app/today/uploads/ai")) return <TodayAiEntryPage data={data} setData={setData} navigate={navigate} businessId={businessId} />;
   if (routePath.startsWith("/app/today/uploads/new")) return <TodayUploadNewPage data={data} setData={setData} navigate={navigate} businessId={businessId} />;
-  if (previewMatch?.[1] && previewMatch[1] !== "new") return <TodayUploadPreviewPage data={data} setData={setData} navigate={navigate} batchId={previewMatch[1]} />;
+  if (previewMatch?.[1] && previewMatch[1] !== "new" && previewMatch[1] !== "ai") return <TodayUploadPreviewPage data={data} setData={setData} navigate={navigate} batchId={previewMatch[1]} />;
   return <TodayUploadsPage data={data} navigate={navigate} businessId={businessId} />;
 }
 
@@ -3198,21 +4360,48 @@ function TodayUploadsPage({ data, navigate, businessId }: PageProps & { business
       </div>
 
       <section className="toolPanel">
-        <SectionHeader title="파일 업로드" action="새 업로드" onAction={() => navigate("/app/today/uploads/new")} />
-        <div className="todayInsightGrid compact">
+        <SectionHeader title="자동 입력" action="영수증/음성 입력" onAction={() => navigate("/app/today/uploads/ai")} />
+        <div className="todayInsightGrid uploadEntryGrid">
+          <article className="todayInsightCard medium">
+            <div className="todayInsightHeader">
+              <span>AI 입력</span>
+              <SearchCheck size={18} />
+            </div>
+            <h3>영수증·자필 메모</h3>
+            <p>사진을 올리면 품목, 수량, 금액을 읽어 오늘장사 매입 초안으로 만듭니다.</p>
+            <button className="primaryButton" type="button" onClick={() => navigate("/app/today/uploads/ai?mode=receipt")}>사진으로 입력</button>
+          </article>
+          <article className="todayInsightCard low">
+            <div className="todayInsightHeader">
+              <span>음성 주문</span>
+              <MicIcon size={18} />
+            </div>
+            <h3>말로 매입 입력</h3>
+            <p>주문 내용을 말하거나 붙여넣으면 AI가 품목과 금액을 정리합니다.</p>
+            <button className="secondaryButton" type="button" onClick={() => navigate("/app/today/uploads/ai?mode=voice")}>음성으로 입력</button>
+          </article>
+        </div>
+      </section>
+
+      <section className="toolPanel todayUploadSimplePanel">
+        <div className="todayUploadSimpleHero">
+          <span className="tileIcon"><Upload size={22} /></span>
+          <div>
+            <span className="eyebrow">대량 파일</span>
+            <h2>CSV·엑셀 파일은 한 곳에서 올리고 검수하세요.</h2>
+            <p>매출, 지출, 매입, 혼합 파일을 업로드한 뒤 컬럼 매핑과 오류 확인을 거쳐 장부에 반영합니다.</p>
+          </div>
+          <button className="primaryButton" type="button" onClick={() => navigate("/app/today/uploads/new")}>새 파일 업로드</button>
+        </div>
+        <div className="todayUploadTypeBar" aria-label="업로드 유형과 템플릿">
           {(["sales", "expense", "purchase", "mixed"] as TodayUploadType[]).map((type) => (
-            <article className="todayInsightCard" key={type}>
-              <div className="todayInsightHeader">
-                <span>{todayUploadTypeLabels[type]}</span>
-                <Upload size={18} />
+            <div className="todayUploadTypeItem" key={type}>
+              <strong>{todayUploadTypeLabels[type]}</strong>
+              <span>{type === "mixed" ? "여러 내역을 한 파일로" : `${todayUploadTypeLabels[type]}만 정리`}</span>
+              <div>
+                <button className="secondaryButton compact" type="button" onClick={() => downloadTemplate(type)}>템플릿</button>
               </div>
-              <h3>{todayUploadTypeLabels[type]} 파일</h3>
-              <p>CSV 또는 엑셀 파일을 올리고 컬럼 매핑과 행 상태를 검수한 뒤 장부에 반영합니다.</p>
-              <div className="formActions">
-                <button className="primaryButton" type="button" onClick={() => navigate(`/app/today/uploads/new?type=${type}`)}>업로드</button>
-                <button className="secondaryButton" type="button" onClick={() => downloadTemplate(type)}>템플릿</button>
-              </div>
-            </article>
+            </div>
           ))}
         </div>
       </section>
@@ -3325,6 +4514,444 @@ function TodayUploadNewPage({ data, setData, navigate, businessId }: MutatingPag
       <div className="formActions">
         <button className="secondaryButton" type="button" onClick={() => downloadTextFile(`today-upload-template-${uploadType}.csv`, toCsv(getTodayUploadTemplateRows(uploadType)), "text/csv;charset=utf-8")}>템플릿 다운로드</button>
       </div>
+    </section>
+  );
+}
+
+function TodayAiEntryPage({ data, setData, navigate, businessId }: MutatingPageProps & { businessId: string }) {
+  const initialMode = new URLSearchParams(window.location.search).get("mode") === "voice" ? "voice" : "receipt";
+  const [mode, setMode] = useState<TodayAiEntryMode>(initialMode);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptFileName, setReceiptFileName] = useState("");
+  const [transcript, setTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
+  const [draft, setDraft] = useState<TodayAiPurchaseDraft | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const recognitionRef = useRef<any>(null);
+  const listeningRequestedRef = useRef(false);
+  const recognitionRestartTimerRef = useRef<number | null>(null);
+  const speechSupported = typeof window !== "undefined" && Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+  useEffect(() => {
+    return () => {
+      listeningRequestedRef.current = false;
+      if (recognitionRestartTimerRef.current !== null) window.clearTimeout(recognitionRestartTimerRef.current);
+      recognitionRef.current?.stop?.();
+      recognitionRef.current = null;
+    };
+  }, []);
+
+  function changeMode(nextMode: TodayAiEntryMode) {
+    if (nextMode !== "voice") stopListening();
+    setMode(nextMode);
+    setError("");
+    setMessage("");
+  }
+
+  async function analyzeReceipt() {
+    if (!receiptFile) {
+      setError("분석할 영수증 또는 자필 메모 사진을 선택해 주세요.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setMessage("이미지에서 품목과 금액을 읽고 있습니다.");
+    try {
+      const analyzed = await analyzeTodayReceiptImage(receiptFile, receiptFileName || receiptFile.name);
+      setDraft(analyzed);
+      setMessage("AI 분석 결과를 확인해 주세요. 금액이나 품목이 다르면 바로 수정할 수 있습니다.");
+    } catch (analysisError) {
+      console.warn("receipt analysis fallback used", analysisError);
+      const fallback = normalizeReceiptPreviewForToday(analyzeReceiptPhotoForQuoteRequest(receiptFileName || receiptFile.name, "receipt"));
+      setDraft(fallback);
+      setMessage("이미지 AI 연결이 불안정해 파일명 기반 초안을 만들었습니다. 저장 전 품목과 금액을 꼭 확인해 주세요.");
+      setError("");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function analyzeVoice() {
+    if (!transcript.trim()) {
+      setError("주문 내용을 말하거나 텍스트로 입력해 주세요.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setMessage("음성 내용을 오늘장사 매입 형식으로 정리하고 있습니다.");
+    try {
+      const analyzed = await analyzeTodayVoiceOrder(transcript);
+      setDraft(analyzed);
+      setMessage("AI 분석 결과를 확인해 주세요. 빠진 품목이나 금액은 아래에서 수정할 수 있습니다.");
+    } catch (analysisError) {
+      console.warn("voice analysis fallback used", analysisError);
+      setDraft(parseVoiceOrderLocally(transcript));
+      setMessage("서버 AI 연결이 불안정해 앱 내부 분석으로 초안을 만들었습니다. 저장 전 내용을 확인해 주세요.");
+      setError("");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function startListening() {
+    if (!speechSupported || listeningRequestedRef.current) return;
+    listeningRequestedRef.current = true;
+    setListening(true);
+    setError("");
+    setMessage("마이크 권한을 확인하고 있습니다.");
+    const micReady = await requestMicrophonePermission();
+    if (!micReady || !listeningRequestedRef.current) return;
+    startSpeechRecognitionSession();
+  }
+
+  async function requestMicrophonePermission() {
+    const mediaDevices = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
+    if (!mediaDevices?.getUserMedia) return true;
+    try {
+      const stream = await mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      return true;
+    } catch {
+      listeningRequestedRef.current = false;
+      setListening(false);
+      setInterimTranscript("");
+      setError("마이크 권한이 허용되지 않았습니다. 브라우저 주소창의 마이크 권한을 허용한 뒤 다시 눌러 주세요.");
+      return false;
+    }
+  }
+
+  function startSpeechRecognitionSession() {
+    if (!speechSupported || !listeningRequestedRef.current) return;
+    if (recognitionRestartTimerRef.current !== null) {
+      window.clearTimeout(recognitionRestartTimerRef.current);
+      recognitionRestartTimerRef.current = null;
+    }
+    const SpeechRecognitionCtor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = "ko-KR";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => {
+      setListening(true);
+      setError("");
+      setMessage("듣고 있습니다. 주문 내용을 자연스럽게 말해 주세요.");
+    };
+    recognition.onerror = (event: any) => {
+      const errorType = String(event?.error ?? "");
+      if (errorType === "not-allowed" || errorType === "service-not-allowed" || errorType === "audio-capture") {
+        listeningRequestedRef.current = false;
+        setListening(false);
+        setError(errorType === "audio-capture" ? "마이크를 찾지 못했습니다. 기기 마이크 권한과 연결 상태를 확인해 주세요." : "마이크 권한이 허용되지 않았습니다. 브라우저 권한을 허용하거나 텍스트 입력으로 사용해 주세요.");
+        return;
+      }
+      setMessage("음성 인식이 잠시 끊겨 다시 듣고 있습니다.");
+    };
+    recognition.onend = () => {
+      setInterimTranscript("");
+      recognitionRef.current = null;
+      if (!listeningRequestedRef.current) {
+        setListening(false);
+        return;
+      }
+      setListening(true);
+      recognitionRestartTimerRef.current = window.setTimeout(() => {
+        recognitionRestartTimerRef.current = null;
+        startSpeechRecognitionSession();
+      }, 350);
+    };
+    recognition.onresult = (event: any) => {
+      let finalText = "";
+      let interimText = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const text = String(result[0]?.transcript ?? "").trim();
+        if (!text) continue;
+        if (result.isFinal) finalText += `${text} `;
+        else interimText += `${text} `;
+      }
+      if (finalText) setTranscript((current) => `${current} ${finalText}`.replace(/\s+/g, " ").trim());
+      setInterimTranscript(interimText.trim());
+    };
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      recognitionRestartTimerRef.current = window.setTimeout(() => {
+        recognitionRestartTimerRef.current = null;
+        startSpeechRecognitionSession();
+      }, 500);
+    }
+  }
+
+  function stopListening() {
+    listeningRequestedRef.current = false;
+    if (recognitionRestartTimerRef.current !== null) {
+      window.clearTimeout(recognitionRestartTimerRef.current);
+      recognitionRestartTimerRef.current = null;
+    }
+    recognitionRef.current?.stop?.();
+    recognitionRef.current = null;
+    setListening(false);
+    setInterimTranscript("");
+  }
+
+  function updateDraft<K extends keyof TodayAiPurchaseDraft>(key: K, value: TodayAiPurchaseDraft[K]) {
+    setDraft((current) => current ? { ...current, [key]: value } : current);
+  }
+
+  function updateItem(index: number, key: keyof TodayAiPurchaseItemDraft, value: string | number | boolean) {
+    setDraft((current) => {
+      if (!current) return current;
+      const items = current.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        const nextItem = { ...item, [key]: value };
+        if (key === "quantity") {
+          const quantity = Math.max(0.01, Number(value) || 1);
+          nextItem.quantity = quantity;
+          nextItem.unit_price = nextItem.total_price > 0 ? Math.round(nextItem.total_price / quantity) : nextItem.unit_price;
+        }
+        if (key === "total_price") {
+          const totalPrice = Math.max(0, Math.round(Number(value) || 0));
+          nextItem.total_price = totalPrice;
+          nextItem.unit_price = nextItem.quantity > 0 ? Math.round(totalPrice / nextItem.quantity) : totalPrice;
+        }
+        if (key === "unit_price") {
+          const unitPrice = Math.max(0, Math.round(Number(value) || 0));
+          nextItem.unit_price = unitPrice;
+          nextItem.total_price = Math.round(unitPrice * Math.max(0.01, nextItem.quantity));
+        }
+        return nextItem;
+      });
+      return { ...current, items, total_amount: items.reduce((sum, item) => sum + item.total_price, 0) };
+    });
+  }
+
+  function addItem() {
+    setDraft((current) => current ? {
+      ...current,
+      items: [...current.items, { item_name: "", spec: "", quantity: 1, unit: "개", unit_price: 0, total_price: 0, memo: "", confidence_score: 70, needs_review: true, review_reason: "직접 추가한 품목입니다." }],
+    } : current);
+  }
+
+  function removeItem(index: number) {
+    setDraft((current) => {
+      if (!current || current.items.length <= 1) return current;
+      const items = current.items.filter((_, itemIndex) => itemIndex !== index);
+      return { ...current, items, total_amount: items.reduce((sum, item) => sum + item.total_price, 0) };
+    });
+  }
+
+  function saveDraft() {
+    if (savingDraft) return;
+    if (!draft) {
+      setError("먼저 사진 또는 음성 내용을 분석해 주세요.");
+      return;
+    }
+    const cleanItems = draft.items.filter((item) => item.item_name.trim());
+    if (!cleanItems.length) {
+      setError("저장할 품목명을 1개 이상 입력해 주세요.");
+      return;
+    }
+    const totalAmount = draft.total_amount || cleanItems.reduce((sum, item) => sum + item.total_price, 0);
+    if (totalAmount <= 0) {
+      setError("총 금액을 입력해 주세요.");
+      return;
+    }
+    setSavingDraft(true);
+    setMessage("오늘장사 매입 장부에 저장하고 있습니다.");
+    const result = createManualPurchaseRecord(data, toManualPurchaseDraft({ ...draft, items: cleanItems, total_amount: totalAmount }), businessId);
+    setData(result.data);
+    setMessage("오늘장사 장부에 반영되었습니다.");
+    window.setTimeout(() => {
+      setSavingDraft(false);
+      navigate("/app/today/purchases");
+    }, 0);
+  }
+
+  const activeAnalyze = mode === "receipt" ? analyzeReceipt : analyzeVoice;
+
+  return (
+    <section className="toolPanel todayAiEntryPanel">
+      <SectionHeader title="영수증/음성 자동입력" action="업로드 이력" onAction={() => navigate("/app/today/uploads")} />
+      <div className="todayAiHero">
+        <span className="todayAiHeroIcon">{mode === "receipt" ? <ReceiptText size={28} /> : <MicIcon size={28} />}</span>
+        <div>
+          <span className="eyebrow">오늘장사 자동입력</span>
+          <h2>사진이나 말로 남긴 주문을 매입 장부로 정리합니다</h2>
+          <p>영수증, 자필 메모, 음성 주문을 AI가 품목·수량·금액으로 나누고 저장 전 확인 화면까지 이어줍니다.</p>
+        </div>
+        <div className="todayAiHeroSteps" aria-label="자동입력 단계">
+          <span>1. 입력</span>
+          <span>2. AI 검토</span>
+          <span>3. 장부 저장</span>
+        </div>
+      </div>
+
+      <div className="todayAiModeCards" role="tablist" aria-label="자동입력 방식 선택">
+        <button className={mode === "receipt" ? "active" : ""} type="button" onClick={() => changeMode("receipt")}>
+          <span><ReceiptText size={22} /></span>
+          <strong>사진으로 입력</strong>
+          <small>영수증·거래명세서·자필 메모</small>
+        </button>
+        <button className={mode === "voice" ? "active" : ""} type="button" onClick={() => changeMode("voice")}>
+          <span><MicIcon size={22} /></span>
+          <strong>음성으로 입력</strong>
+          <small>주문 내용을 말하거나 붙여넣기</small>
+        </button>
+      </div>
+
+      {mode === "receipt" ? (
+        <div className="todayAiInputPanel">
+          <div className="receiptUploadHeader">
+            <span className="tileIcon"><ReceiptText size={20} /></span>
+            <div>
+              <strong>영수증·자필 메모 사진</strong>
+              <p>사진에서 공급처, 품목, 수량, 금액을 읽어 매입 초안을 만듭니다.</p>
+            </div>
+          </div>
+          <div className="receiptUploadGrid todayAiUploadGrid">
+            <label className={receiptFile ? "todayAiFilePicker ready" : "todayAiFilePicker"}>
+              <span>이미지 파일</span>
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0] ?? null; setReceiptFile(file); setReceiptFileName(file?.name ?? ""); event.currentTarget.value = ""; }} disabled={busy} />
+              <strong>{receiptFile ? "사진 선택 완료" : "사진 선택하기"}</strong>
+              <small>{receiptFile ? receiptFile.name : "카메라 촬영 또는 갤러리에서 선택"}</small>
+            </label>
+            <label className="todayAiMemoField">
+              <span>메모 또는 파일명</span>
+              <input value={receiptFileName} onChange={(event) => setReceiptFileName(event.target.value)} placeholder="예: 7월 9일 식자재 영수증" />
+            </label>
+            <div className="receiptUploadActions">
+              <button className="primaryButton todayAiAnalyzeButton" type="button" onClick={analyzeReceipt} disabled={busy || !receiptFile}>
+                <SearchCheck size={16} />
+                {busy ? "분석 중" : "AI로 자동 입력"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="todayAiInputPanel voiceOrderPanel">
+          <div className="receiptUploadHeader">
+            <span className="tileIcon"><MicIcon size={20} /></span>
+            <div>
+              <strong>음성 주문 입력</strong>
+              <p>예: 청과에서 대파 2단 4천원, 달걀 1판 7천원 주문했어.</p>
+            </div>
+          </div>
+          <div className="voiceControlRow">
+            <button className={listening ? "dangerButton todayAiVoiceButton" : "primaryButton todayAiVoiceButton"} type="button" onClick={listening ? stopListening : startListening} disabled={!speechSupported || busy}>
+              <MicIcon size={16} />
+              {listening ? "녹음 중지" : "음성 듣기"}
+            </button>
+            <button className="secondaryButton compact" type="button" onClick={() => setTranscript("")} disabled={busy || !transcript}>
+              지우기
+            </button>
+            {!speechSupported && <span className="mutedText">이 브라우저는 음성 인식을 지원하지 않아 텍스트 입력으로 사용할 수 있습니다.</span>}
+          </div>
+          <textarea className="voiceTranscriptInput" value={transcript} onChange={(event) => setTranscript(event.target.value)} placeholder="예: 서울포장에서 치킨박스 천개 21만원, 소스컵 이천개 4만원 주문했어." rows={6} />
+          {interimTranscript && <p className="voiceInterimText">인식 중: {interimTranscript}</p>}
+        </div>
+      )}
+
+      <div className="formActions">
+        <button className="primaryButton" type="button" onClick={activeAnalyze} disabled={busy || (mode === "receipt" ? !receiptFile : !transcript.trim())}>
+          <SearchCheck size={16} />
+          {busy ? "자동 입력 중" : "AI 검토하기"}
+        </button>
+        <button className="secondaryButton" type="button" onClick={() => navigate("/app/today/uploads")}>취소</button>
+      </div>
+
+      {busy && (
+        <div className="receiptAnalysisLoading" role="status" aria-live="assertive">
+          <div className="spinner large" aria-hidden="true" />
+          <strong>{mode === "receipt" ? "이미지를 분석 중입니다." : "음성 내용을 정리 중입니다."}</strong>
+          <p>품목명, 수량, 금액을 오늘장사 매입 형식으로 정리하고 있습니다.</p>
+        </div>
+      )}
+      {message && <p className="successText">{message}</p>}
+      {error && <p className="formError">{error}</p>}
+
+      {draft && (
+        <div className="todayAiReviewPanel">
+          <div className="todayAiReviewHeader">
+            <div>
+              <span className="eyebrow">{draft.source === "receipt" ? "사진 분석 결과" : "음성 분석 결과"}</span>
+              <h3>오늘장사에 저장하기 전 확인해 주세요</h3>
+              <p>품목명과 금액만 맞으면 바로 장부에 반영할 수 있습니다.</p>
+            </div>
+            <div className="todayAiTotalBadge">
+              <span>총 금액</span>
+              <strong>{money(draft.total_amount)}</strong>
+              <small>신뢰도 {draft.confidence_score}% · {draft.items.length}개 품목</small>
+            </div>
+          </div>
+          <div className="todayAiSummaryGrid">
+            <label>
+              <span>거래처</span>
+              <input value={draft.supplier_name} onChange={(event) => updateDraft("supplier_name", event.target.value)} />
+            </label>
+            <label>
+              <span>구매 날짜</span>
+              <input type="date" value={draft.purchase_date} onChange={(event) => updateDraft("purchase_date", event.target.value)} />
+            </label>
+            <label>
+              <span>장부 카테고리</span>
+              <select value={draft.accounting_category} onChange={(event) => { const category = event.target.value; updateDraft("category_name", category); updateDraft("accounting_category", category); }}>{todayPurchaseCategoryNames.map((category) => <option key={category}>{category}</option>)}</select>
+            </label>
+            <label>
+              <span>총 결제 금액</span>
+              <input inputMode="numeric" value={formatMoneyInput(draft.total_amount)} onChange={(event) => updateDraft("total_amount", parseMoneyInput(event.target.value))} />
+            </label>
+          </div>
+          <div className="todayAiItemList">
+            {draft.items.map((item, index) => (
+              <article className={item.needs_review ? "todayAiItemRow needsReview" : "todayAiItemRow"} key={`${item.item_name}-${index}`}>
+                <div className="todayAiItemTop">
+                  <div className="todayAiItemTitle">
+                    <span>{index + 1}</span>
+                    <label>
+                      품목명
+                      <input value={item.item_name} onChange={(event) => updateItem(index, "item_name", event.target.value)} placeholder="예: 대파, 달걀, 포장용기" />
+                    </label>
+                  </div>
+                  <button className="ghostButton compact" type="button" onClick={() => removeItem(index)} disabled={draft.items.length <= 1}>삭제</button>
+                </div>
+                <div className="todayAiItemFields">
+                  <label>
+                    <span>규격/메모</span>
+                    <input value={item.spec} onChange={(event) => updateItem(index, "spec", event.target.value)} placeholder="예: 1,000개, 15kg" />
+                  </label>
+                  <label>
+                    <span>수량</span>
+                    <input inputMode="decimal" value={String(item.quantity)} onChange={(event) => updateItem(index, "quantity", Number(event.target.value) || 1)} />
+                  </label>
+                  <label>
+                    <span>단위</span>
+                    <input value={item.unit} onChange={(event) => updateItem(index, "unit", event.target.value)} />
+                  </label>
+                  <label>
+                    <span>단가</span>
+                    <input inputMode="numeric" value={formatMoneyInput(item.unit_price)} onChange={(event) => updateItem(index, "unit_price", parseMoneyInput(event.target.value))} />
+                  </label>
+                  <label>
+                    <span>금액</span>
+                    <input inputMode="numeric" value={formatMoneyInput(item.total_price)} onChange={(event) => updateItem(index, "total_price", parseMoneyInput(event.target.value))} />
+                  </label>
+                </div>
+                {(item.needs_review || item.review_reason) && <p className="todayAiReviewHint">{item.review_reason || "확인이 필요한 품목입니다."}</p>}
+              </article>
+            ))}
+          </div>
+          <div className="todayAiStickyActions">
+            <button className="secondaryButton" type="button" onClick={addItem}>품목 추가</button>
+            <button className="primaryButton" type="button" onClick={saveDraft} disabled={savingDraft}>{savingDraft ? "저장 중" : "오늘장사 매입으로 저장"}</button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -3468,13 +5095,6 @@ function TodayV4Home({ summary, analysis, aiAnswer, purchases, sales, expenses, 
           {!topInsights.length && <p className="mutedText">데이터가 더 쌓이면 비교 분석을 보여드릴게요.</p>}
         </div>
       </section>
-      <section className="todayQuickPanel">
-        <div>
-          <h2>오늘 매출이나 지출을 입력해보세요.</h2>
-          <p>저장하면 장부와 예상 순이익에 바로 반영됩니다.</p>
-        </div>
-        <TodayQuickButtons onOpen={onOpen} navigate={navigate} />
-      </section>
       <div className="problemGrid">
         <ProblemCard title="미분류 매입" count={purchases.filter((record) => record.category_needs_review || record.accounting_category === "미분류").length} desc="매입 카테고리를 확인하세요." icon={<ClipboardList />} onClick={() => navigate("/app/today/purchases")} />
         <ProblemCard title="증빙 없음" count={[...purchases, ...expenses].filter((record) => record.evidence_status === "missing").length} desc="영수증이나 자료가 없는 내역입니다." icon={<ShieldCheck />} onClick={() => navigate("/app/today/tax")} />
@@ -3589,6 +5209,12 @@ function getSearchParams(path: string) {
   return new URLSearchParams("");
 }
 
+function parseRequestInputMethod(value: string | null): QuoteRequestInputMethod | null {
+  if (value === "invoice") return "photo";
+  if (value === "manual" || value === "photo" || value === "text" || value === "template" || value === "repeat") return value;
+  return null;
+}
+
 function parseIdList(value: string) {
   try {
     const parsed = JSON.parse(value);
@@ -3628,8 +5254,7 @@ function requoteLogLabel(action: string) {
   return "확인";
 }
 
-function TodayRequotesPage({ data, setData, navigate, routePath }: MutatingPageProps & { routePath: string }) {
-  const businessId = "buyer-1";
+function TodayRequotesPage({ data, setData, navigate, routePath, businessId }: MutatingPageProps & { routePath: string; businessId: string }) {
   const params = getSearchParams(routePath);
   const focusRecommendationId = params.get("recommendationId") ?? "";
   const [filter, setFilter] = useState<TodayRequoteFilter>(params.get("status") === "dismissed" ? "dismissed" : "active");
@@ -3769,7 +5394,7 @@ function TodayRequoteCard({ recommendation, draft, onCreateDraft, onDismiss, onO
   );
 }
 
-function TodayV4Purchases({ data, records, allRecords, period, setPeriod, customRange, setCustomRange, navigate, setData, onOpen, onEdit }: { data: AppData; records: PurchaseRecord[]; allRecords: PurchaseRecord[]; period: TodayV4Period; setPeriod: (period: TodayV4Period) => void; customRange: TodayV4Range; setCustomRange: (range: TodayV4Range) => void; navigate: Navigate; setData: (data: AppData) => void; onOpen: () => void; onEdit: (id: string) => void }) {
+function TodayV4Purchases({ data, records, allRecords, period, setPeriod, customRange, setCustomRange, navigate, setData, onOpen, onEdit, businessId }: { data: AppData; records: PurchaseRecord[]; allRecords: PurchaseRecord[]; period: TodayV4Period; setPeriod: (period: TodayV4Period) => void; customRange: TodayV4Range; setCustomRange: (range: TodayV4Range) => void; navigate: Navigate; setData: (data: AppData) => void; onOpen: () => void; onEdit: (id: string) => void; businessId: string }) {
   const ssawaAmount = records.filter((record) => record.source === "ssawa" || record.ssawa_deal_id).reduce((sum, record) => sum + record.total_amount, 0);
   const manualAmount = records.filter((record) => record.source !== "ssawa" && !record.ssawa_deal_id).reduce((sum, record) => sum + record.total_amount, 0);
   const [selectedPurchaseIds, setSelectedPurchaseIds] = useState<string[]>([]);
@@ -3781,7 +5406,7 @@ function TodayV4Purchases({ data, records, allRecords, period, setPeriod, custom
   }
 
   function createDraftFromPurchases(ids: string[]) {
-    const result = createRequoteDraftFromPurchaseRecords(data, { businessId: "buyer-1", purchaseRecordIds: ids });
+    const result = createRequoteDraftFromPurchaseRecords(data, { businessId, purchaseRecordIds: ids });
     if (result.error || !result.url) {
       setData(result.data);
       return;
@@ -3931,7 +5556,7 @@ function TodayV4RecordList({ rows, emptyTitle, onEdit, onDelete }: { rows: Array
   );
 }
 
-function TodayQuickEntrySheet({ data, setData, mode, editId, onClose }: { data: AppData; setData: (data: AppData) => void; mode: TodayQuickMode; editId?: string; onClose: () => void }) {
+function TodayQuickEntrySheet({ data, setData, mode, editId, onClose, businessId }: { data: AppData; setData: (data: AppData) => void; mode: TodayQuickMode; editId?: string; onClose: () => void; businessId: string }) {
   const editingSale = mode === "sales" && editId ? data.sales_records.find((record) => record.id === editId) : undefined;
   const editingExpense = mode === "expense" && editId ? data.expense_records.find((record) => record.id === editId) : undefined;
   const editingPurchase = mode === "purchase" && editId ? data.purchase_records.find((record) => record.id === editId) : undefined;
@@ -3960,7 +5585,7 @@ function TodayQuickEntrySheet({ data, setData, mode, editId, onClose }: { data: 
       if (editingSale) {
         setData(updateSalesRecord(data, editingSale.id, { amount, sales_date: date, sales_type: salesType, payment_method: salesPayment, sales_channel: salesChannel, memo, evidence_status: hasEvidence ? "complete" : "not_required" }));
       } else {
-        const result = createSalesRecord(data, { amount, sales_date: date, sales_type: salesType, payment_method: salesPayment, sales_channel: salesChannel, memo, evidence_status: hasEvidence ? "complete" : "not_required", business_id: "buyer-1" });
+        const result = createSalesRecord(data, { amount, sales_date: date, sales_type: salesType, payment_method: salesPayment, sales_channel: salesChannel, memo, evidence_status: hasEvidence ? "complete" : "not_required", business_id: businessId });
         if (result.error) return setError(result.error);
         setData(result.data);
       }
@@ -3969,7 +5594,7 @@ function TodayQuickEntrySheet({ data, setData, mode, editId, onClose }: { data: 
       if (editingExpense) {
         setData(updateExpenseRecord(data, editingExpense.id, { amount, expense_date: date, expense_type: expenseType, payment_method: expensePayment, vendor_name: vendorName, memo, evidence_status: hasEvidence ? "complete" : "missing", is_recurring: isRecurring }));
       } else {
-        const result = createExpenseRecord(data, { amount, expense_date: date, expense_type: expenseType, payment_method: expensePayment, vendor_name: vendorName, memo, evidence_status: hasEvidence ? "complete" : "missing", is_recurring: isRecurring, business_id: "buyer-1" });
+        const result = createExpenseRecord(data, { amount, expense_date: date, expense_type: expenseType, payment_method: expensePayment, vendor_name: vendorName, memo, evidence_status: hasEvidence ? "complete" : "missing", is_recurring: isRecurring, business_id: businessId });
         if (result.error) return setError(result.error);
         setData(result.data);
       }
@@ -3979,7 +5604,7 @@ function TodayQuickEntrySheet({ data, setData, mode, editId, onClose }: { data: 
         const supplyAmount = Math.round(amount / 1.1);
         setData(updatePurchaseRecord(data, editingPurchase.id, { purchase_title: title, supplier_name: supplierName || editingPurchase.supplier_name, purchase_date: date, category_name: purchaseCategory, accounting_category: purchaseCategory, total_amount: Math.round(amount), supply_amount: supplyAmount, vat_amount: Math.round(amount) - supplyAmount, item_summary: title, user_memo: memo, evidence_status: hasEvidence ? "complete" : "missing" }));
       } else {
-        const result = createManualPurchaseRecord(data, { purchase_title: title, supplier_name: supplierName || "수동 거래처", supplier_business_number: "000-00-00000", purchase_date: date, category_name: purchaseCategory, accounting_category: purchaseCategory, sub_category: "", total_amount: amount, supply_amount: 0, vat_amount: 0, delivery_fee: 0, discount_amount: 0, payment_method: "card", tax_invoice_status: "none", receipt_status: hasEvidence ? "uploaded" : "none", delivery_note_status: "none", memo, items: [{ item_name: title, spec: "", quantity: 1, unit: "건", unit_price: amount, total_price: amount, memo: "" }] });
+        const result = createManualPurchaseRecord(data, { purchase_title: title, supplier_name: supplierName || "수동 거래처", supplier_business_number: "000-00-00000", purchase_date: date, category_name: purchaseCategory, accounting_category: purchaseCategory, sub_category: "", total_amount: amount, supply_amount: 0, vat_amount: 0, delivery_fee: 0, discount_amount: 0, payment_method: "card", tax_invoice_status: "none", receipt_status: hasEvidence ? "uploaded" : "none", delivery_note_status: "none", memo, items: [{ item_name: title, spec: "", quantity: 1, unit: "건", unit_price: amount, total_price: amount, memo: "" }] }, businessId);
         setData(result.data);
       }
     }
@@ -5202,6 +6827,7 @@ function expensePaymentLabel(value: TodayExpenseRecordV4["payment_method"]) {
 function LoginPage({ data, navigate, setData, onAuthChange }: { data: AppData; navigate: Navigate; setData: (data: AppData) => void; onAuthChange: (session: AppAuthSession | null) => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [autoLogin, setAutoLogin] = useState(() => isAutoLoginEnabled());
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const showLocalLoginShortcuts = appConfig.appEnv === "local" && appConfig.enableDemoData;
@@ -5209,8 +6835,37 @@ function LoginPage({ data, navigate, setData, onAuthChange }: { data: AppData; n
   async function finishLogin(profile: Profile, source: AppAuthSession["source"]) {
     const supplier = data.supplier_profiles.find((entry) => entry.user_id === profile.id);
     const session = authSessionFromProfile(profile, supplier, source);
+    setAutoLoginEnabled(autoLogin);
+    persistAuthSession(session, autoLogin);
     onAuthChange(session);
     navigate(getRoleHomePath(profile.role));
+  }
+
+  function rememberLocalLogin(profile: Profile, rawPassword: string) {
+    if (!rawPassword || rawPassword.length < 8) return;
+    const normalizedEmail = profile.email.trim().toLowerCase();
+    const savedAt = new Date().toISOString();
+    const nextAccount = {
+      id: data.local_auth_accounts.find((account) => account.email.toLowerCase() === normalizedEmail)?.id ?? makeId("local-auth"),
+      profile_id: profile.id,
+      email: normalizedEmail,
+      password: rawPassword,
+      created_at: data.local_auth_accounts.find((account) => account.email.toLowerCase() === normalizedEmail)?.created_at ?? savedAt,
+      updated_at: savedAt,
+    };
+    const nextData: AppData = {
+      ...data,
+      profiles: [
+        profile,
+        ...data.profiles.filter((entry) => entry.id !== profile.id && entry.email.toLowerCase() !== normalizedEmail),
+      ],
+      local_auth_accounts: [
+        nextAccount,
+        ...data.local_auth_accounts.filter((account) => account.email.toLowerCase() !== normalizedEmail),
+      ],
+    };
+    saveData(nextData);
+    setData(nextData);
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -5233,19 +6888,26 @@ function LoginPage({ data, navigate, setData, onAuthChange }: { data: AppData; n
         if (!profile && authData?.user) {
           profile = (await ensureProfile(authData.user)) as Profile | null;
         }
+        if (!profile && authData?.user) {
+          profile = profileFromSupabaseUser(authData.user, localAuthProfile);
+        }
         if (profile) {
+          rememberLocalLogin(profile, password);
           await finishLogin(profile, "supabase");
           return;
         }
       }
 
+      if (isLiveModeReady()) throw new Error(loginErrorMessage());
+
       const expectedLocalPassword = localAuthAccount?.password ?? testAccount?.password;
       if (localAuthProfile && expectedLocalPassword && password === expectedLocalPassword) {
+        rememberLocalLogin(localAuthProfile, password);
         await finishLogin(localAuthProfile, "local");
         return;
       }
 
-      if (!isLiveModeReady() && localProfile && !localAuthAccount && !testAccount && password.length >= 8) {
+      if (localProfile && !localAuthAccount && !testAccount && password.length >= 8) {
         const repairedAt = new Date().toISOString();
         const nextData: AppData = {
           ...data,
@@ -5300,10 +6962,17 @@ function LoginPage({ data, navigate, setData, onAuthChange }: { data: AppData; n
         <Field label="비밀번호">
           <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" />
         </Field>
+        <label className="autoLoginField">
+          <input type="checkbox" checked={autoLogin} onChange={(event) => setAutoLogin(event.target.checked)} />
+          <span>
+            <strong>자동로그인</strong>
+            <small>로그아웃하기 전까지 이 기기에서 로그인 상태를 유지합니다.</small>
+          </span>
+        </label>
         {status && <p className="formStatus error">{status}</p>}
         <button className="primaryButton full" type="submit" disabled={submitting}>
           <ShieldCheck size={17} />
-          {submitting ? "확인 중" : "로그인"}
+          {submitting ? "로그인 확인 중" : "이메일로 로그인"}
         </button>
         <button className="ghostButton full" type="button" onClick={() => navigate("/signup")}>회원가입으로 이동</button>
         {showLocalLoginShortcuts && (
@@ -5531,15 +7200,47 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
           password: draft.password,
           options: {
             data: {
+              name: draft.name.trim(),
               role: draft.role,
               business_name: draft.businessName.trim(),
               business_number: businessNumber,
+              phone: phoneNumber,
+              region: draft.region.trim(),
+              representative_name: draft.representativeName.trim(),
+              business_opening_date: draft.openingDate,
+              business_address: businessAddressText,
+              business_status: businessCheck.status,
+              business_tax_type: businessCheck.taxType,
+              business_verification_status: businessCheck.valid === true ? "verified" : businessCheck.manualReviewRequired ? "manual_review_required" : "failed",
             },
           },
         });
-        if (error) throw error;
-        userId = signupData.user?.id ?? userId;
+        if (error && /already|registered|exists|User already/i.test(error.message)) {
+          const { data: signinData, error: signinError } = await client.auth.signInWithPassword({ email: draft.email.trim(), password: draft.password });
+          if (signinError) throw signinError;
+          userId = signinData.user?.id ?? userId;
+        } else if (error) {
+          throw error;
+        } else {
+          userId = signupData.user?.id ?? userId;
+        }
         source = "supabase";
+        await client.auth.updateUser({
+          data: {
+            name: draft.name.trim(),
+            role: draft.role,
+            business_name: draft.businessName.trim(),
+            business_number: businessNumber,
+            phone: phoneNumber,
+            region: draft.region.trim(),
+            representative_name: draft.representativeName.trim(),
+            business_opening_date: draft.openingDate,
+            business_address: businessAddressText,
+            business_status: businessCheck.status,
+            business_tax_type: businessCheck.taxType,
+            business_verification_status: businessCheck.valid === true ? "verified" : businessCheck.manualReviewRequired ? "manual_review_required" : "failed",
+          },
+        });
       }
 
       const verificationStatus: BusinessVerificationStatus = businessCheck.valid === true ? "verified" : businessCheck.manualReviewRequired ? "manual_review_required" : "failed";
@@ -5646,24 +7347,22 @@ function SignupPage({ data, navigate, setData, onAuthChange }: MutatingPageProps
         created_at: createdAt,
         updated_at: createdAt,
       };
-      const localAuthAccount = !isLiveModeReady() ? {
+      const localAuthAccount = {
         id: makeId("local-auth"),
         profile_id: userId,
         email: draft.email.trim().toLowerCase(),
         password: draft.password,
         created_at: createdAt,
         updated_at: createdAt,
-      } : null;
+      };
       const nextData: AppData = {
         ...data,
-        profiles: [profile, ...data.profiles],
-        local_auth_accounts: localAuthAccount
-          ? [
-              localAuthAccount,
-              ...data.local_auth_accounts.filter((account) => account.email.toLowerCase() !== localAuthAccount.email),
-            ]
-          : data.local_auth_accounts,
-        supplier_profiles: supplier ? [supplier, ...data.supplier_profiles] : data.supplier_profiles,
+        profiles: [profile, ...data.profiles.filter((entry) => entry.id !== profile.id && entry.email.toLowerCase() !== profile.email.toLowerCase())],
+        local_auth_accounts: [
+          localAuthAccount,
+          ...data.local_auth_accounts.filter((account) => account.email.toLowerCase() !== localAuthAccount.email),
+        ],
+        supplier_profiles: supplier ? [supplier, ...data.supplier_profiles.filter((entry) => entry.user_id !== profile.id && entry.business_number !== profile.business_number)] : data.supplier_profiles,
         supplier_documents: supplier && draft.documentFile ? [{
           id: makeId("doc"),
           supplier_id: supplier.id,
@@ -6247,7 +7946,7 @@ function PartnersPage({ navigate }: { navigate: Navigate }) {
   );
 }
 
-function FeedbackPage({ data, navigate, setData }: MutatingPageProps) {
+function FeedbackPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
   const [feedbackType, setFeedbackType] = useState<FeedbackType>("usability");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -6258,8 +7957,8 @@ function FeedbackPage({ data, navigate, setData }: MutatingPageProps) {
   function submit(event: FormEvent) {
     event.preventDefault();
     const result = createBetaFeedback(data, {
-      user_id: "buyer-1",
-      user_role: "buyer",
+      user_id: authSession?.id ?? "guest",
+      user_role: authSession?.role ?? "buyer",
       feedback_type: feedbackType,
       title,
       description,
@@ -6417,60 +8116,227 @@ function QaChecklistCard({ data, item, setData }: { data: AppData; item: AppData
   );
 }
 
-function HomePage({ data, navigate }: PageProps) {
-  const purchaseSummary = calculatePurchaseSummary(data.purchase_records.filter((record) => record.buyer_id === "buyer-1"));
-  const requestsWithQuotes = data.quote_requests.filter((request) => data.quotes.some((quote) => quote.quote_request_id === request.id) && !request.selected_quote_id).length;
-  const activeDeals = data.deals.filter((deal) => deal.buyer_id === "buyer-1" && !["completed", "cancelled_by_buyer", "cancelled_by_supplier"].includes(deal.status)).length;
-  const repeatablePurchases = data.purchase_records.filter((record) => record.buyer_id === "buyer-1").length;
-  const favoriteProducts = data.product_favorites.filter((entry) => entry.buyer_id === "buyer-1").length;
+function HomePage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
+  const buyerIds = getBuyerIdsForSession(data, authSession);
+  const buyerRequests = data.quote_requests.filter((request) => buyerIds.has(request.buyer_id) && (!isLiveModeReady() || isLiveRecordId(request.id) || request.buyer_id !== authSession?.id));
+  const purchaseSummary = calculatePurchaseSummary(data.purchase_records.filter((record) => buyerIds.has(record.buyer_id)));
+  const requestsWithQuotes = buyerRequests.filter((request) => data.quotes.some((quote) => quote.quote_request_id === request.id) && !request.selected_quote_id).length;
+  const activeDeals = data.deals.filter((deal) => buyerIds.has(deal.buyer_id) && !["completed", "cancelled_by_buyer", "cancelled_by_supplier"].includes(deal.status)).length;
+  const repeatablePurchases = data.purchase_records.filter((record) => buyerIds.has(record.buyer_id)).length;
+  const buyerPurchases = data.purchase_records
+    .filter((record) => buyerIds.has(record.buyer_id) && !record.deleted_at)
+    .sort((a, b) => b.purchase_date.localeCompare(a.purchase_date) || b.created_at.localeCompare(a.created_at));
+  const todayArrivals = buyerRequests.filter((request) => request.created_at.startsWith(today)).length;
+  const visibleProducts = getVisibleSupplierProducts(data).slice(0, 3);
+  const recentRequests = [...buyerRequests].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 4);
+  const quickReorderItems = buyerPurchases.slice(0, 3);
+
+  const getQuoteCount = (requestId: string) => data.quotes.filter((quote) => quote.quote_request_id === requestId).length;
+  const getItemCount = (requestId: string) => data.quote_request_items.filter((item) => item.quote_request_id === requestId).length;
+  const formatHomeDate = (value: string) => {
+    const [, month = "", day = ""] = value.slice(0, 10).split("-");
+    return month && day ? `${month}.${day}` : value.slice(0, 10);
+  };
+  const getRequestStatusTone = (request: QuoteRequest, quoteCount: number): "arrived" | "active" | "done" | "waiting" => {
+    if (request.selected_quote_id || request.status === "selected") return "done";
+    if (quoteCount > 0) return "arrived";
+    if (request.status === "open") return "active";
+    return "waiting";
+  };
+  const getRequestStatusLabel = (request: QuoteRequest, quoteCount: number) => {
+    if (quoteCount > 0 && !request.selected_quote_id) return "견적 도착";
+    return requestStatusLabels[request.status];
+  };
 
   return (
     <Page>
-      <section className="simpleHero">
-        <div className="simpleHeroCopy">
-          <img src="/로고.png" alt="싸와!" className="heroLogo" />
-          <h1>필요한 자재를 올려보세요.</h1>
-          <p>업체들이 견적을 보내드립니다.</p>
-          <small>사진이나 거래명세서만 있어도 됩니다.</small>
-        </div>
-        <div className="primaryActionGrid" aria-label="견적요청 시작">
-          <QuickStartCard
-            primary
-            title="거래명세서 올리기"
-            desc="영수증과 거래명세서를 읽어 품목을 만듭니다."
-            icon={<Upload />}
-            onClick={() => navigate("/app/analyze")}
-          />
-          <QuickStartCard
-            title="사진으로 올리기"
-            desc="자재 사진이나 자필 메모 사진을 올립니다."
-            icon={<SearchCheck />}
-            onClick={() => navigate("/app/requests/new")}
-          />
-          <QuickStartCard
-            title="직접 입력하기"
-            desc="필요한 품목을 바로 적어서 요청합니다."
-            icon={<FilePlus2 />}
-            onClick={() => navigate("/app/requests/new")}
-          />
-          <QuickStartCard
-            title="지난 구매 다시 견적"
-            desc={`반복 구매 ${repeatablePurchases}건을 다시 요청합니다.`}
-            icon={<RefreshCcw />}
-            onClick={() => navigate("/app/quick-reorder")}
-          />
-        </div>
-      </section>
+      <div className="buyerDashboard">
+        <section className="buyerDashboardTop" aria-label="빠른 검색과 요청">
+          <label className="buyerSearchBar">
+            <span className="buyerSearchIcon"><SearchCheck size={18} /></span>
+            <input type="search" placeholder="상품명, 규격, 브랜드, 업체명을 검색하세요" />
+          </label>
+        </section>
 
-      <section className="roleFocusGrid" aria-label="오늘 확인할 일">
-        <FocusCard label="도착한 견적" value={`${requestsWithQuotes}건`} desc="비교하고 업체를 선택하세요." icon={<ReceiptText />} onClick={() => navigate("/app/requests")} />
-        <FocusCard label="진행 중 거래" value={`${activeDeals}건`} desc="납품 상태를 확인하세요." icon={<PackageCheck />} onClick={() => navigate("/app/deals")} />
-        <FocusCard label="구매내역" value={`${purchaseSummary.pendingCount}건`} desc="영수증과 세금계산서를 정리하세요." icon={<Landmark />} onClick={() => navigate("/app/purchases")} />
-        <FocusCard label="자주 사는 상품" value={`${favoriteProducts}개`} desc="바로 견적에 담아보세요." icon={<Boxes />} onClick={() => navigate("/app/products")} />
-      </section>
+        <section className="buyerHeroPanel" aria-label="견적요청 시작">
+          <div className="buyerHeroCopy">
+            <h1>
+              필요한 자재를 빠르게 올리고,<br />
+              <span>최적 견적</span>을 받아보세요
+            </h1>
+            <p>많은 업체가 경쟁적으로 견적을 보내드립니다.</p>
+            <div className="buyerHeroBoxes" aria-hidden="true">
+              <span />
+              <span />
+            </div>
+          </div>
+          <div className="buyerHeroActions">
+            <button className="buyerHeroActionCard" type="button" onClick={() => navigate("/app/requests/new?method=photo")}>
+              <span className="buyerHeroActionIcon"><Upload size={28} /></span>
+              <strong>영수증 올리기</strong>
+              <small>영수증, 자필 메모를 사진으로 올려보세요</small>
+              <span className="buyerHeroActionArrow"><ArrowRight size={16} /></span>
+            </button>
+            <button className="buyerHeroActionCard" type="button" onClick={() => navigate("/app/requests/new?method=photo")}>
+              <span className="buyerHeroActionIcon"><ReceiptText size={28} /></span>
+              <strong>품목 사진 올리기</strong>
+              <small>자재 사진이나 메모를 AI가 품목으로 정리합니다</small>
+              <span className="buyerHeroActionArrow"><ArrowRight size={16} /></span>
+            </button>
+            <button className="buyerHeroActionCard" type="button" onClick={() => navigate("/app/requests/new?method=manual")}>
+              <span className="buyerHeroActionIcon"><FilePlus2 size={28} /></span>
+              <strong>직접 입력하기</strong>
+              <small>상품명, 규격, 수량을 직접 입력하세요</small>
+              <span className="buyerHeroActionArrow"><ArrowRight size={16} /></span>
+            </button>
+          </div>
+        </section>
 
-      <SectionHeader title="최근 견적요청" action="전체 보기" onAction={() => navigate("/app/requests")} />
-      <RequestList data={data} requests={data.quote_requests.slice(0, 3)} navigate={navigate} />
+        <section className="buyerProcessStrip" aria-label="구매 진행 단계">
+          <div>
+            <span><Upload size={26} /></span>
+            <strong>1. 품목 업로드</strong>
+            <small>필요한 자재를 올려주세요</small>
+          </div>
+          <div>
+            <span><ReceiptText size={26} /></span>
+            <strong>2. 업체 견적 수신</strong>
+            <small>여러 업체의 견적을 받아보세요</small>
+          </div>
+          <div>
+            <span><ShoppingCart size={26} /></span>
+            <strong>3. 비교 후 구매</strong>
+            <small>조건을 비교하고 구매하세요</small>
+          </div>
+        </section>
+
+        <section className="buyerMetricGrid" aria-label="구매 현황 요약">
+          <button type="button" onClick={() => navigate("/app/requests")}>
+            <span className="metricIcon orange"><BadgeCheck size={24} /></span>
+            <small>진행 중 견적</small>
+            <strong>{activeDeals || buyerRequests.filter((request) => request.status === "open").length}건</strong>
+            <ArrowRight size={18} />
+          </button>
+          <button type="button" onClick={() => navigate("/app/requests")}>
+            <span className="metricIcon blue"><ReceiptText size={24} /></span>
+            <small>오늘 도착 견적</small>
+            <strong>{requestsWithQuotes || todayArrivals}건</strong>
+            {requestsWithQuotes > 0 && <em>{requestsWithQuotes}</em>}
+            <ArrowRight size={18} />
+          </button>
+          <button type="button" onClick={() => navigate("/app/quick-reorder")}>
+            <span className="metricIcon green"><RefreshCcw size={24} /></span>
+            <small>재구매 추천</small>
+            <strong>{repeatablePurchases}건</strong>
+            <ArrowRight size={18} />
+          </button>
+          <button type="button" onClick={() => navigate("/app/purchases")}>
+            <span className="metricIcon purple"><ClipboardList size={24} /></span>
+            <small>최근 주문</small>
+            <strong>{purchaseSummary.pendingCount || buyerPurchases.length}건</strong>
+            <ArrowRight size={18} />
+          </button>
+        </section>
+
+        <section className="buyerDashboardGrid">
+          <article className="buyerPanel buyerRecentPanel">
+            <header>
+              <h2>최근 요청 현황</h2>
+              <button type="button" onClick={() => navigate("/app/requests")}>전체 보기</button>
+            </header>
+            {recentRequests.length ? (
+              <div className="buyerRequestTable" role="table" aria-label="최근 요청 현황">
+                <div className="buyerRequestRow head" role="row">
+                  <span>요청일</span>
+                  <span>요청 제목</span>
+                  <span>품목 수</span>
+                  <span>도착 견적</span>
+                  <span>상태</span>
+                </div>
+                {recentRequests.map((request) => {
+                  const quoteCount = getQuoteCount(request.id);
+                  const itemCount = getItemCount(request.id);
+                  const tone = getRequestStatusTone(request, quoteCount);
+                  return (
+                    <button className="buyerRequestRow" type="button" role="row" key={request.id} onClick={() => navigate(`/app/requests/${request.id}`)}>
+                      <span>{formatHomeDate(request.created_at)}</span>
+                      <strong>{request.title}</strong>
+                      <span>{itemCount}</span>
+                      <span>{quoteCount} / {Math.max(quoteCount, request.expected_supplier_count ?? 0)}</span>
+                      <em className={`buyerStatusPill ${tone}`}>{getRequestStatusLabel(request, quoteCount)}</em>
+                      <ArrowRight size={15} />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="buyerPanelEmpty">
+                <ReceiptText size={34} />
+                <strong>아직 요청한 견적이 없습니다.</strong>
+                <span>영수증이나 사진을 올리면 업체 견적을 받을 수 있습니다.</span>
+              </div>
+            )}
+          </article>
+
+          <article className="buyerPanel buyerProductPanel">
+            <header>
+              <h2>추천 업체 상품</h2>
+              <button type="button" onClick={() => navigate("/app/products")}>전체 보기</button>
+            </header>
+            <div className="buyerProductScroller">
+              {visibleProducts.map((product) => {
+                const supplier = data.supplier_profiles.find((entry) => entry.id === product.supplier_id);
+                return (
+                  <button className="buyerProductCard" type="button" key={product.id} onClick={() => navigate(`/app/products/${product.id}`)}>
+                    <ProductThumb product={product} />
+                    <strong>{product.title}</strong>
+                    <small>{product.package_unit || product.unit_label}</small>
+                    <em>{getSupplierProductPriceLabel(product)}</em>
+                    <span>{supplier?.business_name ?? "공급업체"}</span>
+                    <i><ShoppingCart size={18} /></i>
+                  </button>
+                );
+              })}
+              {!visibleProducts.length && (
+                <div className="buyerPanelEmpty compact">
+                  <Boxes size={30} />
+                  <strong>추천 상품을 준비 중입니다.</strong>
+                  <span>승인된 업체 상품이 등록되면 표시됩니다.</span>
+                </div>
+              )}
+            </div>
+          </article>
+        </section>
+
+        <section className="buyerQuickReorderBand" aria-label="빠른 재구매">
+          <div>
+            <h2>빠른 재구매</h2>
+            <p>최근 구매한 상품을 원클릭으로 다시 요청하세요.</p>
+          </div>
+          <div className="buyerQuickReorderList">
+            {quickReorderItems.map((record) => (
+              <button type="button" key={record.id} onClick={() => navigate("/app/quick-reorder")}>
+                <span>{record.purchase_title.slice(0, 1)}</span>
+                <strong>{record.purchase_title}</strong>
+                <small>{formatHomeDate(record.purchase_date)} 구매</small>
+                <i><ShoppingCart size={17} /></i>
+              </button>
+            ))}
+            {!quickReorderItems.length && (
+              <button type="button" onClick={() => navigate("/app/requests/new?method=photo")}>
+                <span>+</span>
+                <strong>첫 구매 견적 만들기</strong>
+                <small>영수증이나 사진으로 시작하세요</small>
+                <i><ArrowRight size={17} /></i>
+              </button>
+            )}
+          </div>
+          <button className="buyerMoreButton" type="button" onClick={() => navigate("/app/quick-reorder")}>
+            더 보기
+            <ArrowRight size={16} />
+          </button>
+        </section>
+      </div>
     </Page>
   );
 }
@@ -6543,7 +8409,7 @@ function useImageFallback(event: SyntheticEvent<HTMLImageElement>) {
   const image = event.currentTarget;
   if (image.dataset.fallbackApplied) return;
   image.dataset.fallbackApplied = "true";
-  image.src = "/아이콘.png";
+  image.src = "/icon.png";
 }
 
 function productSaveErrorMessage(error: unknown) {
@@ -6559,7 +8425,7 @@ function productSaveErrorMessage(error: unknown) {
 function ProductThumb({ product }: { product: SupplierProduct }) {
   return (
     <div className="productThumb" aria-hidden="true">
-      <img src={product.main_image_url || "/아이콘.png"} alt="" loading="lazy" onError={useImageFallback} />
+      <img src={product.main_image_url || "/icon.png"} alt="" loading="lazy" onError={useImageFallback} />
     </div>
   );
 }
@@ -6633,7 +8499,7 @@ function defaultProductDraft(data: AppData, supplier: SupplierProfile): Supplier
     category_id: category?.id ?? "",
     short_description: "",
     description: "",
-    main_image_url: "/아이콘.png",
+    main_image_url: "/icon.png",
     sku: "",
     brand: "",
     origin: "",
@@ -6689,7 +8555,8 @@ function productToDraft(product: SupplierProduct): SupplierProductDraft {
   };
 }
 
-function ProductsPage({ data, navigate, setData }: MutatingPageProps) {
+function ProductsPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const buyerId = authSession?.role === "buyer" ? authSession.id : "buyer-1";
   const [keyword, setKeyword] = useState("");
   const [categoryId, setCategoryId] = useState("all");
   const [region, setRegion] = useState("all");
@@ -6702,11 +8569,17 @@ function ProductsPage({ data, navigate, setData }: MutatingPageProps) {
     const keywordOk = !keyword.trim() || haystack.includes(keyword.trim().toLowerCase());
     const categoryOk = categoryId === "all" || product.category_id === categoryId;
     const regionOk = region === "all" || product.available_regions.some((entry) => entry.includes(region) || region.includes(entry.split(" ")[0]));
-    const favoriteOk = !favoritesOnly || data.product_favorites.some((entry) => entry.product_id === product.id && entry.buyer_id === "buyer-1");
+    const favoriteOk = !favoritesOnly || data.product_favorites.some((entry) => entry.product_id === product.id && entry.buyer_id === buyerId);
     return keywordOk && categoryOk && regionOk && favoriteOk;
   });
   const featured = filtered.filter((product) => product.is_featured).length;
   const quoteOnly = filtered.filter((product) => product.price_type === "quote_only").length;
+  const registeredProducts = data.supplier_products.filter((product) => !product.deleted_at);
+  const pendingProducts = registeredProducts.filter((product) => product.approval_status !== "approved" || !product.is_public).length;
+  const productEmptyTitle = products.length === 0 && pendingProducts > 0 ? "공개 준비 중인 상품이 있습니다." : "조건에 맞는 상품이 없습니다.";
+  const productEmptyDesc = products.length === 0 && pendingProducts > 0
+    ? "공급업체가 등록한 상품은 관리자 검토와 공개 설정이 끝난 뒤 구매자에게 표시됩니다."
+    : "검색어를 줄이거나 지역 조건을 전체로 바꿔보세요.";
 
   return (
     <Page>
@@ -6715,7 +8588,7 @@ function ProductsPage({ data, navigate, setData }: MutatingPageProps) {
         <Metric label="공개 상품" value={`${products.length}개`} icon={<Boxes />} />
         <Metric label="추천 상품" value={`${featured}개`} icon={<BadgeCheck />} />
         <Metric label="견적 문의 상품" value={`${quoteOnly}개`} icon={<ClipboardList />} />
-        <Metric label="저장한 상품" value={`${data.product_favorites.filter((entry) => entry.buyer_id === "buyer-1").length}개`} icon={<PackageCheck />} />
+        <Metric label="저장한 상품" value={`${data.product_favorites.filter((entry) => entry.buyer_id === buyerId).length}개`} icon={<PackageCheck />} />
       </div>
 
       <section className="filterPanel productFilterPanel">
@@ -6744,32 +8617,33 @@ function ProductsPage({ data, navigate, setData }: MutatingPageProps) {
               key={product.id}
               data={data}
               product={product}
-              favorite={data.product_favorites.some((entry) => entry.product_id === product.id && entry.buyer_id === "buyer-1")}
+              favorite={data.product_favorites.some((entry) => entry.product_id === product.id && entry.buyer_id === buyerId)}
               onOpen={() => navigate(`/app/products/${product.id}`)}
-              onFavorite={() => setData(toggleProductFavorite(data, product.id, "buyer-1"))}
+              onFavorite={() => setData(toggleProductFavorite(data, product.id, buyerId))}
             />
           ))}
         </section>
       ) : (
-        <EmptyState icon={<SearchCheck />} title="조건에 맞는 상품이 없습니다." desc="검색어를 줄이거나 지역 조건을 전체로 바꿔보세요." />
+        <EmptyState icon={<SearchCheck />} title={productEmptyTitle} desc={productEmptyDesc} />
       )}
     </Page>
   );
 }
 
-function ProductDetailPage({ data, navigate, setData, productId }: MutatingPageProps & { productId: string }) {
+function ProductDetailPage({ data, navigate, setData, productId, authSession }: MutatingPageProps & { productId: string; authSession?: AppAuthSession | null }) {
   const product = data.supplier_products.find((entry) => entry.id === productId);
   if (!product || product.deleted_at || product.approval_status !== "approved" || !product.is_public) return <NotFound navigate={navigate} />;
   const supplier = data.supplier_profiles.find((entry) => entry.id === product.supplier_id);
   const categoryName = getProductCategoryName(data, product.category_id);
-  const favorite = data.product_favorites.some((entry) => entry.product_id === product.id && entry.buyer_id === "buyer-1");
+  const buyerId = authSession?.role === "buyer" ? authSession.id : "buyer-1";
+  const favorite = data.product_favorites.some((entry) => entry.product_id === product.id && entry.buyer_id === buyerId);
   const relatedProducts = getVisibleSupplierProducts(data).filter((entry) => entry.supplier_id === product.supplier_id && entry.id !== product.id).slice(0, 3);
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/products")} label="상품 목록" />
       <section className="productDetailHero">
         <div className="productImageFrame">
-          <img src={product.main_image_url || "/아이콘.png"} alt="" onError={useImageFallback} />
+          <img src={product.main_image_url || "/icon.png"} alt="" onError={useImageFallback} />
         </div>
         <div className="productDetailCopy">
           <span className="eyebrow">{categoryName} · {supplier?.business_name ?? "공급업체"}</span>
@@ -6784,7 +8658,7 @@ function ProductDetailPage({ data, navigate, setData, productId }: MutatingPageP
             {product.card_payment_available && <span className="chip">카드 가능</span>}
           </div>
           <div className="formActions">
-            <button className="ghostButton" type="button" onClick={() => setData(toggleProductFavorite(data, product.id, "buyer-1"))}>{favorite ? "저장 해제" : "자주 쓰는 상품 저장"}</button>
+            <button className="ghostButton" type="button" onClick={() => setData(toggleProductFavorite(data, product.id, buyerId))}>{favorite ? "저장 해제" : "자주 쓰는 상품 저장"}</button>
             <button className="secondaryButton" type="button" onClick={() => navigate(`/app/suppliers/${product.supplier_id}/store`)}>업체 상품관 보기</button>
           </div>
         </div>
@@ -6806,7 +8680,7 @@ function ProductDetailPage({ data, navigate, setData, productId }: MutatingPageP
             `안심거래 ${yesNo(product.safe_trade_available)}`,
           ]} />
         </article>
-        <ProductActionPanel data={data} product={product} navigate={navigate} setData={setData} />
+        <ProductActionPanel data={data} product={product} navigate={navigate} setData={setData} authSession={authSession} />
       </section>
 
       <SectionHeader title="이 업체의 다른 상품" action="상품관 보기" onAction={() => navigate(`/app/suppliers/${product.supplier_id}/store`)} />
@@ -6821,7 +8695,8 @@ function ProductDetailPage({ data, navigate, setData, productId }: MutatingPageP
   );
 }
 
-function ProductActionPanel({ data, product, navigate, setData }: MutatingPageProps & { product: SupplierProduct }) {
+function ProductActionPanel({ data, product, navigate, setData, authSession }: MutatingPageProps & { product: SupplierProduct; authSession?: AppAuthSession | null }) {
+  const buyerId = authSession?.role === "buyer" ? authSession.id : "buyer-1";
   const [quantity, setQuantity] = useState(Math.max(product.min_order_quantity, 1));
   const [region, setRegion] = useState(product.available_regions[0] ?? commonServiceRegions[0] ?? "");
   const [date, setDate] = useState("2026-07-10");
@@ -6829,7 +8704,7 @@ function ProductActionPanel({ data, product, navigate, setData }: MutatingPagePr
   const [doneMessage, setDoneMessage] = useState("");
 
   function submitInquiry(type: ProductInquiryDraft["inquiry_type"]) {
-    const result = createProductInquiry(data, product.id, "buyer-1", {
+    const result = createProductInquiry(data, product.id, buyerId, {
       inquiry_type: type,
       message: memo || (type === "question" ? "상품 조건을 문의합니다." : "이 상품 기준으로 견적을 받고 싶습니다."),
       quantity,
@@ -6841,13 +8716,13 @@ function ProductActionPanel({ data, product, navigate, setData }: MutatingPagePr
   }
 
   function requestQuote() {
-    const result = createQuoteRequestFromProduct(data, product.id, "buyer-1", quantity, region, date, memo);
+    const result = createQuoteRequestFromProduct(data, product.id, buyerId, quantity, region, date, memo);
     setData(result.data);
     if (result.requestId) navigate(`/app/requests/${result.requestId}`);
   }
 
   function requestOrder() {
-    const result = createProductOrderRequest(data, product.id, "buyer-1", { quantity, desired_delivery_date: date, delivery_region: region, buyer_memo: memo });
+    const result = createProductOrderRequest(data, product.id, buyerId, { quantity, desired_delivery_date: date, delivery_region: region, buyer_memo: memo });
     setData(result.data);
     setDoneMessage(result.orderRequestId ? "주문요청이 공급업체에 전달되었습니다." : "주문요청을 처리하지 못했습니다.");
   }
@@ -6875,7 +8750,7 @@ function ProductActionPanel({ data, product, navigate, setData }: MutatingPagePr
         <button className="ghostButton" type="button" onClick={requestOrder}>주문요청</button>
       </div>
       {doneMessage && <p className="successText">{doneMessage}</p>}
-      <button className="ghostButton dangerButton" type="button" onClick={() => setData(createProductReport(data, product.id, "buyer-1", "wrong_info", "구매자 화면에서 상품 정보 검토 요청"))}>상품 정보 신고</button>
+      <button className="ghostButton dangerButton" type="button" onClick={() => setData(createProductReport(data, product.id, buyerId, "wrong_info", "구매자 화면에서 상품 정보 검토 요청"))}>상품 정보 신고</button>
     </aside>
   );
 }
@@ -6926,82 +8801,131 @@ function SupplierProductsPage({ data, navigate, setData }: MutatingPageProps) {
   const supplier = getActiveSupplier(data);
   const products = getSupplierProducts(data, supplier.id);
   const summary = getSupplierProductSummary(data, supplier.id);
-  const inquiries = data.product_inquiries.filter((entry) => entry.supplier_id === supplier.id).slice(0, 5);
-  const orderRequests = data.product_order_requests.filter((entry) => entry.supplier_id === supplier.id).slice(0, 5);
+  const [keyword, setKeyword] = useState("");
+  const [visibility, setVisibility] = useState("all");
+  const [approvalStatus, setApprovalStatus] = useState("all");
+  const [sort, setSort] = useState("updated");
+  const recentInquiries = data.product_inquiries.filter((entry) => entry.supplier_id === supplier.id && entry.created_at >= "2026-06-10");
+  const pendingInquiries = data.product_inquiries.filter((entry) => entry.supplier_id === supplier.id && entry.status === "pending");
+  const filteredProducts = products
+    .filter((product) => {
+      const searchText = `${product.title} ${product.short_description} ${product.description} ${product.sku} ${product.brand} ${getProductCategoryName(data, product.category_id)}`.toLowerCase();
+      const keywordOk = !keyword.trim() || searchText.includes(keyword.trim().toLowerCase());
+      const visibilityOk = visibility === "all"
+        || (visibility === "public" && product.is_public && product.approval_status === "approved")
+        || (visibility === "private" && (!product.is_public || product.approval_status === "hidden"));
+      const statusOk = approvalStatus === "all" || product.approval_status === approvalStatus;
+      return keywordOk && visibilityOk && statusOk;
+    })
+    .sort((a, b) => {
+      if (sort === "inquiries") return (b.inquiry_count + b.order_request_count) - (a.inquiry_count + a.order_request_count);
+      if (sort === "price") return (b.price || b.from_price) - (a.price || a.from_price);
+      return b.updated_at.localeCompare(a.updated_at);
+    });
+
+  function productStatusActionLabel(product: SupplierProduct) {
+    if (product.is_public && product.approval_status === "approved") return "비공개";
+    if (product.approval_status === "pending") return "검토중";
+    return "공개하기";
+  }
+
+  function toggleProductPublic(product: SupplierProduct) {
+    if (product.approval_status === "pending") return;
+    setData(updateSupplierProduct(data, product.id, { is_public: !product.is_public, approval_status: product.is_public ? "draft" : "pending" }));
+  }
+
   return (
     <Page>
-      <PageTitle eyebrow="내 상품" title="상품을 등록하고 추가 주문을 받아보세요." desc="복잡한 쇼핑몰이 아니라, 구매자가 바로 문의하고 견적을 요청할 수 있는 B2B 상품관입니다." />
-      <SupplierStatusNotice supplier={supplier} navigate={navigate} />
-      <div className="dashboardGrid">
-        <Metric label="전체 상품" value={`${summary.total}개`} icon={<Boxes />} />
-        <Metric label="공개 상품" value={`${summary.publicCount}개`} icon={<BadgeCheck />} />
-        <Metric label="검토 중" value={`${summary.pendingCount}개`} icon={<ShieldCheck />} />
-        <Metric label="문의/주문" value={`${summary.inquiryCount + summary.orderRequestCount}건`} icon={<MessageCircle />} />
+      <div className="supplierProductsPage">
+      <div className="supplierProductsHeader">
+        <div>
+          <span className="eyebrow">내 상품</span>
+          <h1>상품 등록 및 관리</h1>
+          <p>상품을 등록하고 공개하여 더 많은 바이어에게 노출하세요. 문의 및 주문 현황을 한눈에 관리할 수 있습니다.</p>
+        </div>
+        <div className="supplierProductsControls" aria-label="상품 검색과 필터">
+          <div className="productSearchBox">
+            <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="상품명으로 검색" />
+            <SearchCheck size={18} />
+          </div>
+          <select value={visibility} onChange={(event) => setVisibility(event.target.value)} aria-label="공개 상태">
+            <option value="all">전체</option>
+            <option value="public">공개</option>
+            <option value="private">비공개</option>
+          </select>
+          <select value={approvalStatus} onChange={(event) => setApprovalStatus(event.target.value)} aria-label="검토 상태">
+            <option value="all">상태 전체</option>
+            <option value="approved">공개 승인</option>
+            <option value="pending">검토 중</option>
+            <option value="draft">임시저장</option>
+            <option value="rejected">반려</option>
+          </select>
+        </div>
       </div>
-      <section className="formActions">
-        <button className="primaryButton" type="button" onClick={() => navigate("/app/supplier/products/new")}><Plus size={16} /> 상품 등록하기</button>
-        <button className="secondaryButton" type="button" onClick={() => navigate("/app/supplier/store")}>내 상품관 보기</button>
+      <SupplierStatusNotice supplier={supplier} navigate={navigate} />
+      <div className="supplierProductStats">
+        <Metric label="전체 상품" value={`${summary.total}개`} desc="등록된 상품 수" icon={<Boxes />} />
+        <Metric label="공개 상품" value={`${summary.publicCount}개`} desc="공개 승인된 상품" icon={<BadgeCheck />} />
+        <Metric label="검토 중" value={`${summary.pendingCount}개`} desc="검토 대기 상품" icon={<ShieldCheck />} />
+        <Metric label="문의/주문" value={`${recentInquiries.length + summary.orderRequestCount}건`} desc="최근 30일 기준" icon={<MessageCircle />} />
+      </div>
+
+      <section className="supplierProductGuide">
+        <div className="supplierProductGuideIntro">
+          <div className="guideIllustration"><Boxes size={34} /></div>
+          <div>
+            <strong>처음 등록도 3분이면 가능합니다.</strong>
+            <span>아래 3단계만 따라하면 손쉽게 등록해요.</span>
+          </div>
+        </div>
+        <div className="supplierProductSteps">
+          <div><b>1</b><strong>기본 정보 입력</strong><span>상품명, 이미지, 설명</span></div>
+          <ArrowRight size={18} />
+          <div><b>2</b><strong>가격/옵션 설정</strong><span>가격, 단위, 옵션 추가</span></div>
+          <ArrowRight size={18} />
+          <div><b>3</b><strong>공개 요청</strong><span>검토 후 공개 승인</span></div>
+        </div>
       </section>
 
-      <SectionHeader title="내 상품 목록" />
-      {products.length ? (
-        <section className="supplierProductList">
-          {products.map((product) => (
+      <section className="supplierProductListHeader">
+        <h2>내 상품 목록</h2>
+        <div>
+          <button className="primaryButton compact" type="button" onClick={() => navigate("/app/supplier/products/new")}><Plus size={16} /> 상품 등록</button>
+          <button className="secondaryButton compact" type="button" onClick={() => navigate("/app/supplier/store")}>상품관 보기</button>
+          <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="상품 정렬">
+            <option value="updated">최신 등록순</option>
+            <option value="inquiries">문의 많은순</option>
+            <option value="price">높은 가격순</option>
+          </select>
+        </div>
+      </section>
+
+      {filteredProducts.length ? (
+        <section className="supplierProductList upgraded">
+          {filteredProducts.map((product) => (
             <article className="supplierProductRow" key={product.id}>
               <ProductThumb product={product} />
-              <div>
+              <div className="supplierProductMainInfo">
                 <strong>{product.title}</strong>
                 <p>{product.short_description || getProductCategoryName(data, product.category_id)}</p>
-                <div className="chipLine">
-                  <StatusBadge tone={productApprovalTone(product.approval_status)}>{productApprovalStatusLabels[product.approval_status]}</StatusBadge>
-                  <span className="chip">{getSupplierProductPriceLabel(product)}</span>
-                  <span className="chip">문의 {product.inquiry_count}</span>
-                  <span className="chip">주문 {product.order_request_count}</span>
-                </div>
               </div>
+              <StatusBadge tone={productApprovalTone(product.approval_status)}>{productApprovalStatusLabels[product.approval_status]}</StatusBadge>
+              <strong className="supplierProductPrice">{getSupplierProductPriceLabel(product)}</strong>
+              <span className="supplierProductCount"><MessageCircle size={16} /> 문의 {product.inquiry_count}</span>
+              <span className="supplierProductCount"><PackageCheck size={16} /> 주문 {product.order_request_count}</span>
               <div className="rowActions">
                 <button className="secondaryButton compact" type="button" onClick={() => navigate(`/app/supplier/products/${product.id}/edit`)}>수정</button>
-                <button className="ghostButton compact" type="button" onClick={() => setData(updateSupplierProduct(data, product.id, { is_public: !product.is_public }))}>{product.is_public ? "비공개" : "공개요청"}</button>
+                <button className="ghostButton compact" type="button" disabled={product.approval_status === "pending"} onClick={() => toggleProductPublic(product)}>{productStatusActionLabel(product)}</button>
                 <button className="ghostButton compact dangerButton" type="button" onClick={() => setData(deleteSupplierProduct(data, product.id))}>삭제</button>
               </div>
             </article>
           ))}
         </section>
       ) : (
-        <EmptyState icon={<Boxes />} title="아직 등록한 상품이 없습니다." desc="대표 사진과 필수 정보만으로 첫 상품을 등록해보세요." actionLabel="상품 등록" onAction={() => navigate("/app/supplier/products/new")} />
+        <EmptyState icon={<Boxes />} title="조건에 맞는 상품이 없습니다." desc="검색어 또는 필터를 줄이면 등록한 상품을 다시 확인할 수 있습니다." actionLabel="상품 등록" onAction={() => navigate("/app/supplier/products/new")} />
       )}
-
-      <section className="twoColumn">
-        <article className="formStack">
-          <SectionHeader title="최근 상품 문의" />
-          {inquiries.length ? inquiries.map((entry) => {
-            const product = data.supplier_products.find((item) => item.id === entry.product_id);
-            return (
-              <div className="compactListItem" key={entry.id}>
-                <strong>{product?.title ?? "상품"}</strong>
-                <span>{productInquiryTypeLabels[entry.inquiry_type]} · {productInquiryStatusLabels[entry.status]}</span>
-                <p>{entry.message}</p>
-              </div>
-            );
-          }) : <EmptyState icon={<MessageCircle />} title="새 문의가 없습니다." desc="구매자가 상품을 문의하면 이곳에 표시됩니다." variant="compact" />}
-        </article>
-        <article className="formStack">
-          <SectionHeader title="주문요청 확인" />
-          {orderRequests.length ? orderRequests.map((entry) => {
-            const product = data.supplier_products.find((item) => item.id === entry.product_id);
-            return (
-              <div className="compactListItem" key={entry.id}>
-                <strong>{product?.title ?? "상품"} · {entry.quantity}{entry.unit_label}</strong>
-                <span>{productOrderRequestStatusLabels[entry.status]} · {entry.delivery_region}</span>
-                <div className="rowActions">
-                  <button className="secondaryButton compact" type="button" onClick={() => setData(updateProductOrderRequest(data, entry.id, { status: "confirmed", supplier_response: "주문 가능", final_price: entry.final_price }))}>가능</button>
-                  <button className="ghostButton compact" type="button" onClick={() => setData(updateProductOrderRequest(data, entry.id, { status: "rejected", supplier_response: "현재 재고 또는 납품 조건상 진행이 어렵습니다." }))}>진행불가</button>
-                </div>
-              </div>
-            );
-          }) : <EmptyState icon={<PackageCheck />} title="주문요청이 없습니다." desc="구매자가 주문요청을 보내면 여기서 확인합니다." variant="compact" />}
-        </article>
-      </section>
+      {pendingInquiries.length > 0 && <p className="supplierProductFootnote">답변 대기 문의 {pendingInquiries.length}건이 있습니다. 문의 메뉴에서 빠르게 답변해 주세요.</p>}
+      </div>
     </Page>
   );
 }
@@ -7011,7 +8935,7 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
   const existing = productId ? data.supplier_products.find((entry) => entry.id === productId && entry.supplier_id === supplier.id) : undefined;
   const [draft, setDraft] = useState<SupplierProductDraft>(() => existing ? productToDraft(existing) : defaultProductDraft(data, supplier));
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
-  const [productImagePreview, setProductImagePreview] = useState(draft.main_image_url || "/아이콘.png");
+  const [productImagePreview, setProductImagePreview] = useState(draft.main_image_url || "/icon.png");
   const [imageNotice, setImageNotice] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [savingStep, setSavingStep] = useState("");
@@ -7019,7 +8943,7 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!productImageFile) setProductImagePreview(draft.main_image_url || "/아이콘.png");
+    if (!productImageFile) setProductImagePreview(draft.main_image_url || "/icon.png");
   }, [draft.main_image_url, productImageFile]);
 
   useEffect(() => {
@@ -7030,10 +8954,6 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
 
   function update<K extends keyof SupplierProductDraft>(key: K, value: SupplierProductDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
-  }
-
-  function toggleRegion(region: string) {
-    update("available_regions", draft.available_regions.includes(region) ? draft.available_regions.filter((entry) => entry !== region) : [...draft.available_regions, region]);
   }
 
   function handleProductImageChange(event: ChangeEvent<HTMLInputElement>) {
@@ -7059,7 +8979,7 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
   }
 
   async function resolveProductImageUrl() {
-    if (!productImageFile) return draft.main_image_url || "/아이콘.png";
+    if (!productImageFile) return draft.main_image_url || "/icon.png";
     setSavingStep("상품 이미지를 앱에 맞게 준비하고 있습니다.");
     const localImageUrl = await createLocalProductImageUrl(productImageFile);
     setSavingStep("상품 이미지를 서버에 업로드하고 있습니다.");
@@ -7103,7 +9023,7 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
         const nextData = updateSupplierProduct(data, existing.id, {
           ...existing,
           ...nextDraft,
-          main_image_url: nextDraft.main_image_url || "/아이콘.png",
+          main_image_url: nextDraft.main_image_url || "/icon.png",
         });
         setData(nextData);
         navigate("/app/supplier/products");
@@ -7149,7 +9069,7 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
             <Field label="대표 이미지">
               <div className="productImagePicker">
                 <div className="productImagePreview">
-                  <img src={productImagePreview || "/아이콘.png"} alt="상품 대표 이미지 미리보기" onError={useImageFallback} />
+                  <img src={productImagePreview || "/icon.png"} alt="상품 대표 이미지 미리보기" onError={useImageFallback} />
                 </div>
                 <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleProductImageChange} />
                 {imageNotice && <small>{imageNotice}</small>}
@@ -7173,10 +9093,24 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
               </select>
             </Field>
             <Field label="고정가">
-              <input type="number" value={draft.price} onChange={(event) => update("price", Number(event.target.value))} disabled={draft.price_type !== "fixed"} />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={draft.price_type === "fixed" ? formatMoneyInput(draft.price) : ""}
+                onChange={(event) => update("price", parseMoneyInput(event.target.value))}
+                disabled={draft.price_type !== "fixed"}
+                placeholder="예: 34,000"
+              />
             </Field>
             <Field label="시작가">
-              <input type="number" value={draft.from_price} onChange={(event) => update("from_price", Number(event.target.value))} disabled={draft.price_type !== "from_price"} />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={draft.price_type === "from_price" ? formatMoneyInput(draft.from_price) : ""}
+                onChange={(event) => update("from_price", parseMoneyInput(event.target.value))}
+                disabled={draft.price_type !== "from_price"}
+                placeholder="예: 34,000"
+              />
             </Field>
             <Field label="단위">
               <input value={draft.unit_label} onChange={(event) => update("unit_label", event.target.value)} placeholder="박스, 묶음, kg" />
@@ -7210,17 +9144,19 @@ function SupplierProductFormPage({ data, navigate, setData, productId }: Mutatin
               </select>
             </Field>
             <Field label="배송비 금액">
-              <input type="number" value={draft.delivery_fee_amount} onChange={(event) => update("delivery_fee_amount", Number(event.target.value))} />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={formatMoneyInput(draft.delivery_fee_amount)}
+                onChange={(event) => update("delivery_fee_amount", parseMoneyInput(event.target.value))}
+                placeholder="예: 3,000"
+              />
             </Field>
             <Field label="납품 소요시간">
               <input value={draft.lead_time_text} onChange={(event) => update("lead_time_text", event.target.value)} placeholder="평일 기준 1-2일" />
             </Field>
           </div>
-          <div className="chipSelectGrid">
-            {commonServiceRegions.map((region) => (
-              <button className={draft.available_regions.includes(region) ? "chipSelect active" : "chipSelect"} type="button" onClick={() => toggleRegion(region)} key={region}>{region}</button>
-            ))}
-          </div>
+          <SupplierRegionSelector regions={draft.available_regions} onChange={(regions) => update("available_regions", regions)} />
           <div className="toggleGrid">
             <Toggle checked={draft.is_public} label="공개 요청" onChange={(value) => update("is_public", value)} />
             <Toggle checked={draft.is_featured} label="대표 상품으로 표시" onChange={(value) => update("is_featured", value)} />
@@ -7369,14 +9305,85 @@ function parseTodayDraftItems(itemsJson: string): QuoteRequestDraft["items"] {
   }
 }
 
-function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/new" }: MutatingPageProps & { routePath?: string }) {
+type PreviousPurchaseInfo = {
+  date: string;
+  supplierName: string;
+  categoryName: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalAmount: number;
+};
+
+function normalizePurchaseItemName(value: string) {
+  return value.replace(/\s+/g, "").trim().toLowerCase();
+}
+
+function buildPreviousPurchaseLookup(data: AppData, buyerIds: Set<string>) {
+  const recordsById = new Map<string, PurchaseRecord>();
+  const activeBuyerIds = new Set(buyerIds);
+  if (activeBuyerIds.size === 0) activeBuyerIds.add("buyer-1");
+
+  data.purchase_records.forEach((record) => {
+    if (record.deleted_at) return;
+    if (!activeBuyerIds.has(record.buyer_id) && (!record.business_id || !activeBuyerIds.has(record.business_id))) return;
+    recordsById.set(record.id, record);
+  });
+
+  const lookup = new Map<string, PreviousPurchaseInfo>();
+  data.purchase_record_items.forEach((item) => {
+    const record = recordsById.get(item.purchase_record_id);
+    const key = normalizePurchaseItemName(item.item_name);
+    if (!record || !key) return;
+    const totalAmount = item.total_price || Math.round((item.unit_price || 0) * (item.quantity || 1)) || record.total_amount;
+    const unitPrice = item.unit_price || (item.quantity ? Math.round(totalAmount / item.quantity) : totalAmount);
+    const next: PreviousPurchaseInfo = {
+      date: record.purchase_date,
+      supplierName: record.supplier_name,
+      categoryName: record.category_name,
+      quantity: item.quantity,
+      unit: item.unit,
+      unitPrice,
+      totalAmount,
+    };
+    const current = lookup.get(key);
+    if (!current || current.date < next.date) lookup.set(key, next);
+  });
+
+  return lookup;
+}
+
+function findPreviousPurchaseForItem(lookup: Map<string, PreviousPurchaseInfo>, itemName: string) {
+  const key = normalizePurchaseItemName(itemName);
+  if (!key) return undefined;
+  const exact = lookup.get(key);
+  if (exact) return exact;
+  for (const [historyKey, history] of lookup.entries()) {
+    if (historyKey.includes(key) || key.includes(historyKey)) return history;
+  }
+  return undefined;
+}
+
+function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/new", authSession }: MutatingPageProps & { routePath?: string; authSession?: AppAuthSession | null }) {
   const wizardSteps = ["올리기", "품목 확인", "납품 조건", "완료"];
-  const todayDraftId = getSearchParams(routePath).get("draftId") ?? "";
+  const searchParams = getSearchParams(routePath);
+  const todayDraftId = searchParams.get("draftId") ?? "";
+  const requestedInputMethod = parseRequestInputMethod(searchParams.get("method") ?? searchParams.get("inputMethod"));
+  const buyerIdsForSession = useMemo(() => {
+    const ids = getBuyerIdsForSession(data, authSession);
+    if (authSession?.role === "buyer" && authSession.id) ids.add(authSession.id);
+    if (ids.size === 0) ids.add("buyer-1");
+    return ids;
+  }, [data, authSession]);
   const todayRecommendation = todayDraftId ? null : getTodayRecommendationFromUrl(data);
-  const todayDraft = todayDraftId ? getTodayQuoteDraft(data, todayDraftId, "buyer-1") : undefined;
+  const todayDraft = todayDraftId
+    ? Array.from(buyerIdsForSession)
+      .map((buyerBusinessId) => getTodayQuoteDraft(data, todayDraftId, buyerBusinessId))
+      .find((entry): entry is TodaySsawaQuoteDraft => Boolean(entry))
+    : undefined;
   const todayDraftItems = todayDraft ? parseTodayDraftItems(todayDraft.items_json) : undefined;
   const todayDraftCategory = todayDraft ? data.categories.find((category) => category.name === todayDraft.category || todayDraft.category.includes(category.name) || category.name.includes(todayDraft.category)) : undefined;
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(todayDraftId || requestedInputMethod ? 1 : 0);
   const [textInput, setTextInput] = useState(todayRecommendation?.textInput ?? todayDraft?.description ?? "치킨박스 1000개, 소스컵 2000개, 배달봉투 대형 1000장 필요해요.");
   const [receiptFileName, setReceiptFileName] = useState("");
   const [receiptImageFile, setReceiptImageFile] = useState<File | null>(null);
@@ -7396,7 +9403,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
     description: todayDraft?.description ?? todayRecommendation?.description ?? "",
     attachment_note: "",
     previous_amount: 0,
-    input_method: "manual",
+    input_method: requestedInputMethod ?? "manual",
     original_text_input: todayRecommendation?.textInput ?? todayDraft?.description ?? "",
     template_name: "",
     previous_request_id: "",
@@ -7412,6 +9419,11 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
   });
   const [error, setError] = useState("");
   const selectedCategory = data.categories.find((category) => category.id === draft.category_id) ?? data.categories[0];
+  const buyerIdsForPurchaseHistory = buyerIdsForSession;
+  const previousPurchaseLookup = useMemo(
+    () => buildPreviousPurchaseLookup(data, buyerIdsForPurchaseHistory),
+    [data, buyerIdsForPurchaseHistory],
+  );
   const qualityScore = useMemo(() => calculateRequestQuality({ ...draft, category_name: selectedCategory?.name }, draft.items, draft.attachments), [draft, selectedCategory]);
   const expectedSupplierCount = useMemo(
     () => estimateSupplierMatches(data, selectedCategory?.name ?? "", draft.delivery_region, draft.need_tax_invoice, draft.card_payment_required),
@@ -7425,8 +9437,8 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
 
   useEffect(() => {
     if (!todayDraftId || !todayDraft || todayDraft.status !== "draft") return;
-    setData(markTodayQuoteDraftOpened(data, todayDraftId, "buyer-1"));
-  }, [todayDraftId]);
+    setData(markTodayQuoteDraftOpened(data, todayDraftId, todayDraft.business_id));
+  }, [todayDraftId, todayDraft?.id, todayDraft?.business_id, todayDraft?.status]);
 
   function updateItem(index: number, key: keyof QuoteRequestDraft["items"][number], value: string | number | boolean) {
     setDraft((current) => ({
@@ -7511,7 +9523,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
     setReceiptFileName(result.fileName);
     setDraft((current) => ({
       ...current,
-      input_method: result.sourceType === "invoice" ? "invoice" : "photo",
+      input_method: "photo",
       title: current.title || `${result.categoryName} 재견적 요청`,
       category_id: category?.id ?? current.category_id,
       description: current.description || `${result.supplierName || "업로드 이미지"}에서 자동 추출한 품목입니다. 품목과 수량을 확인한 뒤 견적을 요청합니다.`,
@@ -7529,9 +9541,9 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
   }
 
   async function analyzeReceiptPhoto() {
-    const sourceType = draft.input_method === "invoice" ? "invoice" : "photo";
+    const sourceType = "photo";
     if (!receiptImageFile) {
-      setReceiptAnalysisNotice("분석할 이미지를 먼저 선택해 주세요. 구매영수증, 거래명세서 캡처, 자필 메모 사진을 사용할 수 있습니다.");
+      setReceiptAnalysisNotice("분석할 이미지를 먼저 선택해 주세요. 구매영수증이나 자필 메모 사진을 사용할 수 있습니다.");
       return;
     }
     setReceiptAnalysisLoading(true);
@@ -7540,9 +9552,9 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
       const result = await analyzeReceiptImageWithGemini(receiptImageFile, receiptFileName || receiptImageFile.name, sourceType);
       applyReceiptAnalysis(result, "gemini", "AI가 업로드 이미지를 읽어 품목 후보를 자동 입력했습니다.");
     } catch (analysisError) {
-      setReceiptAnalysisPreview(null);
-      setReceiptAnalysisSource("");
-      setReceiptAnalysisNotice(formatGeminiAnalysisError(analysisError));
+      console.warn("quote receipt analysis fallback used", analysisError);
+      const fallback = analyzeReceiptPhotoForQuoteRequest(receiptFileName || receiptImageFile.name, sourceType);
+      applyReceiptAnalysis(fallback, "mock", `${formatGeminiAnalysisError(analysisError)} 앱 내부 분석으로 임시 품목 초안을 만들었습니다. 저장 전 품목과 금액을 꼭 확인해 주세요.`);
     } finally {
       setReceiptAnalysisLoading(false);
     }
@@ -7573,7 +9585,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
     setStep((current) => Math.min(wizardSteps.length - 1, current + 1));
   }
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     if (!draft.delivery_region.trim() || !draft.desired_delivery_date || !draft.items.some((entry) => entry.item_name.trim())) {
       setError("배송 지역, 희망 납품일, 품목을 입력해 주세요.");
@@ -7588,18 +9600,37 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
       return;
     }
 
-    const result = createQuoteRequest(data, {
+    const finalDraft = {
       ...draft,
       title: draft.title.trim() || `${selectedCategory?.name ?? "자재"} 견적 요청`,
-    });
-    setData(todayDraftId ? linkRequoteDraftToQuoteRequest(result.data, todayDraftId, result.requestId, "buyer-1") : result.data);
+    };
+
+    if (isLiveModeReady() && authSession?.role === "buyer" && authSession.id) {
+      const liveResult = await createLiveQuoteRequest(authSession.id, finalDraft);
+      if (!liveResult.ok) {
+        setError(`견적요청 저장에 실패했습니다. ${liveResult.error}`);
+        return;
+      }
+      if (!liveResult.data) {
+        setError("견적요청 저장 후 응답을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
+      const liveItemsResult = await listLiveQuoteRequestItemsForRequests([liveResult.data.id]);
+      const nextData = mergeQuoteRequestState(data, [liveResult.data], liveItemsResult.ok ? liveItemsResult.data : []);
+      setData(todayDraftId ? linkRequoteDraftToQuoteRequest(nextData, todayDraftId, liveResult.data.id, authSession.id) : nextData);
+      navigate(`/app/requests/${liveResult.data.id}`);
+      return;
+    }
+
+    const result = createQuoteRequest(data, finalDraft, authSession?.role === "buyer" ? authSession.id : "buyer-1");
+    setData(todayDraftId ? linkRequoteDraftToQuoteRequest(result.data, todayDraftId, result.requestId, authSession?.id ?? "buyer-1") : result.data);
     navigate(`/app/requests/${result.requestId}`);
   }
 
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/requests")} label="요청 목록" />
-      <PageTitle eyebrow="구매자" title="필요한 자재를 편하게 알려주세요." desc="거래명세서, 사진, 문장, 지난 구매 중 편한 방식으로 시작하고 마지막에 품목과 납품 조건만 확인합니다." />
+      <PageTitle eyebrow="구매자" title="필요한 자재를 편하게 알려주세요." desc="영수증 사진, 문장, 지난 구매 중 편한 방식으로 시작하고 마지막에 품목과 납품 조건만 확인합니다." />
       <form className="wizardShell" onSubmit={submit}>
         <div className="wizardSteps" aria-label="견적요청 작성 단계">
           {wizardSteps.map((label, index) => (
@@ -7627,8 +9658,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
             <SectionHeader title="어떻게 올릴까요?" />
             <p className="mutedText summaryLine">정확히 몰라도 괜찮아요. 규격을 모르시면 사진이나 메모를 남겨주세요.</p>
             <div className="methodGrid">
-              <MethodCard icon={<ReceiptText />} title="거래명세서/견적서 올리기" desc="기존 명세서나 영수증을 읽어 재견적 품목을 만듭니다." active={draft.input_method === "invoice"} onClick={() => selectMethod("invoice")} />
-              <MethodCard icon={<Upload />} title="사진으로 올리기" desc="구매영수증이나 자필 메모 사진을 올리면 AI가 품목을 자동 입력합니다." active={draft.input_method === "photo"} onClick={() => selectMethod("photo")} />
+              <MethodCard icon={<Upload />} title="영수증 올리기" desc="영수증이나 자필 메모 사진을 올리면 AI가 품목을 자동 입력합니다." active={draft.input_method === "photo"} onClick={() => selectMethod("photo")} />
               <MethodCard icon={<FilePlus2 />} title="직접 입력하기" desc="품목명, 수량, 납품 조건을 직접 입력합니다." active={draft.input_method === "manual"} onClick={() => selectMethod("manual")} />
               <MethodCard icon={<RefreshCcw />} title="지난 구매 다시 요청하기" desc="지난 요청을 복사해 수량과 납품일만 바꿉니다." active={draft.input_method === "repeat"} onClick={() => selectMethod("repeat")} />
             </div>
@@ -7643,6 +9673,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
                   {data.categories.map((category) => (
                     <button className={draft.category_id === category.id ? "categoryChoiceCard active" : "categoryChoiceCard"} type="button" onClick={() => setDraft({ ...draft, category_id: category.id })} key={category.id}>
                       <strong>{category.name}</strong>
+                      <small>{draft.category_id === category.id ? "선택됨" : "탭해서 선택"}</small>
                       <span>{categoryDescriptions[category.name] ?? "요청 품목의 성격에 가장 가까운 카테고리"}</span>
                     </button>
                   ))}
@@ -7671,7 +9702,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
                 )}
                 {draft.input_method === "template" && <TemplatePicker onSelect={selectTemplate} selectedName={draft.template_name} />}
                 {draft.input_method === "repeat" && <RepeatRequestPanel data={data} onSelect={repeatRequest} selectedId={draft.previous_request_id} />}
-                <ItemReviewEditor items={draft.items} onUpdate={updateItem} onRemove={(index) => setDraft({ ...draft, items: draft.items.filter((_, itemIndex) => itemIndex !== index) })} />
+                <ItemReviewEditor items={draft.items} previousPurchaseLookup={previousPurchaseLookup} onUpdate={updateItem} onRemove={(index) => setDraft({ ...draft, items: draft.items.filter((_, itemIndex) => itemIndex !== index) })} />
               </div>
               <QualityPreview score={qualityScore} expectedSupplierCount={expectedSupplierCount} />
             </div>
@@ -7780,7 +9811,11 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
   );
 }
 
-function RequestsPage({ data, navigate }: PageProps) {
+function RequestsPage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
+  const buyerIds = getBuyerIdsForSession(data, authSession);
+  const requests = authSession?.role === "buyer"
+    ? data.quote_requests.filter((request) => buyerIds.has(request.buyer_id) && (!isLiveModeReady() || isLiveRecordId(request.id) || request.buyer_id !== authSession.id))
+    : data.quote_requests;
   return (
     <Page>
       <PageTitle eyebrow="구매자" title="내 견적요청" desc="등록한 요청과 도착한 견적을 한곳에서 확인합니다." />
@@ -7790,7 +9825,7 @@ function RequestsPage({ data, navigate }: PageProps) {
           새 요청
         </button>
       </div>
-      <RequestList data={data} requests={data.quote_requests} navigate={navigate} />
+      <RequestList data={data} requests={requests} navigate={navigate} />
     </Page>
   );
 }
@@ -7878,15 +9913,16 @@ function RequestDetailPage({ data, navigate, setData, requestId }: MutatingPageP
   );
 }
 
-function BuyerDealsPage({ data, navigate }: PageProps) {
+function BuyerDealsPage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
   const [filter, setFilter] = useState("전체");
-  const buyerDeals = data.deals.filter((deal) => deal.buyer_id === "buyer-1");
+  const buyerIds = getBuyerIdsForSession(data, authSession);
+  const buyerDeals = data.deals.filter((deal) => buyerIds.has(deal.buyer_id));
   const visibleDeals = buyerDeals.filter((deal) => filter === "전체" || dealGroup(deal.status) === filter);
   const inProgress = buyerDeals.filter((deal) => ["pending_confirmation", "confirmed", "preparing", "delivering", "delivered"].includes(deal.status)).length;
   const completed = buyerDeals.filter((deal) => deal.status === "completed").length;
   const monthAmount = buyerDeals.reduce((sum, deal) => sum + deal.final_amount, 0);
   const savings = buyerDeals.reduce((sum, deal) => sum + calculateEstimatedSavings(deal.previous_amount, deal.final_amount).amount, 0);
-  const accountingPending = data.purchase_records.filter((record) => record.buyer_id === "buyer-1" && record.accounting_status === "pending").length;
+  const accountingPending = data.purchase_records.filter((record) => buyerIds.has(record.buyer_id) && record.accounting_status === "pending").length;
 
   return (
     <Page>
@@ -7904,6 +9940,10 @@ function BuyerDealsPage({ data, navigate }: PageProps) {
             <ReceiptText size={16} />
             구매내역
           </button>
+          <button className="secondaryButton compact" type="button" onClick={() => navigate("/app/reviews")}>
+            <BadgeCheck size={16} />
+            작성한 후기
+          </button>
           <button className="primaryButton compact" type="button" onClick={() => navigate("/app/accounting/pending")}>
             <Landmark size={16} />
             장부 대기
@@ -7916,9 +9956,111 @@ function BuyerDealsPage({ data, navigate }: PageProps) {
   );
 }
 
-function SupplierDealsPage({ data, navigate }: PageProps) {
+function BuyerReviewsPage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
+  if (authSession?.role === "supplier") return <RoleAccessDenied role="supplier" attemptedRole="buyer" navigate={navigate} />;
+
+  const sessionBuyerIds = getBuyerIdsForSession(data, authSession);
+  const buyerIds = sessionBuyerIds.size ? sessionBuyerIds : new Set([authSession?.id ?? "buyer-1"]);
+  const reviews = data.reviews
+    .filter((review) => buyerIds.has(review.buyer_id))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const averageRating = reviews.length ? reviews.reduce((sum, review) => sum + review.rating_overall, 0) / reviews.length : 0;
+  const reorderReviews = reviews.filter((review) => review.would_reorder).length;
+  const repliedReviews = reviews.filter((review) => data.review_replies.some((reply) => reply.review_id === review.id && reply.status === "active")).length;
+  const hiddenReviews = reviews.filter((review) => review.status !== "active").length;
+
+  return (
+    <Page>
+      <PageTitle eyebrow="구매자" title="내가 작성한 후기" desc="거래 완료 후 남긴 업체 후기를 한곳에서 확인합니다." />
+      <div className="dashboardGrid">
+        <Metric label="작성한 후기" value={`${reviews.length}건`} icon={<BadgeCheck />} />
+        <Metric label="평균 평점" value={reviews.length ? `${averageRating.toFixed(1)}점` : "-"} icon={<Check />} />
+        <Metric label="공급사 답변" value={`${repliedReviews}건`} icon={<MessageCircle />} />
+        <Metric label="재거래 의향" value={`${reorderReviews}건`} icon={<RefreshCcw />} />
+      </div>
+      {repliedReviews > 0 && (
+        <section className="statusNotice approved">
+          <MessageCircle size={22} />
+          <div>
+            <strong>공급사 답변이 {repliedReviews}건 도착했습니다.</strong>
+            <p>작성한 후기 카드에서 공급업체의 답변을 바로 확인할 수 있습니다.</p>
+          </div>
+        </section>
+      )}
+      {hiddenReviews > 0 && (
+        <section className="statusNotice">
+          <ShieldCheck size={22} />
+          <div>
+            <strong>숨김 또는 검토 중인 후기가 {hiddenReviews}건 있습니다.</strong>
+            <p>운영 검토 상태가 바뀌면 공개 여부도 함께 반영됩니다.</p>
+          </div>
+        </section>
+      )}
+      {reviews.length ? (
+        <div className="reviewList">
+          {reviews.map((review) => {
+            const deal = data.deals.find((entry) => entry.id === review.deal_id);
+            const reply = data.review_replies.find((entry) => entry.review_id === review.id && entry.status === "active");
+            const ratingItems = [
+              `가격 ${review.rating_price}점`,
+              `납품 ${review.rating_delivery}점`,
+              `품질 ${review.rating_quality}점`,
+              `소통 ${review.rating_communication}점`,
+            ];
+
+            return (
+              <article className="reviewCard" key={review.id}>
+                <div className="cardTopline">
+                  <StatusBadge tone={reviewStatusTone(review.status)}>{reviewStatusLabels[review.status]}</StatusBadge>
+                  <span>{review.is_public ? "공개" : "비공개"}</span>
+                </div>
+                <strong>{supplierName(data, review.supplier_id)}</strong>
+                <p>{deal?.title ?? "거래 정보 확인 중"} · 평점 {review.rating_overall}점</p>
+                <div className="detailMeta">
+                  {ratingItems.map((item) => <span key={item}>{item}</span>)}
+                  <span>{review.would_reorder ? "재거래 의향 있음" : "재거래 의향 없음"}</span>
+                </div>
+                <p>{review.content}</p>
+                {reply ? (
+                  <div className="buyerReviewReplyBox">
+                    <div>
+                      <MessageCircle size={16} />
+                      <strong>공급사 답변</strong>
+                      <span>{reply.created_at.slice(0, 10)}</span>
+                    </div>
+                    <p>{reply.content}</p>
+                  </div>
+                ) : (
+                  <div className="buyerReviewReplyPending">
+                    <MessageCircle size={16} />
+                    <span>공급사 답변 대기 중</span>
+                  </div>
+                )}
+                <small>{review.created_at.slice(0, 10)}</small>
+                <div className="formActions">
+                  <button className="secondaryButton compact" type="button" onClick={() => navigate(`/app/deals/${review.deal_id}`)}>
+                    <ReceiptText size={16} />
+                    거래 보기
+                  </button>
+                  <button className="ghostButton compact" type="button" onClick={() => navigate(`/app/suppliers/${review.supplier_id}`)}>
+                    <Store size={16} />
+                    업체 보기
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState icon={<BadgeCheck />} title="작성한 후기가 없습니다." desc="거래 완료 후 후기를 남기면 이곳에 모입니다." actionLabel="완료 거래 보기" onAction={() => navigate("/app/deals")} />
+      )}
+    </Page>
+  );
+}
+
+function SupplierDealsPage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
   const [filter, setFilter] = useState("전체");
-  const supplierId = "sup-1";
+  const supplierId = getActiveSupplier(data, authSession).id;
   const supplierDeals = data.deals.filter((deal) => deal.supplier_id === supplierId || data.quotes.some((quote) => quote.id === deal.selected_quote_id && quote.supplier_id === supplierId));
   const visibleDeals = supplierDeals.filter((deal) => filter === "전체" || dealStatusLabels[deal.status] === filter || dealGroup(deal.status) === filter);
   const pending = supplierDeals.filter((deal) => deal.status === "pending_confirmation").length;
@@ -7936,8 +10078,8 @@ function SupplierDealsPage({ data, navigate }: PageProps) {
         <Metric label="이번 달 거래액" value={money(amount)} icon={<ReceiptText />} />
       </div>
       <div className="dashboardGrid compactStats">
-        <Metric label="완료율 샘플" value="82%" icon={<BadgeCheck />} />
-        <Metric label="취소율 샘플" value="6%" icon={<ShieldCheck />} />
+        <Metric label="거래 완료율" value={supplierDeals.length ? `${Math.round((completed / supplierDeals.length) * 100)}%` : "-"} icon={<BadgeCheck />} />
+        <Metric label="취소율" value={supplierDeals.length ? `${Math.round((supplierDeals.filter((deal) => deal.status.includes("cancelled")).length / supplierDeals.length) * 100)}%` : "-"} icon={<ShieldCheck />} />
       </div>
       <FilterTabs options={["전체", "거래 확인 대기", "거래 확정", "납품 준비 중", "배송/납품 중", "납품 완료", "거래 완료", "취소", "문제 발생"]} active={filter} onChange={setFilter} />
       <DealTable data={data} deals={visibleDeals} navigate={navigate} basePath="/app/supplier/deals" role="supplier" />
@@ -7990,6 +10132,7 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
   const logs = data.deal_status_logs.filter((entry) => entry.deal_id === currentDeal.id);
   const syncStatus = getSsawaPurchaseSyncStatus(data, currentDeal.id);
   const purchaseRecord = syncStatus.record;
+  const dealReview = data.reviews.find((entry) => entry.deal_id === currentDeal.id);
   const canManageTodaySync = role === "buyer" || role === "admin";
   const savings = calculateEstimatedSavings(currentDeal.previous_amount, currentDeal.final_amount);
 
@@ -8066,7 +10209,7 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
           <ShieldCheck size={18} />
           <div>
             <strong>안심거래 선택 가능</strong>
-            <p>첫 거래나 고액 거래는 납품 확인 후 정산 흐름으로 진행할 수 있습니다.</p>
+            <p>첫 거래나 고액 거래는 납품 확인 후 입금/증빙 확인 흐름으로 진행할 수 있습니다.</p>
           </div>
         </div>
         <div className="priceSummary">
@@ -8115,7 +10258,7 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
         </div>
         <div className="toolPanel">
           <SectionHeader title="상태 변경" />
-          <DealActions deal={deal} role={role} onChange={changeStatus} onCancel={() => setModalMode("cancel")} onDispute={() => setModalMode("dispute")} navigate={navigate} purchaseRecordId={purchaseRecord?.id} />
+          <DealActions deal={deal} role={role} onChange={changeStatus} onCancel={() => setModalMode("cancel")} onDispute={() => setModalMode("dispute")} navigate={navigate} purchaseRecordId={purchaseRecord?.id} reviewId={dealReview?.id} />
           <button className="secondaryButton full" type="button" onClick={() => navigate(role === "supplier" ? `/app/supplier/deals/${currentDeal.id}/messages` : role === "admin" ? `/app/admin/deals/${currentDeal.id}/messages` : `/app/deals/${currentDeal.id}/messages`)}>
             <Bell size={16} />
             거래 문의 보기
@@ -8161,7 +10304,7 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
         </div>
       </section>
 
-      {purchaseRecord && (
+      {purchaseRecord && role !== "supplier" && (
         <section className="completionPanel">
           <h2>거래가 완료되었습니다.</h2>
           <p>구매내역이 오늘장사 장부에 정리되었습니다.</p>
@@ -8169,6 +10312,17 @@ function DealDetailPage({ data, navigate, setData, dealId, role }: MutatingPageP
             <button className="secondaryButton" type="button" onClick={() => navigate(`/app/purchases/${purchaseRecord.id}`)}>구매내역 보기</button>
             {canManageTodaySync && <button className="ghostButton" type="button" onClick={syncPurchaseToAccounting}>다시 반영하기</button>}
             <button className="primaryButton" type="button" onClick={() => navigate("/app/requests/new")}>같은 품목 다시 견적받기</button>
+          </div>
+        </section>
+      )}
+
+      {role === "supplier" && currentDeal.status === "completed" && (
+        <section className="completionPanel">
+          <h2>거래가 완료되었습니다.</h2>
+          <p>완료된 거래는 공급업체 거래관리와 입금/증빙 화면에서 확인합니다.</p>
+          <div className="formActions">
+            <button className="secondaryButton" type="button" onClick={() => navigate("/app/today/supplier/sales")}>매출내역 보기</button>
+            <button className="ghostButton" type="button" onClick={() => navigate("/app/supplier/settlements")}>입금/증빙 확인</button>
           </div>
         </section>
       )}
@@ -8405,7 +10559,7 @@ function UserReportDetailPage({ data, navigate, setData, reportId }: MutatingPag
   );
 }
 
-function DealReviewPage({ data, navigate, setData, dealId }: MutatingPageProps & { dealId: string }) {
+function DealReviewPage({ data, navigate, setData, dealId, authSession }: MutatingPageProps & { dealId: string; authSession?: AppAuthSession | null }) {
   const deal = data.deals.find((entry) => entry.id === dealId);
   const [overall, setOverall] = useState(5);
   const [price, setPrice] = useState(5);
@@ -8415,26 +10569,71 @@ function DealReviewPage({ data, navigate, setData, dealId }: MutatingPageProps &
   const [content, setContent] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [wouldReorder, setWouldReorder] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   if (!deal) return <NotFound navigate={navigate} />;
   const currentDeal = deal;
+  const buyerIds = getBuyerIdsForSession(data, authSession);
+  const canAccessBuyerDeal = authSession?.role === "buyer" ? buyerIds.has(currentDeal.buyer_id) : true;
+  if (authSession?.role === "supplier") return <RoleAccessDenied role="supplier" attemptedRole="buyer" navigate={navigate} />;
+  if (authSession?.role === "buyer" && !canAccessBuyerDeal) {
+    return (
+      <Page narrow>
+        <EmptyState icon={<ShieldCheck />} title="후기를 작성할 수 없는 거래입니다." desc="현재 로그인한 구매자 계정의 거래만 후기를 작성할 수 있습니다." actionLabel="거래 목록으로 이동" onAction={() => navigate("/app/deals")} />
+      </Page>
+    );
+  }
   const existing = data.reviews.find((entry) => entry.deal_id === currentDeal.id);
-  const canReview = currentDeal.status === "completed" && !existing;
+  const isReviewableStatus = ["completed", "closed"].includes(currentDeal.status);
+  const canReview = isReviewableStatus && !existing && canAccessBuyerDeal && !saving;
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!canReview) return;
-    const nextData = createDealReview(data, currentDeal.id, {
+    setError("");
+    if (!canReview) {
+      setError(existing ? "이미 이 거래에 대한 후기가 등록되어 있습니다." : "거래 완료 상태에서만 후기를 등록할 수 있습니다.");
+      return;
+    }
+    const draft = {
       rating_overall: overall,
       rating_price: price,
       rating_delivery: delivery,
       rating_quality: quality,
       rating_communication: communication,
-      content,
+      content: content.trim(),
       is_public: isPublic,
       would_reorder: wouldReorder,
-    });
+    };
+    if (!draft.content) {
+      setError("후기 내용을 입력해 주세요.");
+      return;
+    }
+
+    setSaving(true);
+    if (isLiveModeReady() && isLiveRecordId(currentDeal.id) && isLiveRecordId(currentDeal.quote_request_id) && isLiveRecordId(currentDeal.buyer_id) && isLiveRecordId(currentDeal.supplier_id)) {
+      const liveResult = await createLiveDealReview({
+        dealId: currentDeal.id,
+        quoteRequestId: currentDeal.quote_request_id,
+        buyerId: currentDeal.buyer_id,
+        supplierId: currentDeal.supplier_id,
+        ...draft,
+      });
+      if (!liveResult.ok) {
+        setSaving(false);
+        setError(`후기 저장에 실패했습니다. ${liveResult.error}`);
+        return;
+      }
+    }
+
+    const nextData = createDealReview(data, currentDeal.id, draft);
+    if (nextData === data || !nextData.reviews.some((entry) => entry.deal_id === currentDeal.id)) {
+      setSaving(false);
+      setError("후기 저장에 실패했습니다. 거래 상태 또는 기존 후기 여부를 다시 확인해 주세요.");
+      return;
+    }
     setData(nextData);
-    navigate(`/app/suppliers/${currentDeal.supplier_id}`);
+    setSaving(false);
+    navigate("/app/reviews");
   }
 
   return (
@@ -8445,8 +10644,17 @@ function DealReviewPage({ data, navigate, setData, dealId }: MutatingPageProps &
         <section className="protectionNotice">
           <Bell />
           <div>
-            <strong>{existing ? "이미 작성한 후기입니다." : "거래 완료 후 후기를 작성할 수 있습니다."}</strong>
+            <strong>{existing ? "이미 작성한 후기입니다." : saving ? "후기를 저장하고 있습니다." : "거래 완료 후 후기를 작성할 수 있습니다."}</strong>
             <p>현재 거래 상태는 {dealStatusLabels[currentDeal.status]}입니다.</p>
+          </div>
+        </section>
+      )}
+      {error && (
+        <section className="protectionNotice warning">
+          <Bell />
+          <div>
+            <strong>후기를 등록하지 못했습니다.</strong>
+            <p>{error}</p>
           </div>
         </section>
       )}
@@ -8465,14 +10673,14 @@ function DealReviewPage({ data, navigate, setData, dealId }: MutatingPageProps &
           <Toggle checked={isPublic} label="공개 후기" onChange={setIsPublic} />
           <Toggle checked={wouldReorder} label="재거래 의향 있음" onChange={setWouldReorder} />
         </div>
-        <button className="primaryButton full" type="submit" disabled={!canReview}>후기 등록</button>
+        <button className="primaryButton full" type="submit" disabled={!canReview}>{saving ? "등록 중" : "후기 등록"}</button>
       </form>
     </Page>
   );
 }
 
-function SupplierReputationPage({ data, navigate, setData }: MutatingPageProps) {
-  const supplier = getActiveSupplier(data);
+function SupplierReputationPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const supplier = getActiveSupplier(data, authSession);
   const reputation = getSupplierReputation(data, supplier.id);
   const stats = supplierStatsFor(data, supplier.id);
   const reviews = data.reviews.filter((entry) => entry.supplier_id === supplier.id).sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -8480,77 +10688,136 @@ function SupplierReputationPage({ data, navigate, setData }: MutatingPageProps) 
   const sanctions = data.user_sanctions.filter((entry) => entry.user_id === supplier.user_id && entry.status === "active");
   const [replyReviewId, setReplyReviewId] = useState("");
   const [replyContent, setReplyContent] = useState("");
+  const [replySaving, setReplySaving] = useState(false);
+  const [replyError, setReplyError] = useState("");
+  const repliedCount = reviews.filter((review) => data.review_replies.some((reply) => reply.review_id === review.id)).length;
+  const pendingReplyCount = Math.max(0, reviews.length - repliedCount);
+  const publicReviewCount = reviews.filter((review) => review.is_public && review.status === "active").length;
+  const averageRating = reviews.length ? reviews.reduce((sum, review) => sum + review.rating_overall, 0) / reviews.length : stats.rating;
+  const selectedReview = reviews.find((review) => review.id === replyReviewId);
 
-  function saveReply() {
-    if (!replyReviewId) return;
+  async function saveReply() {
+    if (!replyReviewId || !replyContent.trim() || replySaving) return;
+    setReplyError("");
+    setReplySaving(true);
+    if (isLiveModeReady() && isLiveRecordId(replyReviewId) && isLiveRecordId(supplier.id)) {
+      const liveResult = await createLiveReviewReply({
+        reviewId: replyReviewId,
+        supplierId: supplier.id,
+        content: replyContent,
+      });
+      if (!liveResult.ok) {
+        setReplySaving(false);
+        setReplyError(`답변 저장에 실패했습니다. ${liveResult.error}`);
+        return;
+      }
+    }
     setData(addReviewReply(data, replyReviewId, supplier.id, replyContent));
     setReplyReviewId("");
     setReplyContent("");
+    setReplySaving(false);
+  }
+
+  function startReply(reviewId: string) {
+    setReplyReviewId(reviewId);
+    setReplyContent("");
+    setReplyError("");
   }
 
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/supplier")} label="공급업체 홈" />
-      <PageTitle eyebrow="신뢰도/후기" title={`${supplier.business_name} 운영 신뢰도`} desc="구매자에게 노출되는 신뢰도 점수, 후기, 운영 상태를 확인합니다." />
-      <section className="reputationHero">
-        <ScoreCircle score={reputation.total_score} label={supplierGradeLabels[reputation.grade]} />
-        <div className="reputationHeroCopy">
-          <StatusBadge tone={reputationTone(reputation)}>{riskLabel(reputation.risk_level)}</StatusBadge>
-          <h2>{supplierGradeLabels[reputation.grade]}</h2>
-          <p>운영상태: {operationalStatusLabels[supplier.operational_status ?? "normal"]} · 최근 업데이트 {reputation.updated_at.slice(0, 10)}</p>
-          <div className="badgeList">
-            {reputation.badges.map((badge) => <span key={badge}>{badge}</span>)}
+      <PageTitle eyebrow="공급업체" title="후기와 답변" desc="구매자가 남긴 후기를 확인하고 필요한 답변을 관리합니다." />
+      <section className="supplierReviewHero">
+        <div>
+          <div className="cardTopline">
+            <StatusBadge tone={reputationTone(reputation)}>{riskLabel(reputation.risk_level)}</StatusBadge>
+            <span>{supplierGradeLabels[reputation.grade]}</span>
           </div>
-          <button className="secondaryButton" type="button" onClick={() => setData(recalculateSupplierReputation(data, supplier.id))}>신뢰도 다시 계산</button>
+          <h2>{supplier.business_name}</h2>
+          <p>후기 답변은 구매자에게 공개되는 운영 신뢰 신호로 표시됩니다.</p>
+        </div>
+        <div className="supplierReviewScore">
+          <strong>{averageRating ? averageRating.toFixed(1) : "신규"}</strong>
+          <span>평균 평점</span>
         </div>
       </section>
-      <div className="dashboardGrid">
-        <Metric label="응답 점수" value={`${reputation.response_score}점`} icon={<RefreshCcw />} />
-        <Metric label="거래 완료 점수" value={`${reputation.completion_score}점`} icon={<PackageCheck />} />
-        <Metric label="후기 점수" value={`${reputation.review_score}점`} icon={<BadgeCheck />} />
-        <Metric label="분쟁 점수" value={`${reputation.dispute_score}점`} icon={<ShieldCheck />} />
-        <Metric label="인증 점수" value={`${reputation.verification_score}점`} icon={<Upload />} />
-        <Metric label="재거래 점수" value={`${reputation.repeat_score}점`} icon={<ReceiptText />} />
+      <div className="supplierReviewStats">
+        <Metric label="전체 후기" value={`${reviews.length}건`} icon={<BadgeCheck />} />
+        <Metric label="답변 대기" value={`${pendingReplyCount}건`} icon={<MessageCircle />} />
+        <Metric label="공개 후기" value={`${publicReviewCount}건`} icon={<ShieldCheck />} />
+        <Metric label="신뢰도" value={`${reputation.total_score}점`} icon={<ReceiptText />} />
       </div>
-      <section className="twoColumn">
-        <InfoPanel title="운영 개선 가이드" items={[
-          `평균 응답 시간 ${stats.average_response_minutes}분을 30분 이하로 낮추면 응답 점수가 개선됩니다.`,
-          "납품 지연이나 품목 누락 신고는 처리 결과까지 남겨 분쟁 점수 하락을 줄이세요.",
-          "후기 답변은 공개 신뢰도에 긍정적인 운영 신호로 표시됩니다.",
-        ]} />
-        <InfoPanel title="구매자 보호 기준" items={[
-          "싸와! 내 거래와 메시지 이력을 기준으로 운영팀이 분쟁을 확인합니다.",
-          "외부 결제 유도, 허위 견적, 반복 지연은 제재 또는 제한 대상입니다.",
-          "세금계산서/영수증 약속 불이행은 별도 신고 유형으로 관리됩니다.",
-        ]} />
-      </section>
-      <SectionHeader title="후기와 답변" />
-      <div className="reviewList">
-        {reviews.map((review) => {
+      <div className="supplierReviewToolbar">
+        <div>
+          <strong>후기 답변 관리</strong>
+          <span>답변을 남기면 같은 후기 카드에 바로 표시됩니다.</span>
+        </div>
+        <div className="formActions">
+          <button className="ghostButton compact" type="button" onClick={() => navigate(`/suppliers/${supplier.id}`)}>
+            <Store size={16} />
+            공개 프로필
+          </button>
+          <button className="secondaryButton compact" type="button" onClick={() => setData(recalculateSupplierReputation(data, supplier.id))}>
+            <RefreshCcw size={16} />
+            신뢰도 갱신
+          </button>
+        </div>
+      </div>
+      <div className="supplierReviewList">
+        {reviews.length ? reviews.map((review) => {
           const reply = data.review_replies.find((entry) => entry.review_id === review.id);
           return (
-            <article className="reviewCard" key={review.id}>
-              <strong>{review.rating_overall.toFixed(1)}점 · {reviewStatusLabels[review.status]}</strong>
-              <p>{review.content}</p>
-              <small>{review.created_at.slice(0, 10)} · 재거래 {review.would_reorder ? "희망" : "미정"}</small>
-              {reply ? <p className="replyText">답변: {reply.content}</p> : (
-                <button className="ghostButton compact" type="button" onClick={() => setReplyReviewId(review.id)}>답변 작성</button>
+            <article className={replyReviewId === review.id ? "supplierReviewCard active" : "supplierReviewCard"} key={review.id}>
+              <div className="supplierReviewCardHeader">
+                <div>
+                  <strong>{review.rating_overall.toFixed(1)}점</strong>
+                  <span>{review.created_at.slice(0, 10)} · {review.is_public ? "공개" : "비공개"}</span>
+                </div>
+                <StatusBadge tone={reviewStatusTone(review.status)}>{reviewStatusLabels[review.status]}</StatusBadge>
+              </div>
+              <p className="supplierReviewContent">{review.content}</p>
+              <div className="supplierReviewMeta">
+                <span>가격 {review.rating_price}점</span>
+                <span>납품 {review.rating_delivery}점</span>
+                <span>품질 {review.rating_quality}점</span>
+                <span>소통 {review.rating_communication}점</span>
+                <span>재거래 {review.would_reorder ? "희망" : "미정"}</span>
+              </div>
+              {reply ? (
+                <div className="supplierReplyBox">
+                  <span>답변 완료</span>
+                  <p>{reply.content}</p>
+                </div>
+              ) : replyReviewId === review.id ? (
+                <div className="supplierReplyComposer">
+                  <textarea value={replyContent} onChange={(event) => setReplyContent(event.target.value)} placeholder="구매자에게 보이는 답변을 입력하세요." autoFocus />
+                  {replyError && <p className="formError">{replyError}</p>}
+                  <div className="formActions">
+                    <button className="secondaryButton compact" type="button" onClick={() => setReplyReviewId("")} disabled={replySaving}>취소</button>
+                    <button className="primaryButton compact" type="button" onClick={saveReply} disabled={!replyContent.trim() || replySaving}>{replySaving ? "저장 중" : "답변 등록"}</button>
+                  </div>
+                </div>
+              ) : (
+                <button className="ghostButton compact" type="button" onClick={() => startReply(review.id)}>
+                  <MessageCircle size={16} />
+                  답변 작성
+                </button>
               )}
             </article>
           );
-        })}
+        }) : <EmptyState icon={<BadgeCheck />} title="아직 받은 후기가 없습니다." desc="구매자가 거래 완료 후 후기를 작성하면 이곳에서 확인하고 답변할 수 있습니다." />}
       </div>
-      {replyReviewId && (
-        <section className="toolPanel">
-          <SectionHeader title="후기 답변 작성" />
-          <textarea value={replyContent} onChange={(event) => setReplyContent(event.target.value)} placeholder="구매자에게 보이는 답변을 입력하세요." />
-          <div className="formActions">
-            <button className="secondaryButton" type="button" onClick={() => setReplyReviewId("")}>취소</button>
-            <button className="primaryButton" type="button" onClick={saveReply}>답변 등록</button>
+      {selectedReview && (
+        <section className="statusNotice approved">
+          <BadgeCheck size={22} />
+          <div>
+            <strong>{selectedReview.rating_overall.toFixed(1)}점 후기에 답변 작성 중</strong>
+            <p>답변은 짧고 구체적으로 남기면 구매자가 거래 경험을 더 쉽게 이해할 수 있습니다.</p>
           </div>
         </section>
       )}
-      <section className="twoColumn">
+      <section className="twoColumn supplierReviewFooter">
         <InfoPanel title="최근 신고" items={reports.slice(0, 4).map((report) => `${reportStatusLabels[report.status]} · ${report.title}`)} />
         <InfoPanel title="활성 제재" items={sanctions.length ? sanctions.map((sanction) => `${sanctionTypeLabels[sanction.sanction_type]} · ${sanction.reason}`) : ["활성 제재 없음"]} />
       </section>
@@ -8964,13 +11231,12 @@ function AdminOperationsPage({ data, navigate }: PageProps) {
 }
 
 function AnalyzePage({ data, navigate, setData }: MutatingPageProps) {
-  const [sourceType, setSourceType] = useState<AnalysisSourceType>("invoice");
-  const [fileName, setFileName] = useState("동대문식자재_거래명세서.jpg");
+  const [sourceType, setSourceType] = useState<AnalysisSourceType>("receipt");
+  const [fileName, setFileName] = useState("영수증_샘플.jpg");
   const [textInput, setTextInput] = useState("닭정육 20kg 120,000원\n양파 15kg 28,000원\n식용유 18L 2통 76,000원\n배달봉투 대형 1000장 45,000원");
   const sourceCards: Array<{ type: AnalysisSourceType; title: string; desc: string; icon: ReactNode }> = [
-    { type: "invoice", title: "거래명세서 올리기", desc: "기존 거래처에서 구매한 품목과 금액을 분석합니다.", icon: <ReceiptText /> },
+    { type: "receipt", title: "영수증 올리기", desc: "구매내역이나 자필 메모를 읽어 품목과 금액을 정리합니다.", icon: <Upload /> },
     { type: "quotation", title: "기존 견적서 올리기", desc: "기존 견적을 기준으로 더 저렴한 견적을 받을 수 있습니다.", icon: <ClipboardList /> },
-    { type: "receipt", title: "영수증 올리기", desc: "구매내역으로 자동 정리할 수 있습니다.", icon: <Upload /> },
     { type: "tax_invoice", title: "세금계산서/PDF 올리기", desc: "공급가, 부가세, 거래처 정보를 추출합니다.", icon: <Landmark /> },
     { type: "excel", title: "엑셀/CSV 올리기", desc: "여러 품목을 한 번에 견적요청으로 변환합니다.", icon: <Boxes /> },
     { type: "text", title: "카톡 주문내역 붙여넣기", desc: "복사한 주문 내용을 품목 리스트로 정리합니다.", icon: <FilePlus2 /> },
@@ -8991,7 +11257,7 @@ function AnalyzePage({ data, navigate, setData }: MutatingPageProps) {
 
   return (
     <Page>
-      <PageTitle eyebrow="OCR/AI 분석" title="거래명세서나 견적서를 올려보세요." desc="품목을 자동으로 정리해서 견적요청이나 장부 입력으로 바꿔드립니다." />
+      <PageTitle eyebrow="OCR/AI 분석" title="영수증이나 견적서를 올려보세요." desc="품목을 자동으로 정리해서 견적요청이나 장부 입력으로 바꿔드립니다." />
       <BetaLimitationsNotice navigate={navigate} context="analysis" />
       <section className="securityNotice">
         <ShieldCheck size={20} />
@@ -9012,12 +11278,12 @@ function AnalyzePage({ data, navigate, setData }: MutatingPageProps) {
           <label className="field">
             자료 유형
             <select value={sourceType} onChange={(event) => setSourceType(event.target.value as AnalysisSourceType)}>
-              {Object.entries(analysisSourceTypeLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+              {Object.entries(analysisSourceTypeLabels).filter(([value]) => value !== "invoice").map(([value, label]) => <option value={value} key={value}>{label}</option>)}
             </select>
           </label>
           <label className="field">
             파일명
-            <input value={fileName} onChange={(event) => setFileName(event.target.value)} placeholder="예: 거래명세서.jpg" />
+            <input value={fileName} onChange={(event) => setFileName(event.target.value)} placeholder="예: 영수증.jpg" />
           </label>
         </div>
         <label className="field">
@@ -9193,7 +11459,7 @@ function AnalysisItemCard({ item, data, setData }: { item: AnalysisItem; data: A
   );
 }
 
-function AnalysisToRequestPage({ data, navigate, setData, analysisId }: MutatingPageProps & { analysisId: string }) {
+function AnalysisToRequestPage({ data, navigate, setData, analysisId, authSession }: MutatingPageProps & { analysisId: string; authSession?: AppAuthSession | null }) {
   const job = data.analysis_jobs.find((entry) => entry.id === analysisId);
   const [disclosureScope, setDisclosureScope] = useState<AnalysisDisclosureScope>("items_only");
   const [deliveryRegion, setDeliveryRegion] = useState("서울 노원구");
@@ -9211,7 +11477,7 @@ function AnalysisToRequestPage({ data, navigate, setData, analysisId }: Mutating
       desired_delivery_date: desiredDate,
       need_tax_invoice: needTaxInvoice,
       disclosure_scope: disclosureScope,
-    });
+    }, authSession?.role === "buyer" ? authSession.id : "buyer-1");
     setData(result.data);
     navigate(`/app/requests/${result.requestId}`);
   }
@@ -9254,7 +11520,7 @@ function AnalysisToRequestPage({ data, navigate, setData, analysisId }: Mutating
   );
 }
 
-function AnalysisToPurchasePage({ data, navigate, setData, analysisId }: MutatingPageProps & { analysisId: string }) {
+function AnalysisToPurchasePage({ data, navigate, setData, analysisId, authSession }: MutatingPageProps & { analysisId: string; authSession?: AppAuthSession | null }) {
   const job = data.analysis_jobs.find((entry) => entry.id === analysisId);
   const [accountingCategory, setAccountingCategory] = useState(job ? getAccountingCategory(job.detected_category || "기타") : "자재구매");
   const [taxStatus, setTaxStatus] = useState<TaxInvoiceStatus>("pending");
@@ -9268,7 +11534,7 @@ function AnalysisToPurchasePage({ data, navigate, setData, analysisId }: Mutatin
       accounting_category: accountingCategory,
       tax_invoice_status: taxStatus,
       payment_method: paymentMethod,
-    });
+    }, authSession?.role === "buyer" ? authSession.id : "buyer-1");
     setData(result.data);
     navigate(`/app/purchases/${result.purchaseId}`);
   }
@@ -9412,9 +11678,9 @@ function AdminAnalysisDetailPage({ data, navigate, analysisId }: PageProps & { a
   );
 }
 
-function NotificationsPage({ data, navigate, setData, userId, userRole, admin = false }: MutatingPageProps & { userId: string; userRole: UserRole; admin?: boolean }) {
+function NotificationsPage({ data, navigate, setData, userId, userRole, admin = false }: MutatingPageProps & { userId: string | string[]; userRole: UserRole; admin?: boolean }) {
   const [filter, setFilter] = useState("전체");
-  const notifications = getNotificationsForUser(data, userId);
+  const notifications = collapseDuplicateNotifications(getNotificationsForUser(data, userId));
   const visibleNotifications = filterNotifications(notifications, filter);
   const unread = notifications.filter((entry) => !entry.is_read).length;
   const quoteCount = notifications.filter((entry) => notificationCategory(entry) === "견적").length;
@@ -9424,7 +11690,10 @@ function NotificationsPage({ data, navigate, setData, userId, userRole, admin = 
   function openNotification(entry: Notification) {
     const nextData = entry.is_read ? data : markNotificationAsRead(data, entry.id);
     setData(nextData);
-    navigate(entry.link_url || "/app");
+    const linkUrl = userRole === "supplier" && entry.link_url?.startsWith("/app/deals/")
+      ? entry.link_url.replace("/app/deals/", "/app/supplier/deals/")
+      : entry.link_url;
+    navigate(linkUrl || "/app");
   }
 
   return (
@@ -9536,13 +11805,13 @@ function NotificationSettingsPage({ data, setData, userId, navigate }: { data: A
   );
 }
 
-function ChatInboxPage({ data, navigate, setData, role, selectedThreadId }: MutatingPageProps & { role: "buyer" | "supplier"; selectedThreadId?: string }) {
-  const userId = role === "supplier" ? supplierUserIdForUi(data, getActiveSupplier(data).id) : "buyer-1";
-  const threads = getThreadsForRole(data, role).sort((a, b) => b.last_message_at.localeCompare(a.last_message_at));
+function ChatInboxPage({ data, navigate, setData, role, selectedThreadId, authSession }: MutatingPageProps & { role: "buyer" | "supplier"; selectedThreadId?: string; authSession?: AppAuthSession | null }) {
+  const threads = getThreadsForRole(data, role, authSession).sort((a, b) => b.last_message_at.localeCompare(a.last_message_at));
   const selectedThread = threads.find((thread) => thread.id === selectedThreadId) ?? threads[0];
+  const userId = role === "supplier" ? supplierThreadUserIdForUi(getActiveSupplier(data, authSession).id) : selectedThread?.buyer_id ?? getPrimaryBuyerIdForSession(data, authSession);
   const quoteThreads = threads.filter((thread) => thread.thread_type === "quote_request").length;
   const dealThreads = threads.filter((thread) => thread.thread_type === "deal").length;
-  const unreadThreads = threads.filter((thread) => getThreadUnreadCount(data, thread.id, userId) > 0).length;
+  const unreadThreads = threads.filter((thread) => getThreadUnreadCount(data, thread.id, role === "supplier" ? userId : thread.buyer_id) > 0).length;
 
   return (
     <Page>
@@ -9565,14 +11834,14 @@ function ChatInboxPage({ data, navigate, setData, role, selectedThreadId }: Muta
               key={thread.id}
               data={data}
               thread={thread}
-              userId={userId}
+              userId={role === "supplier" ? userId : thread.buyer_id}
               active={selectedThread?.id === thread.id}
               onClick={() => navigate(role === "supplier" ? `/app/supplier/chats/${thread.id}` : `/app/chats/${thread.id}`)}
             />
           ))}
           {threads.length === 0 && <p className="mutedText">아직 연결된 문의가 없습니다.</p>}
         </aside>
-        {selectedThread && canAccessMessageThread(data, selectedThread, role) ? (
+        {selectedThread && canAccessMessageThread(data, selectedThread, role, authSession) ? (
           <MessageThreadPanel data={data} setData={setData} thread={selectedThread} currentUserId={userId} currentRole={role} />
         ) : (
           <EmptyState icon={<Bell />} title="문의 스레드를 선택해주세요." desc="견적 또는 거래와 연결된 대화만 열 수 있습니다." />
@@ -9597,7 +11866,7 @@ function RequestMessagesPage({ data, navigate, setData, requestId, role }: Mutat
       : data.supplier_profiles
           .filter((entry) => quotedSupplierIds.has(entry.id))
           .sort((a, b) => calculateSupplierMatchScore(b, request, data) - calculateSupplierMatchScore(a, request, data));
-  const currentUserId = role === "supplier" ? supplierUserIdForUi(data, supplier.id) : request.buyer_id;
+  const currentUserId = role === "supplier" ? supplierThreadUserIdForUi(supplier.id) : request.buyer_id;
 
   function startThread(supplierId: string) {
     const result = ensureRequestMessageThread(data, requestId, supplierId);
@@ -9638,7 +11907,7 @@ function DealMessagesPage({ data, navigate, setData, dealId, role = "buyer" }: M
   const deal = data.deals.find((entry) => entry.id === dealId);
   if (!deal) return <NotFound navigate={navigate} />;
   const thread = data.message_threads.find((entry) => entry.thread_type === "deal" && entry.related_entity_id === dealId);
-  const currentUserId = role === "supplier" ? supplierUserIdForUi(data, deal.supplier_id) : role === "admin" ? "admin-1" : deal.buyer_id;
+  const currentUserId = role === "supplier" ? supplierThreadUserIdForUi(deal.supplier_id) : role === "admin" ? "admin-1" : deal.buyer_id;
 
   function startThread() {
     const result = ensureDealMessageThread(data, dealId);
@@ -9953,9 +12222,10 @@ function AdminMessageDetailPage({ data, navigate, setData, threadId }: MutatingP
   );
 }
 
-function PurchasesPage({ data, navigate }: PageProps) {
+function PurchasesPage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
   const [filter, setFilter] = useState("전체");
-  const records = data.purchase_records.filter((record) => record.buyer_id === "buyer-1");
+  const buyerIds = getBuyerIdsForSession(data, authSession);
+  const records = data.purchase_records.filter((record) => buyerIds.has(record.buyer_id));
   const visibleRecords = filterPurchaseRecords(records, filter);
   const summary = calculatePurchaseSummary(records);
 
@@ -9980,10 +12250,11 @@ function PurchasesPage({ data, navigate }: PageProps) {
   );
 }
 
-function PurchaseDetailPage({ data, navigate, setData, purchaseId }: MutatingPageProps & { purchaseId: string }) {
+function PurchaseDetailPage({ data, navigate, setData, purchaseId, authSession }: MutatingPageProps & { purchaseId: string; authSession?: AppAuthSession | null }) {
   const record = data.purchase_records.find((entry) => entry.id === purchaseId);
   if (!record) return <NotFound navigate={navigate} />;
   const currentRecord = record;
+  const buyerId = authSession?.role === "buyer" ? authSession.id : currentRecord.buyer_id;
 
   const items = data.purchase_record_items.filter((entry) => entry.purchase_record_id === currentRecord.id);
   const documents = data.purchase_documents.filter((entry) => entry.purchase_record_id === currentRecord.id);
@@ -9998,21 +12269,24 @@ function PurchaseDetailPage({ data, navigate, setData, purchaseId }: MutatingPag
 
   function saveRecordPatch() {
     const categoryData = accountingCategory !== currentRecord.accounting_category
-      ? changePurchaseCategory(data, currentRecord.id, accountingCategory, { learnSimilar: learnSimilarCategory, actorUserId: "buyer-1" })
+      ? changePurchaseCategory(data, currentRecord.id, accountingCategory, { learnSimilar: learnSimilarCategory, actorUserId: buyerId })
       : data;
     setData(updatePurchaseRecord(categoryData, currentRecord.id, { user_memo: userMemo }));
   }
 
   function confirmCategoryFromDetail() {
-    setData(confirmPurchaseCategory(data, currentRecord.id, "buyer-1"));
+    setData(confirmPurchaseCategory(data, currentRecord.id, buyerId));
   }
 
   function reclassifyFromDetail() {
-    setData(applyPurchaseClassification(data, currentRecord.id, { force: true, actorUserId: "buyer-1" }));
+    setData(applyPurchaseClassification(data, currentRecord.id, { force: true, actorUserId: buyerId }));
   }
 
   function changeAccountingStatus(status: AccountingStatus, memo: string) {
     setData(updatePurchaseAccountingStatus(data, currentRecord.id, status, memo));
+    if (status === "synced") {
+      window.alert("반영되었습니다.");
+    }
   }
 
   function submitDocument() {
@@ -10140,7 +12414,8 @@ function PurchaseDetailPage({ data, navigate, setData, purchaseId }: MutatingPag
   );
 }
 
-function NewPurchasePage({ data, navigate, setData }: MutatingPageProps) {
+function NewPurchasePage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const buyerId = authSession?.role === "buyer" ? authSession.id : "buyer-1";
   const [draft, setDraft] = useState<ManualPurchaseDraft>({
     purchase_title: "수동 구매내역",
     supplier_name: "현장 직접구매",
@@ -10178,7 +12453,7 @@ function NewPurchasePage({ data, navigate, setData }: MutatingPageProps) {
     const result = createManualPurchaseRecord(data, {
       ...draft,
       accounting_category: draft.accounting_category || getAccountingCategory(draft.category_name),
-    });
+    }, buyerId);
     setData(result.data);
     navigate(`/app/purchases/${result.purchaseId}`);
   }
@@ -10277,8 +12552,9 @@ function NewPurchasePage({ data, navigate, setData }: MutatingPageProps) {
   );
 }
 
-function AccountingDashboardPage({ data, navigate, setData }: MutatingPageProps) {
-  const records = data.purchase_records.filter((record) => record.buyer_id === "buyer-1");
+function AccountingDashboardPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const buyerId = authSession?.role === "buyer" ? authSession.id : "buyer-1";
+  const records = data.purchase_records.filter((record) => record.buyer_id === buyerId);
   const pending = records.filter((record) => record.accounting_status === "pending");
   const summary = calculatePurchaseSummary(records);
   const categoryGroups = groupPurchasesByCategory(records);
@@ -10325,8 +12601,9 @@ function AccountingDashboardPage({ data, navigate, setData }: MutatingPageProps)
   );
 }
 
-function AccountingPendingPage({ data, navigate, setData }: MutatingPageProps) {
-  const records = data.purchase_records.filter((record) => record.accounting_status === "pending" || record.accounting_status === "failed" || record.accounting_status === "hold");
+function AccountingPendingPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const buyerId = authSession?.role === "buyer" ? authSession.id : "buyer-1";
+  const records = data.purchase_records.filter((record) => record.buyer_id === buyerId && (record.accounting_status === "pending" || record.accounting_status === "failed" || record.accounting_status === "hold"));
 
   function changeStatus(record: PurchaseRecord, status: AccountingStatus) {
     setData(updatePurchaseAccountingStatus(data, record.id, status, `대기 목록에서 ${accountingStatusLabels[status]} 처리`));
@@ -10364,8 +12641,9 @@ function AccountingPendingPage({ data, navigate, setData }: MutatingPageProps) {
   );
 }
 
-function PurchaseReportPage({ data, navigate }: PageProps) {
-  const records = data.purchase_records.filter((record) => record.buyer_id === "buyer-1");
+function PurchaseReportPage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
+  const buyerId = authSession?.role === "buyer" ? authSession.id : "buyer-1";
+  const records = data.purchase_records.filter((record) => record.buyer_id === buyerId);
   const monthRecords = records.filter((record) => record.purchase_date.startsWith("2026-07"));
   const summary = calculatePurchaseSummary(monthRecords);
   const categoryGroups = groupPurchasesByCategory(monthRecords);
@@ -10390,8 +12668,9 @@ function PurchaseReportPage({ data, navigate }: PageProps) {
   );
 }
 
-function SavingsReportPage({ data, navigate }: PageProps) {
-  const records = data.purchase_records.filter((record) => record.buyer_id === "buyer-1");
+function SavingsReportPage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
+  const buyerId = authSession?.role === "buyer" ? authSession.id : "buyer-1";
+  const records = data.purchase_records.filter((record) => record.buyer_id === buyerId);
   const savingsSummary = calculateEstimatedSavingsSummary(records);
   const savedRecords = records.filter((record) => record.estimated_savings_amount > 0).sort((a, b) => b.estimated_savings_amount - a.estimated_savings_amount);
 
@@ -10707,6 +12986,29 @@ function ThreadListButton({ data, thread, active, onClick, userId }: { data: App
   );
 }
 
+function notificationDisplayKey(entry: Notification) {
+  return [
+    entry.user_id,
+    entry.user_role,
+    entry.type,
+    entry.title.trim(),
+    entry.body.trim(),
+    entry.link_url,
+    entry.related_entity_type,
+    entry.related_entity_id,
+  ].join("|");
+}
+
+function collapseDuplicateNotifications(notifications: Notification[]) {
+  const seen = new Set<string>();
+  return notifications.filter((entry) => {
+    const key = notificationDisplayKey(entry);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function filterNotifications(notifications: Notification[], filter: string) {
   return notifications.filter((entry) => {
     if (filter === "안 읽음") return !entry.is_read;
@@ -10864,7 +13166,6 @@ function defaultAnalysisUiFileName(sourceType: AnalysisSourceType) {
 function SupplierApplyPage({ data, navigate, setData }: MutatingPageProps) {
   const steps = ["기본 정보", "취급 카테고리", "납품 지역", "거래 조건", "인증 자료", "신청 완료"];
   const [step, setStep] = useState(0);
-  const [regionInput, setRegionInput] = useState("");
   const [draft, setDraft] = useState<SupplierApplicationDraft>({
     business_name: "",
     representative_name: "",
@@ -10877,7 +13178,7 @@ function SupplierApplyPage({ data, navigate, setData }: MutatingPageProps) {
     description: "",
     categories: [],
     sub_categories: [],
-    service_regions: ["서울 동대문구"],
+    service_regions: [],
     min_order_amount: 100000,
     delivery_fee_policy: "지역/금액에 따라 배송비 협의",
     free_delivery_min_amount: 300000,
@@ -10898,7 +13199,7 @@ function SupplierApplyPage({ data, navigate, setData }: MutatingPageProps) {
     ],
   });
   const [submittedId, setSubmittedId] = useState("");
-  const availableSubCategories = draft.categories.flatMap((category) => supplierSubCategoryOptions[category] ?? []);
+  const supplierCategories = supplierCategoryChoices(data.categories);
 
   function submitApplication() {
     const result = createSupplierApplication(data, {
@@ -10909,9 +13210,9 @@ function SupplierApplyPage({ data, navigate, setData }: MutatingPageProps) {
       phone: draft.phone || draft.manager_phone || "010-0000-0000",
       email: draft.email || "partner@ssawa.local",
       address: draft.address || draft.service_regions[0] || "서울",
-      categories: draft.categories.length ? draft.categories : ["포장재"],
-      sub_categories: draft.sub_categories.length ? draft.sub_categories : ["배달용기"],
-      service_regions: draft.service_regions.length ? draft.service_regions : ["서울 전체"],
+      categories: draft.categories.length ? uniqueSupplierCategories(draft.categories) : ["포장재"],
+      sub_categories: [],
+      service_regions: draft.service_regions.length ? draft.service_regions : ["전국"],
     });
     setData(result.data);
     setSubmittedId(result.supplierId);
@@ -10951,19 +13252,12 @@ function SupplierApplyPage({ data, navigate, setData }: MutatingPageProps) {
 
         {step === 1 && (
           <div className="wizardPanel">
-            <SectionHeader title="취급 카테고리와 세부 품목을 선택하세요" />
+            <SectionHeader title="취급 카테고리를 선택하세요" />
             <div className="categoryChoiceGrid">
-              {data.categories.map((category) => (
-                <button className={draft.categories.includes(category.name) ? "categoryChoiceCard active" : "categoryChoiceCard"} type="button" onClick={() => setDraft({ ...draft, categories: toggleArray(draft.categories, category.name) })} key={category.id}>
+              {supplierCategories.map((category) => (
+                <button className={hasSupplierCategory(draft.categories, category.name) ? "categoryChoiceCard active" : "categoryChoiceCard"} type="button" onClick={() => setDraft({ ...draft, categories: toggleSupplierCategory(draft.categories, category.name) })} key={category.name}>
                   <strong>{category.name}</strong>
-                  <span>{categoryDescriptions[category.name]}</span>
-                </button>
-              ))}
-            </div>
-            <div className="chipSelector">
-              {availableSubCategories.map((subCategory) => (
-                <button className={draft.sub_categories.includes(subCategory) ? "chipButton active" : "chipButton"} type="button" onClick={() => setDraft({ ...draft, sub_categories: toggleArray(draft.sub_categories, subCategory) })} key={subCategory}>
-                  {subCategory}
+                  <span>{categoryDescriptions[category.name] ?? "요청 품목의 성격에 가장 가까운 카테고리"}</span>
                 </button>
               ))}
             </div>
@@ -10973,17 +13267,7 @@ function SupplierApplyPage({ data, navigate, setData }: MutatingPageProps) {
         {step === 2 && (
           <div className="wizardPanel">
             <SectionHeader title="납품 가능 지역을 설정하세요" />
-            <div className="chipSelector">
-              {commonServiceRegions.map((region) => (
-                <button className={draft.service_regions.includes(region) ? "chipButton active" : "chipButton"} type="button" onClick={() => setDraft({ ...draft, service_regions: toggleArray(draft.service_regions, region) })} key={region}>
-                  {region}
-                </button>
-              ))}
-            </div>
-            <div className="inlineForm">
-              <input value={regionInput} onChange={(event) => setRegionInput(event.target.value)} placeholder="직접 입력: 경기 구리시" />
-              <button className="secondaryButton compact" type="button" onClick={() => { if (regionInput.trim()) setDraft({ ...draft, service_regions: [...draft.service_regions, regionInput.trim()] }); setRegionInput(""); }}>지역 추가</button>
-            </div>
+            <SupplierRegionSelector regions={draft.service_regions} onChange={(service_regions) => setDraft({ ...draft, service_regions })} />
           </div>
         )}
 
@@ -10991,8 +13275,8 @@ function SupplierApplyPage({ data, navigate, setData }: MutatingPageProps) {
           <div className="wizardPanel">
             <SectionHeader title="거래 조건을 설정하세요" />
             <div className="conditionGrid">
-              <Field label="최소 주문금액"><input type="number" min="0" value={draft.min_order_amount} onChange={(event) => setDraft({ ...draft, min_order_amount: Number(event.target.value) })} /></Field>
-              <Field label="무료배송 기준 금액"><input type="number" min="0" value={draft.free_delivery_min_amount} onChange={(event) => setDraft({ ...draft, free_delivery_min_amount: Number(event.target.value) })} /></Field>
+              <Field label="최소 주문금액"><input inputMode="numeric" value={formatMoneyInput(draft.min_order_amount)} onChange={(event) => setDraft({ ...draft, min_order_amount: parseMoneyInput(event.target.value) })} placeholder="예: 100,000" /></Field>
+              <Field label="무료배송 기준 금액"><input inputMode="numeric" value={formatMoneyInput(draft.free_delivery_min_amount)} onChange={(event) => setDraft({ ...draft, free_delivery_min_amount: parseMoneyInput(event.target.value) })} placeholder="예: 300,000" /></Field>
               <Field label="견적 유효기간 기본값"><input type="number" min="1" value={draft.default_quote_valid_days} onChange={(event) => setDraft({ ...draft, default_quote_valid_days: Number(event.target.value) })} /></Field>
             </div>
             <Field label="배송비 조건"><input value={draft.delivery_fee_policy} onChange={(event) => setDraft({ ...draft, delivery_fee_policy: event.target.value })} /></Field>
@@ -11057,8 +13341,8 @@ function SupplierApplyPage({ data, navigate, setData }: MutatingPageProps) {
   );
 }
 
-function SupplierProfilePage({ data, navigate, setData, onSignOut }: MutatingPageProps & { onSignOut?: () => void | Promise<void> }) {
-  const supplier = getActiveSupplier(data);
+function SupplierProfilePage({ data, navigate, setData, authSession, onSignOut }: MutatingPageProps & { authSession?: AppAuthSession | null; onSignOut?: () => void | Promise<void> }) {
+  const supplier = getActiveSupplier(data, authSession);
   const [draft, setDraft] = useState<SupplierProfile>({ ...supplier });
 
   function saveProfile() {
@@ -11088,7 +13372,7 @@ function SupplierProfilePage({ data, navigate, setData, onSignOut }: MutatingPag
         <Field label="소개글"><textarea value={draft.description ?? ""} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></Field>
         <div className="formActions">
           <button className="primaryButton" type="button" onClick={saveProfile}><Check size={17} /> 저장</button>
-          <button className="secondaryButton" type="button" onClick={() => navigate(`/app/suppliers/${supplier.id}`)}>공개 프로필 보기</button>
+          <button className="secondaryButton" type="button" onClick={() => navigate(`/suppliers/${supplier.id}`)}>공개 프로필 보기</button>
         </div>
       </section>
       <AccountAccessPanel onSignOut={onSignOut} />
@@ -11128,13 +13412,37 @@ function BusinessNumberChangeNotice({ navigate }: { navigate: Navigate }) {
   );
 }
 
-function SupplierSettingsPage({ data, navigate, setData }: MutatingPageProps) {
-  const supplier = getActiveSupplier(data);
-  const [draft, setDraft] = useState<SupplierProfile>({ ...supplier });
-  const availableSubCategories = draft.categories.flatMap((category) => supplierSubCategoryOptions[category] ?? []);
+function SupplierSettingsPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const supplier = getActiveSupplier(data, authSession);
+  const [draft, setDraft] = useState<SupplierProfile>({ ...supplier, categories: uniqueSupplierCategories(supplier.categories) });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const supplierCategories = supplierCategoryChoices(data.categories);
 
-  function saveSettings() {
-    setData(updateSupplierProfile(data, draft));
+  async function saveSettings() {
+    setError("");
+    const normalizedDraft = { ...draft, categories: uniqueSupplierCategories(draft.categories), sub_categories: [] };
+    if (!normalizedDraft.categories.length) {
+      setError("취급 카테고리를 1개 이상 선택해 주세요.");
+      return;
+    }
+    if (isLiveModeReady()) {
+      setSaving(true);
+      const liveResult = await updateLiveSupplierSettings(normalizedDraft);
+      setSaving(false);
+      if (!liveResult.ok) {
+        setError(liveResult.error);
+        return;
+      }
+      if (!liveResult.data) {
+        setError("업체 조건 저장 후 서버 데이터를 다시 읽지 못했습니다.");
+        return;
+      }
+      setData(updateSupplierProfile(data, liveResult.data));
+      navigate("/app/supplier");
+      return;
+    }
+    setData(updateSupplierProfile(data, normalizedDraft));
     navigate("/app/supplier");
   }
 
@@ -11145,25 +13453,15 @@ function SupplierSettingsPage({ data, navigate, setData }: MutatingPageProps) {
       <section className="formStack">
         <SectionHeader title="취급 카테고리" />
         <div className="chipSelector">
-          {data.categories.map((category) => (
-            <button className={draft.categories.includes(category.name) ? "chipButton active" : "chipButton"} type="button" onClick={() => setDraft({ ...draft, categories: toggleArray(draft.categories, category.name) })} key={category.id}>{category.name}</button>
-          ))}
-        </div>
-        <SectionHeader title="세부 취급 품목" />
-        <div className="chipSelector">
-          {availableSubCategories.map((subCategory) => (
-            <button className={(draft.sub_categories ?? []).includes(subCategory) ? "chipButton active" : "chipButton"} type="button" onClick={() => setDraft({ ...draft, sub_categories: toggleArray(draft.sub_categories ?? [], subCategory) })} key={subCategory}>{subCategory}</button>
+          {supplierCategories.map((category) => (
+            <button className={hasSupplierCategory(draft.categories, category.name) ? "chipButton active" : "chipButton"} type="button" onClick={() => setDraft({ ...draft, categories: toggleSupplierCategory(draft.categories, category.name) })} key={category.name}>{category.name}</button>
           ))}
         </div>
         <SectionHeader title="납품 가능 지역" />
-        <div className="chipSelector">
-          {commonServiceRegions.map((region) => (
-            <button className={draft.service_regions.includes(region) ? "chipButton active" : "chipButton"} type="button" onClick={() => setDraft({ ...draft, service_regions: toggleArray(draft.service_regions, region) })} key={region}>{region}</button>
-          ))}
-        </div>
+        <SupplierRegionSelector regions={draft.service_regions} onChange={(service_regions) => setDraft({ ...draft, service_regions })} />
         <div className="conditionGrid">
-          <Field label="최소 주문금액"><input type="number" value={draft.min_order_amount ?? 0} onChange={(event) => setDraft({ ...draft, min_order_amount: Number(event.target.value) })} /></Field>
-          <Field label="무료배송 기준 금액"><input type="number" value={draft.free_delivery_min_amount ?? 0} onChange={(event) => setDraft({ ...draft, free_delivery_min_amount: Number(event.target.value) })} /></Field>
+          <Field label="최소 주문금액"><input inputMode="numeric" value={formatMoneyInput(draft.min_order_amount ?? 0)} onChange={(event) => setDraft({ ...draft, min_order_amount: parseMoneyInput(event.target.value) })} placeholder="예: 100,000" /></Field>
+          <Field label="무료배송 기준 금액"><input inputMode="numeric" value={formatMoneyInput(draft.free_delivery_min_amount ?? 0)} onChange={(event) => setDraft({ ...draft, free_delivery_min_amount: parseMoneyInput(event.target.value) })} placeholder="예: 300,000" /></Field>
           <Field label="견적 유효기간 기본값"><input type="number" value={draft.default_quote_valid_days ?? 3} onChange={(event) => setDraft({ ...draft, default_quote_valid_days: Number(event.target.value) })} /></Field>
         </div>
         <Field label="배송비 조건"><input value={draft.delivery_fee_policy ?? ""} onChange={(event) => setDraft({ ...draft, delivery_fee_policy: event.target.value })} /></Field>
@@ -11175,21 +13473,82 @@ function SupplierSettingsPage({ data, navigate, setData }: MutatingPageProps) {
           <Toggle checked={draft.bank_transfer_available ?? true} label="계좌이체 가능" onChange={(checked) => setDraft({ ...draft, bank_transfer_available: checked })} />
           <Toggle checked={draft.on_site_payment_available ?? false} label="현장결제 가능" onChange={(checked) => setDraft({ ...draft, on_site_payment_available: checked })} />
         </div>
-        <button className="primaryButton" type="button" onClick={saveSettings}><Check size={17} /> 조건 저장</button>
+        {error && <p className="formError">{error}</p>}
+        <button className="primaryButton" type="button" onClick={saveSettings} disabled={saving}><Check size={17} /> {saving ? "저장 중" : "조건 저장"}</button>
       </section>
     </Page>
   );
 }
 
-function SupplierPublicProfilePage({ data, navigate, supplierId }: PageProps & { supplierId: string }) {
-  const supplier = data.supplier_profiles.find((entry) => entry.id === supplierId);
-  if (!supplier) return <NotFound navigate={navigate} />;
-  const stats = supplierStatsFor(data, supplier.id);
-  const documents = data.supplier_documents.filter((document) => document.supplier_id === supplier.id);
-  const reviews = data.supplier_reviews.filter((review) => review.supplier_id === supplier.id);
+function SupplierPublicProfilePage({ data, navigate, supplierId, publicView = false }: PageProps & { supplierId: string; publicView?: boolean }) {
+  const localSupplier = data.supplier_profiles.find((entry) => entry.id === supplierId);
+  const [liveSupplier, setLiveSupplier] = useState<SupplierProfile | null>(null);
+  const [liveReviews, setLiveReviews] = useState<Review[]>([]);
+  const [liveReplies, setLiveReplies] = useState<ReviewReply[]>([]);
+  const [loadingLiveProfile, setLoadingLiveProfile] = useState(publicView && isLiveModeReady());
+  const [livePublicReviewsLoaded, setLivePublicReviewsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!isLiveModeReady() || !isLiveRecordId(supplierId)) {
+      setLoadingLiveProfile(false);
+      return;
+    }
+    let cancelled = false;
+
+    async function loadPublicProfile() {
+      setLoadingLiveProfile(true);
+      const suppliersResult = await listLiveSupplierProfiles();
+      if (!cancelled && suppliersResult.ok) {
+        setLiveSupplier(suppliersResult.data.find((entry) => entry.id === supplierId) ?? null);
+      }
+      const reviewsResult = await listLiveReviewsForSupplier(supplierId);
+      const nextReviews = reviewsResult.ok ? reviewsResult.data.filter((review) => review.is_public && review.status === "active") : [];
+      if (!cancelled) {
+        setLiveReviews(nextReviews);
+        setLivePublicReviewsLoaded(reviewsResult.ok);
+      }
+      const repliesResult = nextReviews.length ? await listLiveReviewRepliesForReviews(nextReviews.map((review) => review.id)) : null;
+      if (!cancelled) {
+        setLiveReplies(repliesResult?.ok ? repliesResult.data.filter((reply) => reply.status === "active") : []);
+        setLoadingLiveProfile(false);
+      }
+    }
+
+    void loadPublicProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [supplierId, publicView]);
+
+  const supplier = liveSupplier ?? localSupplier;
+  if (!supplier) {
+    if (loadingLiveProfile) return <Page><EmptyState icon={<SearchCheck />} title="공급업체 정보를 불러오는 중입니다." desc="공개 프로필과 후기를 확인하고 있습니다." /></Page>;
+    return <NotFound navigate={navigate} />;
+  }
+  const matchedLocalSupplier = localSupplier
+    ?? data.supplier_profiles.find((entry) => supplier.user_id && entry.user_id === supplier.user_id)
+    ?? data.supplier_profiles.find((entry) => cleanBusinessNumber(entry.business_number) && cleanBusinessNumber(entry.business_number) === cleanBusinessNumber(supplier.business_number))
+    ?? data.supplier_profiles.find((entry) => entry.business_name === supplier.business_name);
+  const supplierReviewIds = new Set([supplier.id, supplierId, matchedLocalSupplier?.id].filter(Boolean));
+  const statsSupplierId = matchedLocalSupplier?.id ?? supplier.id;
+  const stats = supplierStatsFor(data, statsSupplierId);
+  const documents = data.supplier_documents.filter((document) => supplierReviewIds.has(document.supplier_id));
+  const localPublicReviews = data.reviews.filter((review) => supplierReviewIds.has(review.supplier_id) && review.is_public && review.status === "active");
+  const reviews = [...liveReviews, ...localPublicReviews]
+    .filter((review, index, list) => list.findIndex((entry) => entry.id === review.id) === index)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const replies = [...liveReplies, ...data.review_replies.filter((reply) => reply.status === "active" && reviews.some((review) => review.id === reply.review_id))]
+    .filter((reply, index, list) => list.findIndex((entry) => entry.id === reply.id) === index);
+  const averageRating = reviews.length ? reviews.reduce((sum, review) => sum + review.rating_overall, 0) / reviews.length : stats.rating;
+  const reorderCount = reviews.filter((review) => review.would_reorder).length;
+  const repliedCount = reviews.filter((review) => replies.some((reply) => reply.review_id === review.id)).length;
+  const completedDealCount = data.deals.filter((deal) => supplierReviewIds.has(deal.supplier_id) && deal.status === "completed").length;
+  const selectedQuoteCount = data.quotes.filter((quote) => supplierReviewIds.has(quote.supplier_id) && quote.status === "selected").length;
+  const publicDealCount = Math.max(stats.selected_quotes_count, completedDealCount, selectedQuoteCount);
+  const publicRepeatRate = reviews.length ? Math.round((reorderCount / reviews.length) * 100) : stats.repeat_customer_rate;
   return (
     <Page>
-      <BackButton onClick={() => navigate("/app/requests")} label="요청 목록" />
+      <BackButton onClick={() => navigate(publicView ? "/supplier" : "/app/requests")} label={publicView ? "공급사 안내" : "요청 목록"} />
       <section className="supplierProfileHero">
         <div>
           <span className="eyebrow">공급업체 프로필</span>
@@ -11203,107 +13562,309 @@ function SupplierPublicProfilePage({ data, navigate, supplierId }: PageProps & {
           </div>
         </div>
         <div className="supplierRatingBlock">
-          <strong>{stats.rating ? stats.rating.toFixed(1) : "신규"}</strong>
-          <span>후기 {stats.review_count}개 · 거래 {stats.selected_quotes_count}건</span>
+          <strong>{averageRating ? averageRating.toFixed(1) : "신규"}</strong>
+          <span>공개 후기 {reviews.length}개 · 거래 {publicDealCount}건</span>
         </div>
       </section>
       <div className="dashboardGrid">
         <Metric label="평균 응답 시간" value={stats.average_response_minutes ? `${stats.average_response_minutes}분` : "신규"} icon={<RefreshCcw />} />
         <Metric label="견적 응답률" value={`${stats.response_rate}%`} icon={<BadgeCheck />} />
-        <Metric label="재거래율" value={`${stats.repeat_customer_rate}%`} icon={<ReceiptText />} />
+        <Metric label="재거래율" value={`${publicRepeatRate}%`} icon={<ReceiptText />} />
         <Metric label="인증자료" value={`${documents.length}개`} icon={<Upload />} />
       </div>
       <section className="twoColumn">
-        <InfoPanel title="취급 카테고리" items={[...supplier.categories, ...(supplier.sub_categories ?? [])]} />
+        <InfoPanel title="취급 카테고리" items={supplier.categories} />
         <InfoPanel title="납품 가능 지역" items={supplier.service_regions} />
         <InfoPanel title="거래 조건" items={[`최소 주문 ${money(supplier.min_order_amount ?? 0)}`, supplier.delivery_fee_policy ?? "배송비 협의", `견적 유효 ${supplier.default_quote_valid_days ?? 3}일`]} />
         <InfoPanel title="결제/증빙" items={[`세금계산서 ${yesNo(supplier.tax_invoice_available)}`, `카드결제 ${yesNo(supplier.card_payment_available)}`, `계좌이체 ${yesNo(supplier.bank_transfer_available ?? true)}`]} />
       </section>
-      <SectionHeader title="구매자 후기" />
-      <div className="reviewList">
-        {reviews.length ? reviews.map((review) => <ReviewCard key={review.id} review={review} />) : <EmptyState icon={<ReceiptText />} title="아직 후기가 없습니다." desc="거래가 완료되면 후기가 표시됩니다." />}
+      <section className="publicReviewSummary">
+        <div>
+          <span className="eyebrow">공개 후기</span>
+          <h2>거래한 구매자가 남긴 평가</h2>
+          <p>공개로 등록된 실제 거래 후기와 공급사 답변만 표시됩니다.</p>
+        </div>
+        <div className="publicReviewMetrics">
+          <Metric label="평균 평점" value={reviews.length ? `${averageRating.toFixed(1)}점` : "신규"} icon={<BadgeCheck />} />
+          <Metric label="재거래 희망" value={`${reorderCount}건`} icon={<RefreshCcw />} />
+          <Metric label="공급사 답변" value={`${repliedCount}건`} icon={<MessageCircle />} />
+        </div>
+      </section>
+      <div className="publicReviewList">
+        {reviews.length ? reviews.map((review) => (
+          <PublicSupplierReviewCard
+            key={review.id}
+            review={review}
+            reply={replies.find((entry) => entry.review_id === review.id)}
+          />
+        )) : <EmptyState icon={<ReceiptText />} title="아직 공개 후기가 없습니다." desc="거래 완료 후 구매자가 공개 후기를 남기면 이곳에 표시됩니다." />}
       </div>
-      <button className="primaryButton" type="button">문의하기 UI</button>
     </Page>
   );
 }
 
-function SupplierDashboard({ data, navigate }: PageProps) {
-  const supplier = getActiveSupplier(data);
+function PublicSupplierReviewCard({ review, reply }: { review: Review; reply?: ReviewReply }) {
+  return (
+    <article className="publicSupplierReviewCard">
+      <div className="supplierReviewCardHeader">
+        <div>
+          <strong>{review.rating_overall.toFixed(1)}점</strong>
+          <span>{review.created_at.slice(0, 10)} · {review.would_reorder ? "재거래 희망" : "거래 후기"}</span>
+        </div>
+        <StatusBadge tone="green">공개</StatusBadge>
+      </div>
+      <p className="supplierReviewContent">{review.content}</p>
+      <div className="supplierReviewMeta">
+        <span>가격 {review.rating_price}점</span>
+        <span>납품 {review.rating_delivery}점</span>
+        <span>품질 {review.rating_quality}점</span>
+        <span>소통 {review.rating_communication}점</span>
+      </div>
+      {reply && (
+        <div className="publicSupplierReplyBox">
+          <div>
+            <MessageCircle size={16} />
+            <strong>공급사 답변</strong>
+            <span>{reply.created_at.slice(0, 10)}</span>
+          </div>
+          <p>{reply.content}</p>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function SupplierDashboard({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
+  const supplier = getActiveSupplier(data, authSession);
   const stats = supplierStatsFor(data, supplier.id);
-  const focusSetting = getActiveFocusSetting(data);
-  const matchingRequests = getVisibleRequestsForSupplier(supplier, data.quote_requests, data);
+  const plan = getSupplierCurrentPlan(data, supplier.id);
+  const usageSummary = getSupplierUsageSummary(data, supplier.id);
+  const matchingRequests = getVisibleRequestsForSupplier(supplier, getSupplierQuoteRequestSource(data), data);
   const myQuotes = data.quotes.filter((quoteEntry) => quoteEntry.supplier_id === supplier.id);
   const pendingQuoteRequests = matchingRequests.filter((request) => !myQuotes.some((quote) => quote.quote_request_id === request.id));
   const todayRequests = matchingRequests.filter((request) => request.created_at.slice(0, 10) === today || request.status === "open").length;
   const supplierThreadUserId = supplierUserIdForUi(data, supplier.id);
-  const supplierThreads = getThreadsForRole(data, "supplier");
+  const supplierThreads = getThreadsForRole(data, "supplier", authSession);
   const unansweredThreads = supplierThreads.filter((thread) => getThreadUnreadCount(data, thread.id, supplierThreadUserId) > 0);
   const productSummary = getSupplierProductSummary(data, supplier.id);
+  const receivedReviews = data.reviews.filter((review) => review.supplier_id === supplier.id);
+  const supplierDeals = data.deals.filter((deal) => deal.supplier_id === supplier.id);
+  const selectedQuotes = myQuotes.filter((quote) => quote.status === "selected").length;
+  const reviewsNeedingReply = receivedReviews.filter((review) => !data.review_replies.some((reply) => reply.review_id === review.id && reply.supplier_id === supplier.id));
+  const evidenceNeededDeals = supplierDeals.filter(
+    (deal) =>
+      ["delivered", "completed"].includes(deal.status) &&
+      !data.deal_attachments.some((attachment) => attachment.deal_id === deal.id && attachment.uploaded_by === "supplier"),
+  );
+  const monthlyAmount = supplierDeals
+    .filter((deal) => (deal.completed_at ?? deal.updated_at ?? deal.created_at).slice(0, 7) === today.slice(0, 7))
+    .reduce((sum, deal) => sum + deal.final_amount, 0);
+  const recentRequests = matchingRequests
+    .slice()
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 4);
+
+  const formatSupplierDate = (value: string) => {
+    const [, month = "", day = ""] = value.slice(0, 10).split("-");
+    return month && day ? `${month}.${day}` : value.slice(0, 10);
+  };
+
+  const formatSupplierDeadline = (value: string) => {
+    const date = value.slice(0, 10);
+    const [, month = "", day = ""] = date.split("-");
+    if (!month || !day) return value || "-";
+    return `${month}.${day}`;
+  };
+
+  const requestDashboardStatus = (request: QuoteRequest) => {
+    const submittedQuote = myQuotes.find((quote) => quote.quote_request_id === request.id);
+    if (submittedQuote?.status === "selected") return { label: "제출완료", tone: "done" };
+    if (submittedQuote) return { label: "검토중", tone: "review" };
+    if (request.urgent) return { label: "마감임박", tone: "urgent" };
+    return { label: "신규", tone: "new" };
+  };
 
   return (
     <Page>
-      <PageTitle eyebrow="공급업체 홈" title="오늘 견적 가능한 요청" desc={`${supplier.business_name}에 맞는 요청과 선택된 거래를 먼저 보여드립니다.`} />
-      <SupplierStatusNotice supplier={supplier} navigate={navigate} />
-      {focusSetting.focus_mode_enabled && supplier.categories.includes(focusSetting.focus_category_name) && (
-        <section className="dealNotice">
+      <div className="supplierDashboard">
+        <p className="supplierDashboardIntro">{supplier.business_name}에 맞는 요청과 선택된 거래를 먼저 보여드립니다.</p>
+
+        <section className={`supplierApprovalHero ${supplier.approval_status === "approved" ? "approved" : "pending"}`}>
           <div>
-            <span className="eyebrow">집중 카테고리 · {focusSetting.focus_category_name}</span>
-            <h2>{focusSetting.supplier_home_message}</h2>
-            <p>응답 가능한 요청을 먼저 확인하고 빠른 견적으로 신규 거래처를 확보하세요.</p>
+            <StatusBadge tone={supplier.approval_status === "approved" ? "green" : supplier.approval_status === "suspended" || supplier.approval_status === "rejected" ? "gray" : "orange"}>
+              {supplierApprovalLabels[supplier.approval_status]}
+            </StatusBadge>
+            <h1>{supplier.approval_status === "approved" ? "입점 승인이 완료되었습니다." : "입점 상태를 확인해 주세요."}</h1>
+            <p>
+              {supplier.approval_status === "approved"
+                ? "지금부터 견적요청에 참여할 수 있습니다."
+                : supplier.admin_memo || supplier.rejection_reason || "승인 또는 보완이 완료되면 요청 매칭에 참여할 수 있습니다."}
+            </p>
           </div>
-          <button className="primaryButton" type="button" onClick={() => navigate("/app/supplier/requests")}>빠른 견적 제출</button>
+          <div className="supplierApprovalGraphic" aria-hidden="true">
+            <ShieldCheck size={56} />
+          </div>
+          <button className="secondaryButton" type="button" onClick={() => navigate(supplier.approval_status === "approved" ? "/app/supplier/settings" : "/app/supplier/profile")}>
+            {supplier.approval_status === "approved" ? "매칭 조건 관리" : "업체 정보 관리"}
+            <ArrowRight size={16} />
+          </button>
         </section>
-      )}
 
-      <section className="primaryActionGrid compact" aria-label="공급업체 주요 작업">
-        <QuickStartCard
-          primary
-          title="새 요청 보기"
-          desc={`${todayRequests}건을 확인할 수 있습니다.`}
-          icon={<SearchCheck />}
-          onClick={() => navigate("/app/supplier/requests")}
-        />
-        <QuickStartCard
-          title="견적 제출"
-          desc={`${pendingQuoteRequests.length}건이 견적을 기다립니다.`}
-          icon={<FilePlus2 />}
-          onClick={() => navigate("/app/supplier/requests")}
-        />
-        <QuickStartCard
-          title="문의 답변"
-          desc={`${unansweredThreads.length}건을 확인하세요.`}
-          icon={<MessageCircle />}
-          onClick={() => navigate("/app/supplier/chats")}
-        />
-        <QuickStartCard
-          title="거래 관리"
-          desc="납품 상태와 증빙을 관리합니다."
-          icon={<ReceiptText />}
-          onClick={() => navigate("/app/supplier/deals")}
-        />
-      </section>
+        <section className="supplierActionGrid" aria-label="공급업체 주요 작업">
+          <button className="supplierActionCard primary" type="button" onClick={() => navigate("/app/supplier/requests")}>
+            <span><SearchCheck size={30} /></span>
+            <strong>새 요청 보기</strong>
+            <small>{todayRequests}건을 확인할 수 있습니다.</small>
+            <ArrowRight size={18} />
+          </button>
+          <button className="supplierActionCard" type="button" onClick={() => navigate("/app/supplier/requests")}>
+            <span><FilePlus2 size={30} /></span>
+            <strong>견적 제출</strong>
+            <small>{pendingQuoteRequests.length}건이 견적을 기다립니다.</small>
+            <ArrowRight size={18} />
+          </button>
+          <button className="supplierActionCard" type="button" onClick={() => navigate("/app/supplier/chats")}>
+            <span><MessageCircle size={30} /></span>
+            <strong>문의 답변</strong>
+            <small>{unansweredThreads.length}건을 확인하세요.</small>
+            <ArrowRight size={18} />
+          </button>
+          <button className="supplierActionCard" type="button" onClick={() => navigate("/app/supplier/deals")}>
+            <span><ReceiptText size={30} /></span>
+            <strong>거래 관리</strong>
+            <small>납품 상태와 증빙을 관리합니다.</small>
+            <ArrowRight size={18} />
+          </button>
+        </section>
 
-      <section className="roleFocusGrid" aria-label="공급업체 확인 항목">
-        <FocusCard label="제출 견적" value={`${myQuotes.length}건`} desc="선택 여부를 확인하세요." icon={<ClipboardList />} onClick={() => navigate("/app/supplier/quotes")} />
-        <FocusCard label="미응답 문의" value={`${unansweredThreads.length}건`} desc="구매자 문의에 답변하세요." icon={<Bell />} onClick={() => navigate("/app/supplier/chats")} />
-        <FocusCard label="이번 달 거래액" value={money(stats.total_deal_amount)} desc="정산 예정 금액을 확인하세요." icon={<Landmark />} onClick={() => navigate("/app/supplier/settlements")} />
-        <FocusCard label="내 상품" value={`${productSummary.publicCount}/${productSummary.total}개`} desc={`응답률 ${stats.response_rate}% · 상품을 관리하세요.`} icon={<Boxes />} onClick={() => navigate("/app/supplier/products")} />
-        <FocusCard label="업체 정보" value={supplierApprovalLabels[supplier.approval_status]} desc="노출되는 정보를 관리하세요." icon={<Store />} onClick={() => navigate("/app/supplier/profile")} />
-      </section>
+        <section className="supplierMetricGrid" aria-label="공급업체 확인 항목">
+          <button type="button" onClick={() => navigate("/app/supplier/quotes")}>
+            <span className="supplierMetricIcon orange"><ClipboardList size={25} /></span>
+            <small>제출 견적</small>
+            <strong>{myQuotes.length}건</strong>
+            <p>선택 여부를 확인하세요.</p>
+            <ArrowRight size={17} />
+          </button>
+          <button type="button" onClick={() => navigate("/app/supplier/chats")}>
+            <span className="supplierMetricIcon yellow"><Bell size={25} /></span>
+            <small>미응답 문의</small>
+            <strong>{unansweredThreads.length}건</strong>
+            <p>구매자 문의에 답변하세요.</p>
+            <ArrowRight size={17} />
+          </button>
+          <button type="button" onClick={() => navigate("/app/supplier/settlements")}>
+            <span className="supplierMetricIcon green"><Landmark size={25} /></span>
+            <small>이번 달 거래액</small>
+            <strong className="supplierMetricAmount" title={money(monthlyAmount || stats.total_deal_amount)}>
+              {compactKrw(monthlyAmount || stats.total_deal_amount)}
+            </strong>
+            <p>완료 거래와 입금 확인 상태를 보세요.</p>
+            <ArrowRight size={17} />
+          </button>
+          <button type="button" onClick={() => navigate("/app/supplier/reputation")}>
+            <span className="supplierMetricIcon blue"><BadgeCheck size={25} /></span>
+            <small>받은 후기</small>
+            <strong>{receivedReviews.length}건</strong>
+            <p>평균 {stats.rating ? stats.rating.toFixed(1) : "신규"}점 · 답변 관리</p>
+            <ArrowRight size={17} />
+          </button>
+          <button type="button" onClick={() => navigate("/app/supplier/products")}>
+            <span className="supplierMetricIcon purple"><Boxes size={25} /></span>
+            <small>내 상품</small>
+            <strong>{productSummary.publicCount}/{productSummary.total}개</strong>
+            <p>응답률 {stats.response_rate}% · 상품 관리</p>
+            <ArrowRight size={17} />
+          </button>
+          <button type="button" onClick={() => navigate("/app/supplier/billing")}>
+            <span className="supplierMetricIcon teal"><RefreshCcw size={25} /></span>
+            <small>구독 준비</small>
+            <strong>{SUPPLIER_BETA_FREE_ENABLED ? "무료" : plan.name}</strong>
+            <p>{SUPPLIER_BETA_FREE_ENABLED ? `${SUPPLIER_BETA_END_LABEL} 제한 없음` : `${usageSummary.usage.quotes_submitted_count}건 사용`}</p>
+            <ArrowRight size={17} />
+          </button>
+        </section>
 
-      <SectionHeader title="최근 요청" action="전체 보기" onAction={() => navigate("/app/supplier/requests")} />
-      {supplier.approval_status === "approved" ? (
-        <SupplierRequestList data={data} supplier={supplier} requests={matchingRequests.slice(0, 3)} navigate={navigate} />
-      ) : (
-        <EmptyState icon={<ShieldCheck />} title="승인 후 견적요청에 참여할 수 있습니다." desc="프로필 수정과 인증자료 보완은 계속 진행할 수 있습니다." />
-      )}
+        <section className="supplierDashboardGrid">
+          <article className="supplierPanel supplierRecentRequests">
+            <header>
+              <h2>최근 요청 현황</h2>
+              <button type="button" onClick={() => navigate("/app/supplier/requests")}>전체 보기</button>
+            </header>
+            {supplier.approval_status === "approved" && recentRequests.length ? (
+              <div className="supplierRequestTable" role="table" aria-label="최근 요청 현황">
+                <div className="supplierRequestRow head" role="row">
+                  <span>요청일</span>
+                  <span>요청명</span>
+                  <span>업종</span>
+                  <span>마감</span>
+                  <span>상태</span>
+                </div>
+                {recentRequests.map((request) => {
+                  const status = requestDashboardStatus(request);
+                  return (
+                    <button className="supplierRequestRow" type="button" role="row" key={request.id} onClick={() => navigate(`/app/supplier/requests/${request.id}`)}>
+                      <span>{formatSupplierDate(request.created_at)}</span>
+                      <strong>{request.title}</strong>
+                      <span>{request.category_name}</span>
+                      <span>{formatSupplierDeadline(request.desired_delivery_date || request.created_at)}</span>
+                      <em className={`supplierStatusPill ${status.tone}`}>{status.label}</em>
+                      <ArrowRight size={15} />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="supplierPanelEmpty">
+                <ShieldCheck size={34} />
+                <strong>{supplier.approval_status === "approved" ? "조건에 맞는 새 요청이 없습니다." : "승인 후 견적요청에 참여할 수 있습니다."}</strong>
+                <span>{supplier.approval_status === "approved" ? "카테고리와 납품 지역을 넓히면 더 많은 요청을 볼 수 있습니다." : "프로필 수정과 인증자료 보완은 계속 진행할 수 있습니다."}</span>
+              </div>
+            )}
+          </article>
+
+          <article className="supplierPanel supplierPriorityPanel">
+            <header>
+              <h2>우선 처리 업무</h2>
+            </header>
+            <div className="supplierPriorityList">
+              <button type="button" onClick={() => navigate("/app/supplier/chats")}>
+                <span className="orange"><MessageCircle size={22} /></span>
+                <strong>미응답 문의</strong>
+                <small>구매자의 문의에 답변해 주세요.</small>
+                <em>{unansweredThreads.length}건</em>
+                <ArrowRight size={16} />
+              </button>
+              <button type="button" onClick={() => navigate("/app/supplier/reputation")}>
+                <span className="blue"><BadgeCheck size={22} /></span>
+                <strong>후기 답변</strong>
+                <small>고객 후기에 답변을 남겨보세요.</small>
+                <em>{reviewsNeedingReply.length}건</em>
+                <ArrowRight size={16} />
+              </button>
+              <button type="button" onClick={() => navigate("/app/supplier/products")}>
+                <span className="purple"><Boxes size={22} /></span>
+                <strong>상품 등록</strong>
+                <small>더 많은 요청을 받으려면 상품을 등록하세요.</small>
+                <em>{Math.max(0, 1 - productSummary.total)}개</em>
+                <ArrowRight size={16} />
+              </button>
+              <button type="button" onClick={() => navigate("/app/supplier/deals")}>
+                <span className="green"><Upload size={22} /></span>
+                <strong>거래 증빙 업로드</strong>
+                <small>납품 완료 거래의 증빙을 업로드하세요.</small>
+                <em>{evidenceNeededDeals.length}건</em>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </article>
+        </section>
+      </div>
     </Page>
   );
 }
 
-function SupplierRequestsPage({ data, navigate }: PageProps) {
-  const supplier = getActiveSupplier(data);
+function SupplierRequestsPage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
+  const supplier = getActiveSupplier(data, authSession);
   const [categoryFilter, setCategoryFilter] = useState("전체");
   const [regionFilter, setRegionFilter] = useState("전체");
   const [sort, setSort] = useState("요청 완성도 높은순");
@@ -11312,9 +13873,9 @@ function SupplierRequestsPage({ data, navigate }: PageProps) {
   const [urgentOnly, setUrgentOnly] = useState(false);
   const [unquotedOnly, setUnquotedOnly] = useState(false);
   const myQuotes = data.quotes.filter((quote) => quote.supplier_id === supplier.id);
-  const baseRequests = getVisibleRequestsForSupplier(supplier, data.quote_requests, data);
+  const baseRequests = getVisibleRequestsForSupplier(supplier, getSupplierQuoteRequestSource(data), data);
   const requests = baseRequests
-    .filter((request) => categoryFilter === "전체" || request.category_name === categoryFilter)
+    .filter((request) => categoryFilter === "전체" || normalizeSupplierCategoryFilter(request.category_name) === normalizeSupplierCategoryFilter(categoryFilter))
     .filter((request) => regionFilter === "전체" || request.delivery_region.includes(regionFilter) || regionFilter.includes(request.delivery_region.split(" ")[0]))
     .filter((request) => !taxOnly || request.need_tax_invoice)
     .filter((request) => !cardOnly || request.card_payment_required)
@@ -11340,7 +13901,7 @@ function SupplierRequestsPage({ data, navigate }: PageProps) {
               {supplier.service_regions.map((region) => <option key={region}>{region}</option>)}
             </select>
             <select value={sort} onChange={(event) => setSort(event.target.value)}>
-              {["최신순", "마감 임박순", "희망 납품일 빠른순", "요청 완성도 높은순", "예상 금액 높은순", "지역 가까운순 샘플"].map((option) => <option key={option}>{option}</option>)}
+              {["최신순", "마감 임박순", "희망 납품일 빠른순", "요청 완성도 높은순", "예상 금액 높은순", "지역 가까운순"].map((option) => <option key={option}>{option}</option>)}
             </select>
             <Toggle checked={taxOnly} label="세금계산서 필요" onChange={setTaxOnly} />
             <Toggle checked={cardOnly} label="카드결제 필요" onChange={setCardOnly} />
@@ -11354,11 +13915,33 @@ function SupplierRequestsPage({ data, navigate }: PageProps) {
   );
 }
 
-function SupplierRequestDetailPage({ data, navigate, setData, requestId }: MutatingPageProps & { requestId: string }) {
-  const request = data.quote_requests.find((entry) => entry.id === requestId);
-  const supplier = getActiveSupplier(data);
-  const [draft, setDraft] = useState<QuoteDraft>({
+function quoteToDraft(quote: Quote, supplier: SupplierProfile): QuoteDraft {
+  return {
     supplier_id: supplier.id,
+    quote_mode: "summary",
+    total_amount: quote.total_amount,
+    delivery_fee: quote.delivery_fee,
+    available_delivery_date: quote.available_delivery_date,
+    tax_invoice_available: quote.tax_invoice_available,
+    card_payment_available: quote.card_payment_available,
+    alternative_proposal: quote.alternative_proposal,
+    item_price_memo: quote.item_price_memo,
+    item_prices: [],
+    memo: quote.memo,
+    valid_until: quote.valid_until,
+  };
+}
+
+function SupplierRequestDetailPage({ data, navigate, setData, requestId, quoteId, authSession }: MutatingPageProps & { requestId: string; quoteId?: string; authSession?: AppAuthSession | null }) {
+  const request = data.quote_requests.find((entry) => entry.id === requestId);
+  const supplier = getActiveSupplier(data, authSession);
+  const existingQuote = quoteId
+    ? data.quotes.find((entry) => entry.id === quoteId && entry.supplier_id === supplier.id)
+    : request ? data.quotes.find((entry) => entry.quote_request_id === request.id && entry.supplier_id === supplier.id) : undefined;
+  const [isEditingExistingQuote, setIsEditingExistingQuote] = useState(false);
+  const [draft, setDraft] = useState<QuoteDraft>(() => existingQuote ? quoteToDraft(existingQuote, supplier) : {
+    supplier_id: supplier.id,
+    quote_mode: "summary",
     total_amount: 0,
     delivery_fee: supplier.free_delivery_min_amount ? 0 : 30000,
     available_delivery_date: "2026-07-08",
@@ -11366,18 +13949,76 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
     card_payment_available: supplier.card_payment_available,
     alternative_proposal: "",
     item_price_memo: "",
+    item_prices: [],
     memo: "",
     valid_until: "2026-07-09",
   });
   const [error, setError] = useState("");
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [isQuoteSending, setIsQuoteSending] = useState(false);
+
+  useEffect(() => {
+    if (existingQuote) {
+      setDraft(quoteToDraft(existingQuote, supplier));
+      setIsEditingExistingQuote(false);
+    }
+  }, [existingQuote?.id, existingQuote?.updated_at, supplier.id]);
 
   if (!request) return <NotFound navigate={navigate} />;
   const currentRequest = request;
   const items = data.quote_request_items.filter((entry) => entry.quote_request_id === currentRequest.id);
   const attachments = data.quote_attachments.filter((entry) => entry.quote_request_id === currentRequest.id);
+  const existingDeal = existingQuote ? data.deals.find((entry) => entry.selected_quote_id === existingQuote.id) : undefined;
+  const canEditExistingQuote = Boolean(existingQuote && existingQuote.status === "submitted" && !existingDeal);
   const qualityScore = currentRequest.request_quality_score ?? calculateRequestQuality(currentRequest, items, attachments);
   const quickBaseAmount = currentRequest.budget_max || currentRequest.previous_amount || Math.max(120000, items.reduce((sum, entry) => sum + entry.quantity * 1200, 0));
+  const quoteMode = draft.quote_mode ?? "summary";
+  const itemizedSubtotal = (draft.item_prices ?? []).reduce((sum, item) => sum + Math.max(0, Number(item.total_price) || 0), 0);
+  const quoteSubtotal = quoteMode === "itemized" ? itemizedSubtotal : draft.total_amount;
+  const quoteFinalAmount = quoteSubtotal + draft.delivery_fee;
+
+  function buildItemPriceRows(current: QuoteDraft) {
+    return items.map((item) => {
+      const existing = current.item_prices?.find((entry) => entry.item_id === item.id);
+      const totalPrice = existing?.total_price ?? 0;
+      return {
+        item_id: item.id,
+        item_name: item.item_name,
+        quantity: item.quantity,
+        unit: item.unit,
+        unit_price: existing?.unit_price ?? (item.quantity > 0 ? Math.round(totalPrice / item.quantity) : 0),
+        total_price: totalPrice,
+        memo: existing?.memo ?? "",
+      };
+    });
+  }
+
+  function switchQuoteMode(mode: "summary" | "itemized") {
+    setDraft((current) => {
+      if (mode === "itemized") {
+        const itemPrices = buildItemPriceRows(current);
+        const subtotal = itemPrices.reduce((sum, item) => sum + Math.max(0, item.total_price), 0);
+        return { ...current, quote_mode: mode, item_prices: itemPrices, total_amount: subtotal || current.total_amount };
+      }
+      return { ...current, quote_mode: mode };
+    });
+  }
+
+  function updateItemQuoteAmount(itemId: string, value: string) {
+    const amount = parseMoneyInput(value);
+    setDraft((current) => {
+      const itemPrices = buildItemPriceRows(current).map((item) => (
+        item.item_id === itemId
+          ? { ...item, total_price: amount, unit_price: item.quantity > 0 ? Math.round(amount / item.quantity) : amount }
+          : item
+      ));
+      return {
+        ...current,
+        item_prices: itemPrices,
+        total_amount: itemPrices.reduce((sum, item) => sum + Math.max(0, item.total_price), 0),
+      };
+    });
+  }
 
   function startBuyerInquiry() {
     const result = ensureRequestMessageThread(data, currentRequest.id, supplier.id);
@@ -11387,9 +14028,11 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
 
   function applyQuickQuote(mode: "standard" | "lowest" | "fast") {
     const discount = mode === "lowest" ? 0.92 : mode === "fast" ? 1.04 : 1;
+    const totalAmount = Math.round(quickBaseAmount * discount);
     setDraft((current) => ({
       ...current,
-      total_amount: Math.round(quickBaseAmount * discount),
+      quote_mode: "summary",
+      total_amount: totalAmount,
       delivery_fee: currentRequest.include_delivery_fee === false ? 30000 : quickBaseAmount >= (supplier.free_delivery_min_amount ?? 0) ? 0 : 30000,
       available_delivery_date: mode === "fast" ? currentRequest.desired_delivery_date : current.available_delivery_date,
       item_price_memo: mode === "lowest" ? "최저가 대응 단가로 입력한 목업 견적입니다." : "품목별 단가는 상세 확인 후 조정 가능합니다.",
@@ -11397,21 +14040,163 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
     }));
   }
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    if (draft.total_amount <= 0 || !draft.available_delivery_date || !draft.valid_until) {
+    if (isQuoteSending) return;
+    setError("");
+    if (quoteSubtotal <= 0 || !draft.available_delivery_date || !draft.valid_until) {
       setError("총 견적금액, 납품 가능일, 견적 유효기간을 입력해 주세요.");
       return;
     }
-    const gate = canSubmitQuoteByPlan(data, draft.supplier_id);
-    if (!gate.allowed) {
-      setShowUpgradePrompt(true);
-      setError("");
+    if (quoteMode === "itemized" && items.length > 0 && (draft.item_prices ?? []).some((item) => item.total_price <= 0)) {
+      setError("세부견적은 요청 품목별 금액을 모두 입력해 주세요.");
       return;
     }
-    const nextData = createQuote(data, currentRequest.id, draft);
-    setData(nextData);
-    navigate(`/app/requests/${currentRequest.id}`);
+    if (!existingQuote) {
+      const gate = canSubmitQuoteByPlan(data, draft.supplier_id);
+      if (!gate.allowed) {
+        setShowUpgradePrompt(true);
+        return;
+      }
+    }
+
+    setIsQuoteSending(true);
+    let shouldResetSending = true;
+
+    try {
+      if (isLiveModeReady()) {
+        const requestExists = await ensureLiveQuoteRequestExists(currentRequest.id);
+        if (!requestExists.ok) {
+          setError(`운영 DB 견적요청 확인에 실패했습니다. ${requestExists.error}`);
+          return;
+        }
+        if (!requestExists.data) {
+          setError("운영 DB에 저장되지 않은 요청입니다. 목록을 새로고침한 뒤 실제 운영 요청을 선택해 주세요.");
+          return;
+        }
+      }
+
+      if (existingQuote) {
+        if (isLiveModeReady()) {
+          const liveResult = isLiveRecordId(existingQuote.id)
+            ? await updateLiveQuote(existingQuote.id, currentRequest.id, draft)
+            : await createLiveQuote(currentRequest.id, draft);
+          if (!liveResult.ok) {
+            setError(`견적서 수정 저장에 실패했습니다. ${liveResult.error}`);
+            return;
+          }
+          if (!liveResult.data) {
+            setError("견적서 수정 저장에 실패했습니다. 운영 DB 응답이 비어 있습니다.");
+            return;
+          }
+          const liveQuote = liveResult.data;
+          const nextData = {
+            ...data,
+            quotes: [liveQuote, ...data.quotes.filter((entry) => entry.id !== liveQuote.id && entry.id !== existingQuote.id)],
+          };
+          saveData(nextData);
+          setData(nextData);
+          setIsEditingExistingQuote(false);
+          shouldResetSending = false;
+          navigate(`/app/supplier/quotes/${liveQuote.id}`);
+          return;
+        }
+        const nextData = updateQuote(data, existingQuote.id, draft);
+        setData(nextData);
+        setIsEditingExistingQuote(false);
+        shouldResetSending = false;
+        navigate("/app/supplier/quotes");
+        return;
+      }
+
+      if (isLiveModeReady()) {
+        const liveResult = await createLiveQuote(currentRequest.id, draft);
+        if (!liveResult.ok) {
+          setError(`견적서 저장에 실패했습니다. ${liveResult.error}`);
+          return;
+        }
+        if (!liveResult.data) {
+          setError("견적서 저장에 실패했습니다. 운영 DB 응답이 비어 있습니다.");
+          return;
+        }
+        const liveQuote = liveResult.data;
+        const nextData = {
+          ...data,
+          quote_requests: data.quote_requests.map((entry) => entry.id === currentRequest.id ? { ...entry, status: "quoted" as const, updated_at: new Date().toISOString() } : entry),
+          quotes: [liveQuote, ...data.quotes.filter((entry) => entry.id !== liveQuote.id)],
+        };
+        saveData(nextData);
+        setData(nextData);
+        shouldResetSending = false;
+        navigate(`/app/supplier/quotes/${liveQuote.id}`);
+        return;
+      }
+
+      const nextData = createQuote(data, currentRequest.id, draft);
+      const submittedQuote = nextData.quotes.find((entry) => entry.quote_request_id === currentRequest.id && entry.supplier_id === draft.supplier_id);
+      setData(nextData);
+      shouldResetSending = false;
+      navigate(submittedQuote ? `/app/supplier/quotes/${submittedQuote.id}` : `/app/supplier/requests/${currentRequest.id}`);
+    } finally {
+      if (shouldResetSending) setIsQuoteSending(false);
+    }
+  }
+
+  if (existingQuote && !isEditingExistingQuote) {
+    return (
+      <Page>
+        <BackButton onClick={() => navigate("/app/supplier/quotes")} label="제출한 견적" />
+        <RequestSummary data={data} request={currentRequest} items={items} />
+        <SupplierStatusNotice supplier={supplier} navigate={navigate} />
+        <section className="quoteSentPanel">
+          <div className="quoteSentHeader">
+            <div>
+              <span className="eyebrow">보낸 견적</span>
+              <h2>이미 제출한 견적입니다.</h2>
+              <p>같은 요청에는 견적을 다시 발송할 수 없고, 제출한 내용만 확인하거나 수정할 수 있습니다.</p>
+            </div>
+            <StatusBadge tone={existingQuote.status === "selected" ? "green" : "blue"}>{quoteStatusLabels[existingQuote.status]}</StatusBadge>
+          </div>
+          <div className="quoteSentAmount">
+            <span>최종 견적금액</span>
+            <strong>{money(existingQuote.final_amount)}</strong>
+          </div>
+          <div className="quoteSentGrid">
+            <span><small>상품 금액</small>{money(existingQuote.total_amount)}</span>
+            <span><small>배송비</small>{money(existingQuote.delivery_fee)}</span>
+            <span><small>납품 가능일</small>{existingQuote.available_delivery_date}</span>
+            <span><small>견적 유효기간</small>{existingQuote.valid_until}</span>
+            <span><small>세금계산서</small>{yesNo(existingQuote.tax_invoice_available)}</span>
+            <span><small>카드결제</small>{yesNo(existingQuote.card_payment_available)}</span>
+          </div>
+          {(existingQuote.item_price_memo || existingQuote.alternative_proposal || existingQuote.memo) && (
+            <div className="quoteSentNotes">
+              {existingQuote.item_price_memo && <QuoteSentNote title="품목별 단가 메모" body={existingQuote.item_price_memo} />}
+              {existingQuote.alternative_proposal && <QuoteSentNote title="대체품 제안" body={existingQuote.alternative_proposal} />}
+              {existingQuote.memo && <QuoteSentNote title="추가 설명" body={existingQuote.memo} />}
+            </div>
+          )}
+          <div className="formActions">
+            <button className="secondaryButton" type="button" onClick={startBuyerInquiry}>
+              <Bell size={16} />
+              문의/채팅
+            </button>
+            {existingDeal && (
+              <button className="secondaryButton" type="button" onClick={() => navigate(`/app/supplier/deals/${existingDeal.id}`)}>
+                거래 보기
+              </button>
+            )}
+            {canEditExistingQuote ? (
+              <button className="primaryButton" type="button" onClick={() => setIsEditingExistingQuote(true)}>
+                견적 수정
+              </button>
+            ) : (
+              <span className="quoteLockedHint">거래가 진행된 견적은 수정할 수 없습니다.</span>
+            )}
+          </div>
+        </section>
+      </Page>
+    );
   }
 
   return (
@@ -11432,7 +14217,8 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
         <EmptyState icon={<ShieldCheck />} title="승인 후 견적을 제출할 수 있습니다." desc="프로필 수정과 인증자료 보완을 먼저 진행해 주세요." />
       ) : (
         <>
-      <PageTitle eyebrow="견적 제출" title="공급업체 견적 입력" desc="필수 금액과 납품 조건을 입력하면 구매자 상세 화면에 즉시 반영됩니다." />
+      <PageTitle eyebrow={existingQuote ? "견적 수정" : "견적 제출"} title={existingQuote ? "보낸 견적 수정" : "공급업체 견적 입력"} desc={existingQuote ? "이미 발송한 견적 조건을 수정합니다. 같은 요청에 중복 발송은 되지 않습니다." : "필수 금액과 납품 조건을 입력하면 구매자 상세 화면에 즉시 반영됩니다."} />
+      {isQuoteSending && <QuoteSubmittingNotice editing={Boolean(existingQuote)} />}
       {showUpgradePrompt && (
         <section className="limitModalInline">
           <h2>이번 달 무료 견적 참여 한도를 모두 사용했습니다.</h2>
@@ -11444,28 +14230,68 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
         </section>
       )}
       <div className="quickQuoteButtons">
-        <button className="secondaryButton compact" type="button" onClick={() => applyQuickQuote("standard")}>기본 견적 채우기</button>
-        <button className="secondaryButton compact" type="button" onClick={() => applyQuickQuote("lowest")}>최저가 대응</button>
-        <button className="secondaryButton compact" type="button" onClick={() => applyQuickQuote("fast")}>빠른 납품</button>
+        <button className="secondaryButton compact" type="button" onClick={() => applyQuickQuote("standard")} disabled={isQuoteSending}>기본 견적 채우기</button>
+        <button className="secondaryButton compact" type="button" onClick={() => applyQuickQuote("lowest")} disabled={isQuoteSending}>최저가 대응</button>
+        <button className="secondaryButton compact" type="button" onClick={() => applyQuickQuote("fast")} disabled={isQuoteSending}>빠른 납품</button>
       </div>
-      <form className="formStack" onSubmit={submit}>
+      <form className="formStack" onSubmit={submit} aria-busy={isQuoteSending}>
         {error && <div className="alert">{error}</div>}
-        <Field label="제출 업체">
-          <select value={draft.supplier_id} onChange={(event) => setDraft({ ...draft, supplier_id: event.target.value })}>
-            {data.supplier_profiles.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.business_name}
-              </option>
+        <section className="quoteModeSelector" aria-label="견적 작성 방식">
+          <button className={quoteMode === "summary" ? "quoteModeCard active" : "quoteModeCard"} type="button" onClick={() => switchQuoteMode("summary")}>
+            <strong>총액 견적</strong>
+            <span>전체 금액만 빠르게 입력합니다.</span>
+          </button>
+          <button className={quoteMode === "itemized" ? "quoteModeCard active" : "quoteModeCard"} type="button" onClick={() => switchQuoteMode("itemized")}>
+            <strong>품목별 견적</strong>
+            <span>요청 품목별 금액을 입력하고 자동 합산합니다.</span>
+          </button>
+        </section>
+        {quoteMode === "itemized" && (
+          <section className="itemizedQuoteEditor">
+            <SectionHeader title="품목별 금액" />
+            {(draft.item_prices?.length ? draft.item_prices : buildItemPriceRows(draft)).map((item) => (
+              <div className="itemizedQuoteRow" key={item.item_id}>
+                <div>
+                  <strong>{item.item_name}</strong>
+                  <span>{item.quantity.toLocaleString("ko-KR")} {item.unit}</span>
+                </div>
+                <input
+                  inputMode="numeric"
+                  value={formatMoneyInput(item.total_price)}
+                  onChange={(event) => updateItemQuoteAmount(item.item_id, event.target.value)}
+                  placeholder="0"
+                  aria-label={`${item.item_name} 금액`}
+                />
+              </div>
             ))}
-          </select>
-        </Field>
+            <div className="quoteTotalPreview">
+              <span>품목 합계</span>
+              <strong>{money(itemizedSubtotal)}</strong>
+            </div>
+          </section>
+        )}
         <div className="formGrid">
           <Field label="총 견적금액">
-            <input type="number" min="0" value={draft.total_amount} onChange={(event) => setDraft({ ...draft, total_amount: Number(event.target.value) })} />
+            <input
+              inputMode="numeric"
+              value={formatMoneyInput(quoteSubtotal)}
+              onChange={(event) => setDraft({ ...draft, quote_mode: "summary", total_amount: parseMoneyInput(event.target.value) })}
+              placeholder="0"
+              readOnly={quoteMode === "itemized"}
+            />
           </Field>
           <Field label="배송비">
-            <input type="number" min="0" value={draft.delivery_fee} onChange={(event) => setDraft({ ...draft, delivery_fee: Number(event.target.value) })} />
+            <input
+              inputMode="numeric"
+              value={formatMoneyInput(draft.delivery_fee)}
+              onChange={(event) => setDraft({ ...draft, delivery_fee: parseMoneyInput(event.target.value) })}
+              placeholder="0"
+            />
           </Field>
+        </div>
+        <div className="quoteTotalPreview final">
+          <span>최종 견적금액</span>
+          <strong>{money(quoteFinalAmount)}</strong>
         </div>
         <div className="formGrid">
           <Field label="납품 가능일">
@@ -11489,12 +14315,12 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
           <textarea value={draft.memo} onChange={(event) => setDraft({ ...draft, memo: event.target.value })} placeholder="배송 시간, 재고 조건, 결제 조건 등을 입력하세요." />
         </Field>
         <div className="formActions">
-          <button className="secondaryButton" type="button" onClick={() => navigate("/app/supplier/requests")}>
+          <button className="secondaryButton" type="button" onClick={() => existingQuote ? setIsEditingExistingQuote(false) : navigate("/app/supplier/requests")} disabled={isQuoteSending}>
             취소
           </button>
-          <button className="primaryButton" type="submit">
-            <ReceiptText size={18} />
-            견적 제출
+          <button className="primaryButton" type="submit" disabled={isQuoteSending}>
+            {isQuoteSending ? <span className="buttonSpinner" aria-hidden="true" /> : <ReceiptText size={18} />}
+            {isQuoteSending ? "발송 중" : existingQuote ? "견적 수정 저장" : "견적 제출"}
           </button>
         </div>
       </form>
@@ -11504,8 +14330,39 @@ function SupplierRequestDetailPage({ data, navigate, setData, requestId }: Mutat
   );
 }
 
-function SupplierQuotesPage({ data, navigate }: PageProps) {
-  const supplier = getActiveSupplier(data);
+function QuoteSubmittingNotice({ editing }: { editing: boolean }) {
+  return (
+    <div className="quoteSubmittingBackdrop" role="alertdialog" aria-modal="true" aria-labelledby="quote-submitting-title">
+      <section className="quoteSubmittingPanel">
+        <span className="spinner large" aria-hidden="true" />
+        <div>
+          <h2 id="quote-submitting-title">{editing ? "견적서 수정사항을 저장 중입니다." : "견적서를 발송 중입니다."}</h2>
+          <p>완료될 때까지 화면을 닫지 말고 잠시만 기다려 주세요.</p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function QuoteSentNote({ title, body }: { title: string; body: string }) {
+  return (
+    <article className="quoteSentNote">
+      <h3>{title}</h3>
+      <p>{body}</p>
+    </article>
+  );
+}
+
+function SupplierQuoteDetailPage({ data, navigate, setData, quoteId, authSession }: MutatingPageProps & { quoteId: string; authSession?: AppAuthSession | null }) {
+  const supplier = getActiveSupplier(data, authSession);
+  const quote = data.quotes.find((entry) => entry.id === quoteId && entry.supplier_id === supplier.id);
+  const request = quote ? data.quote_requests.find((entry) => entry.id === quote.quote_request_id) : undefined;
+  if (!quote || !request) return <NotFound navigate={navigate} />;
+  return <SupplierRequestDetailPage data={data} navigate={navigate} setData={setData} requestId={request.id} quoteId={quote.id} authSession={authSession} />;
+}
+
+function SupplierQuotesPage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
+  const supplier = getActiveSupplier(data, authSession);
   const myQuotes = data.quotes.filter((quoteEntry) => quoteEntry.supplier_id === supplier.id);
   const quoteSummaries = myQuotes.map((quoteEntry) => {
     const supplierLabel = supplierName(data, quoteEntry.supplier_id);
@@ -11533,7 +14390,7 @@ function SupplierQuotesPage({ data, navigate }: PageProps) {
               </thead>
               <tbody>
                 {quoteSummaries.map(({ deal, quoteEntry, request, supplierLabel }) => (
-                  <tr key={quoteEntry.id} onClick={() => request && navigate(`/app/supplier/requests/${request.id}`)}>
+                  <tr key={quoteEntry.id} onClick={() => navigate(`/app/supplier/quotes/${quoteEntry.id}`)}>
                     <td>{supplierLabel}</td>
                     <td>{request?.title ?? "삭제된 요청"}</td>
                     <td>{money(quoteEntry.final_amount)}</td>
@@ -11543,7 +14400,7 @@ function SupplierQuotesPage({ data, navigate }: PageProps) {
                     <td>{quoteEntry.available_delivery_date}</td>
                     <td>
                       {deal ? (
-                        <button className="primaryButton compact" type="button" onClick={(event) => { event.stopPropagation(); navigate(`/app/deals/${deal.id}`); }}>
+                        <button className="primaryButton compact" type="button" onClick={(event) => { event.stopPropagation(); navigate(`/app/supplier/deals/${deal.id}`); }}>
                           거래 상세
                         </button>
                       ) : "없음"}
@@ -11584,12 +14441,12 @@ function SupplierQuotesPage({ data, navigate }: PageProps) {
                 </div>
                 <div className="formActions supplierQuoteActions">
                   {request && (
-                    <button className="secondaryButton" type="button" onClick={() => navigate(`/app/supplier/requests/${request.id}`)}>
-                      요청 보기
+                    <button className="secondaryButton" type="button" onClick={() => navigate(`/app/supplier/quotes/${quoteEntry.id}`)}>
+                      견적 보기
                     </button>
                   )}
                   {deal ? (
-                    <button className="primaryButton" type="button" onClick={() => navigate(`/app/deals/${deal.id}`)}>
+                    <button className="primaryButton" type="button" onClick={() => navigate(`/app/supplier/deals/${deal.id}`)}>
                       거래 상세
                     </button>
                   ) : (
@@ -11607,17 +14464,13 @@ function SupplierQuotesPage({ data, navigate }: PageProps) {
   );
 }
 
-function SupplierBillingPage({ data, navigate, setData }: MutatingPageProps) {
-  const supplier = getActiveSupplier(data);
+function SupplierBillingPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const supplier = getActiveSupplier(data, authSession);
   const plan = getSupplierCurrentPlan(data, supplier.id);
   const subscription = getSupplierSubscription(data, supplier.id);
   const summary = getSupplierUsageSummary(data, supplier.id);
   const billingAccount = data.billing_accounts.find((entry) => entry.supplier_id === supplier.id) ?? defaultBillingAccount(supplier);
   const [accountDraft, setAccountDraft] = useState<BillingAccount>({ ...billingAccount });
-
-  function changePlan(planId: string) {
-    setData(updateSupplierSubscriptionPlan(data, supplier.id, planId, supplier.user_id));
-  }
 
   function saveBillingAccount() {
     setData(updateBillingAccount(data, supplier.id, accountDraft));
@@ -11626,15 +14479,27 @@ function SupplierBillingPage({ data, navigate, setData }: MutatingPageProps) {
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/supplier")} label="공급업체 홈" />
-      <PageTitle eyebrow="요금제/이용현황" title="이번 달 견적 참여와 수수료를 확인하세요." desc="실제 결제 연동 전까지 요금제와 청구 기준을 샘플로 관리합니다." />
-      <BetaLimitationsNotice navigate={navigate} context="payment" />
+      <PageTitle eyebrow="구독 준비" title="베타 기간 무료 사용현황을 확인하세요." desc="정식 출시 전까지 모든 핵심 기능은 무료로 제공하고, 활성화 이후 구독제로 전환할 수 있도록 준비합니다." />
+      <section className="subscriptionBetaHero">
+        <div>
+          <span className="eyebrow">현재 운영 정책</span>
+          <h2>전면 무료 베타 운영 중입니다.</h2>
+          <p>{SUPPLIER_BETA_END_LABEL} 견적 제출, 상품 등록, 문의, 거래관리 기능을 제한 없이 사용할 수 있습니다. 아래 플랜은 정식 출시 전환을 위한 준비용입니다.</p>
+          <div className="chipLine">
+            <span className="chip">현재 청구 없음</span>
+            <span className="chip">결제수단 등록 불필요</span>
+            <span className="chip">구독 전환 사전 준비</span>
+          </div>
+        </div>
+        <button className="secondaryButton" type="button" onClick={() => navigate("/app/supplier/usage")}>사용량 보기</button>
+      </section>
       <section className="billingHero">
         <div>
-          <span className="eyebrow">현재 요금제</span>
-          <h2>{plan.name}</h2>
-          <p>{subscription.current_period_start} ~ {subscription.current_period_end} · {supplierSubscriptionStatusLabels[subscription.status]}</p>
+          <span className="eyebrow">현재 표시 플랜</span>
+          <h2>{SUPPLIER_BETA_FREE_ENABLED ? "베타 무료" : plan.name}</h2>
+          <p>{subscription.current_period_start} ~ {subscription.current_period_end} · {SUPPLIER_BETA_FREE_ENABLED ? "무료 베타" : supplierSubscriptionStatusLabels[subscription.status]}</p>
           <div className="chipLine">
-            <span className="chip">{planLimitLabel(plan.quote_participation_limit)} 견적 참여</span>
+            <span className="chip">{SUPPLIER_BETA_FREE_ENABLED ? "견적 참여 제한 없음" : `${planLimitLabel(plan.quote_participation_limit)} 견적 참여`}</span>
             {plan.badge_enabled && <span className="chip">{plan.badge_label}</span>}
             {plan.priority_exposure_enabled && <span className="chip">상위노출 가능</span>}
             {plan.analytics_enabled && <span className="chip">통계 제공</span>}
@@ -11644,24 +14509,24 @@ function SupplierBillingPage({ data, navigate, setData }: MutatingPageProps) {
       </section>
       <div className="dashboardGrid">
         <Metric label="견적 참여 사용량" value={summary.quoteLimit <= 0 ? `${summary.usage.quotes_submitted_count}건` : `${summary.usage.quotes_submitted_count}/${summary.quoteLimit}건`} icon={<ReceiptText />} />
-        <Metric label="남은 참여 가능" value={summary.remaining === Infinity ? "무제한" : `${summary.remaining}건`} icon={<ClipboardList />} />
+        <Metric label="베타 남은 한도" value={SUPPLIER_BETA_FREE_ENABLED ? "무제한" : summary.remaining === Infinity ? "무제한" : `${summary.remaining}건`} icon={<ClipboardList />} />
         <Metric label="이번 달 거래 성사" value={`${summary.usage.deals_won_count}건`} icon={<PackageCheck />} />
         <Metric label="이번 달 거래액" value={money(summary.usage.total_deal_amount)} icon={<Landmark />} />
-        <Metric label="예상 플랫폼 수수료" value={money(summary.expectedPlatformFees)} icon={<ReceiptText />} />
-        <Metric label="다음 갱신일" value={subscription.current_period_end} icon={<RefreshCcw />} />
+        <Metric label="현재 청구액" value="₩0" icon={<ReceiptText />} />
+        <Metric label="정식 전환" value="준비 중" icon={<RefreshCcw />} />
       </div>
       <UsageLimitNotice data={data} supplierId={supplier.id} navigate={navigate} />
-      <SectionHeader title="요금제 변경" />
+      <SectionHeader title="정식 출시 예정 플랜" />
       <div className="planGrid">
         {data.supplier_plans.filter((entry) => entry.is_active).sort((a, b) => a.sort_order - b.sort_order).map((entry) => (
-          <PlanCard key={entry.id} plan={entry} active={entry.id === plan.id} onChange={() => changePlan(entry.id)} />
+          <PlanCard key={entry.id} plan={entry} />
         ))}
       </div>
       <section className="billingAccountPanel">
         <div>
-          <span className="eyebrow">청구 정보</span>
-          <h2>결제수단 연결은 추후 제공됩니다.</h2>
-          <p>현재는 관리자 정산 기준으로 수수료가 계산됩니다. 실제 PG/구독 연동 시 아래 정보가 고객/청구 계정으로 이전됩니다.</p>
+          <span className="eyebrow">구독 전환 준비 정보</span>
+          <h2>결제수단 연결은 정식 출시 시 제공합니다.</h2>
+          <p>지금은 비용이 청구되지 않습니다. 추후 구독 결제를 시작할 때 세금계산서와 담당자 연락처로 사용할 정보를 미리 정리합니다.</p>
           <div className="chipLine">
             <span className="chip">결제수단 {paymentMethodStatusLabels[billingAccount.payment_method_status]}</span>
             <span className="chip">{billingAccount.default_payment_method_type === "none" ? "기본 결제수단 없음" : billingAccount.default_payment_method_type}</span>
@@ -11682,27 +14547,27 @@ function SupplierBillingPage({ data, navigate, setData }: MutatingPageProps) {
           </Field>
         </div>
         <div className="formActions">
-          <button className="secondaryButton" type="button" onClick={saveBillingAccount}>청구정보 저장</button>
-          <button className="ghostButton" type="button" disabled>결제수단 연결 예정</button>
+          <button className="secondaryButton" type="button" onClick={saveBillingAccount}>전환 준비 정보 저장</button>
+          <button className="ghostButton" type="button" disabled>결제수단 연결은 정식 출시 예정</button>
         </div>
       </section>
     </Page>
   );
 }
 
-function SupplierUsagePage({ data, navigate }: PageProps) {
-  const supplier = getActiveSupplier(data);
+function SupplierUsagePage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
+  const supplier = getActiveSupplier(data, authSession);
   const summary = getSupplierUsageSummary(data, supplier.id);
   const credits = data.quote_participation_credits.filter((credit) => credit.supplier_id === supplier.id);
 
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/supplier/billing")} label="요금제/이용현황" />
-      <PageTitle eyebrow="견적 참여 사용량" title="이번 달 참여 한도와 남은 건수를 확인하세요." desc="무료 플랜은 월 견적 참여 한도가 있으며, 한도 도달 시 업그레이드 안내가 표시됩니다." />
+      <PageTitle eyebrow="베타 무료 사용량" title="정식 구독 전환 전까지 사용량만 확인하세요." desc="현재는 견적 참여 한도를 실제로 차단하지 않고, 향후 구독 설계를 위한 사용량 지표로만 기록합니다." />
       <UsageLimitNotice data={data} supplierId={supplier.id} navigate={navigate} />
       <div className="dashboardGrid">
-        <Metric label="현재 플랜" value={summary.plan.name} icon={<BadgeCheck />} />
-        <Metric label="월 견적 한도" value={planLimitLabel(summary.quoteLimit)} icon={<ClipboardList />} />
+        <Metric label="현재 플랜" value={SUPPLIER_BETA_FREE_ENABLED ? "베타 무료" : summary.plan.name} icon={<BadgeCheck />} />
+        <Metric label="베타 한도" value={SUPPLIER_BETA_FREE_ENABLED ? "무제한" : planLimitLabel(summary.quoteLimit)} icon={<ClipboardList />} />
         <Metric label="사용한 견적" value={`${summary.usage.quotes_submitted_count}건`} icon={<ReceiptText />} />
         <Metric label="남은 견적" value={summary.remaining === Infinity ? "무제한" : `${summary.remaining}건`} icon={<PackageCheck />} />
         <Metric label="매칭 조회" value={`${summary.usage.matched_requests_viewed_count}건`} icon={<SearchCheck />} />
@@ -11737,73 +14602,96 @@ function SupplierUsagePage({ data, navigate }: PageProps) {
   );
 }
 
-function SupplierSettlementsPage({ data, navigate, setData }: MutatingPageProps) {
-  const supplier = getActiveSupplier(data);
+function SupplierSettlementsPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const supplier = getActiveSupplier(data, authSession);
   const [filter, setFilter] = useState("전체");
-  const fees = getPlatformFeesBySupplier(data, supplier.id);
-  const settlements = getSupplierSettlements(data, supplier.id).filter((entry) => filter === "전체" || settlementStatusLabels[entry.status] === filter);
-  const pendingFees = fees.filter((fee) => !["paid", "waived", "cancelled"].includes(fee.fee_status));
+  const [message, setMessage] = useState("");
+  const supplierDeals = data.deals
+    .filter((deal) => deal.supplier_id === supplier.id && ["delivered", "completed", "closed"].includes(deal.status))
+    .sort((a, b) => (b.completed_at ?? b.updated_at ?? b.created_at).localeCompare(a.completed_at ?? a.updated_at ?? a.created_at));
+  const allSettlements = getSupplierSettlements(data, supplier.id);
+  const settlements = allSettlements.filter((entry) => filter === "전체" || supplierSettlementDisplayLabel(entry.status) === filter);
+  const totalCompletedAmount = allSettlements.reduce((sum, entry) => sum + entry.total_deal_amount, 0);
+  const paymentConfirmedCount = allSettlements.filter((entry) => entry.status === "paid").length;
+  const paymentCheckNeededCount = allSettlements.filter((entry) => entry.status !== "paid" && entry.status !== "cancelled").length;
+  const evidenceNeededCount = supplierDeals.filter((deal) => !data.deal_attachments.some((attachment) => attachment.deal_id === deal.id && attachment.uploaded_by === "supplier")).length;
+
+  function settlementDeals(settlementId: string) {
+    const dealIds = data.settlement_items.filter((item) => item.settlement_id === settlementId).map((item) => item.deal_id);
+    return supplierDeals.filter((deal) => dealIds.includes(deal.id));
+  }
+
+  function markSettlementPaid(settlementId: string) {
+    setData(updateSettlementStatus(data, settlementId, "paid"));
+    setMessage("입금 확인 완료로 저장되었습니다.");
+    setFilter("전체");
+  }
 
   return (
     <Page>
       <BackButton onClick={() => navigate("/app/supplier")} label="공급업체 홈" />
-      <PageTitle eyebrow="정산 예정 내역" title="거래 완료 후 계산된 플랫폼 이용 수수료입니다." desc="실제 정산/납부 기능은 추후 결제 시스템 연동 후 제공됩니다." />
+      <PageTitle eyebrow="입금/증빙 관리" title="완료된 거래를 확인하고 바로 완료 처리하세요." desc="공급업체 과금은 구독으로만 준비하며, 이 화면은 청구 화면이 아닌 거래 확인용입니다." />
       <BetaLimitationsNotice navigate={navigate} context="payment" />
-      <div className="dashboardGrid">
-        <Metric label="이번 달 완료 거래액" value={money(settlements.reduce((sum, entry) => sum + entry.total_deal_amount, 0))} icon={<ReceiptText />} />
-        <Metric label="플랫폼 수수료" value={money(settlements.reduce((sum, entry) => sum + entry.total_platform_fee, 0))} icon={<Landmark />} />
-        <Metric label="미납/대기 수수료" value={money(pendingFees.reduce((sum, fee) => sum + fee.fee_amount, 0))} icon={<Bell />} />
-        <Metric label="완료 거래 수" value={`${fees.length}건`} icon={<PackageCheck />} />
-        <Metric label="면제 거래 수" value={`${fees.filter((fee) => fee.is_waived).length}건`} icon={<BadgeCheck />} />
-        <Metric label="VAT 샘플" value={money(settlements.reduce((sum, entry) => sum + entry.total_vat_amount, 0))} icon={<ReceiptText />} />
-      </div>
-      <FilterTabs options={["전체", "정산 대기", "확정", "납부 완료", "취소"]} active={filter} onChange={setFilter} />
-      <div className="settlementLayout">
-        <div className="tableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th>정산 기간</th>
-                <th>거래금액</th>
-                <th>수수료</th>
-                <th>VAT 샘플</th>
-                <th>정산 기준 금액</th>
-                <th>상태</th>
-                <th>예정일</th>
-              </tr>
-            </thead>
-            <tbody>
-              {settlements.map((entry) => (
-                <tr key={entry.id}>
-                  <td>{entry.period_start} ~ {entry.period_end}</td>
-                  <td>{money(entry.total_deal_amount)}</td>
-                  <td>{money(entry.total_platform_fee)}</td>
-                  <td>{money(entry.total_vat_amount)}</td>
-                  <td>{money(entry.total_settlement_amount)}</td>
-                  <td><StatusBadge tone={settlementTone(entry.status)}>{settlementStatusLabels[entry.status]}</StatusBadge></td>
-                  <td>{entry.payout_due_date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="statusNotice settlementGuide" aria-label="입금 확인 안내">
+        <BadgeCheck size={22} />
+        <div>
+          <strong>실제 입금이 확인된 건만 완료 처리하세요.</strong>
+          <p>카드의 거래 금액과 연결 거래를 확인한 뒤, 문제가 없으면 입금 확인 완료 버튼을 누르면 됩니다.</p>
         </div>
-        <section className="detailPanel">
-          <span className="eyebrow">거래별 수수료</span>
-          <h2>플랫폼 이용 수수료 내역</h2>
-          {fees.map((fee) => {
-            const deal = data.deals.find((entry) => entry.id === fee.deal_id);
-            return (
-              <div className="feeRow" key={fee.id}>
-                <strong>{deal?.title ?? fee.deal_id}</strong>
-                <span>{fee.category_name} · {(fee.commission_rate * 100).toFixed(1)}%</span>
-                <span>{money(fee.deal_final_amount)} / 수수료 {money(fee.fee_amount)}</span>
-                <StatusBadge tone={feeStatusTone(fee.fee_status)}>{platformFeeStatusLabels[fee.fee_status]}</StatusBadge>
-              </div>
-            );
-          })}
-          <button className="ghostButton" type="button" onClick={() => setData(data)}>정산 확인</button>
-        </section>
+      </section>
+      {message && <p className="successText">{message}</p>}
+      <div className="dashboardGrid">
+        <Metric label="완료 거래액" value={money(totalCompletedAmount)} icon={<ReceiptText />} />
+        <Metric label="완료 거래 수" value={`${supplierDeals.length}건`} icon={<PackageCheck />} />
+        <Metric label="입금 확인 완료" value={`${paymentConfirmedCount}건`} icon={<BadgeCheck />} />
+        <Metric label="확인 필요" value={`${paymentCheckNeededCount}건`} icon={<Bell />} />
+        <Metric label="증빙 필요" value={`${evidenceNeededCount}건`} icon={<FilePlus2 />} />
       </div>
+      <FilterTabs options={["전체", "입금 확인 대기", "거래 확인", "입금 확인 완료", "취소"]} active={filter} onChange={setFilter} />
+      <section className="settlementSimpleList" aria-label="입금 확인 목록">
+        {settlements.length ? settlements.map((entry) => {
+          const dealsForSettlement = settlementDeals(entry.id);
+          const visibleDeals = dealsForSettlement.length ? dealsForSettlement : supplierDeals;
+          const evidenceNeeded = visibleDeals.filter((deal) => !data.deal_attachments.some((attachment) => attachment.deal_id === deal.id && attachment.uploaded_by === "supplier")).length;
+          const isPaid = entry.status === "paid";
+          return (
+            <article className="settlementSimpleCard" key={entry.id}>
+              <div className="settlementSimpleHeader">
+                <div>
+                  <span className="eyebrow">{entry.period_start} ~ {entry.period_end}</span>
+                  <h2>{money(entry.total_deal_amount)}</h2>
+                  <p>{visibleDeals.length}건 거래 · 확인 예정일 {entry.payout_due_date}</p>
+                </div>
+                <StatusBadge tone={settlementTone(entry.status)}>{supplierSettlementDisplayLabel(entry.status)}</StatusBadge>
+              </div>
+              <div className="settlementSimpleFacts">
+                <span><strong>{visibleDeals.length}</strong><small>연결 거래</small></span>
+                <span><strong>{evidenceNeeded}</strong><small>증빙 필요</small></span>
+                <span><strong>{entry.paid_at ? entry.paid_at.slice(0, 10) : "-"}</strong><small>완료일</small></span>
+              </div>
+              {visibleDeals.length > 0 && (
+                <div className="settlementDealPreview">
+                  {visibleDeals.slice(0, 3).map((deal) => (
+                    <span key={deal.id}>{deal.title} · {money(deal.final_amount)}</span>
+                  ))}
+                </div>
+              )}
+              <div className="settlementCardActions">
+                <button className={isPaid ? "secondaryButton" : "primaryButton"} type="button" onClick={() => markSettlementPaid(entry.id)} disabled={isPaid}>
+                  {isPaid ? "입금 확인 완료됨" : "입금 확인 완료 처리"}
+                </button>
+                <button className="ghostButton" type="button" onClick={() => navigate("/app/supplier/deals")}>거래 보기</button>
+              </div>
+            </article>
+          );
+        }) : (
+          <div className="emptyState">
+            <ReceiptText size={36} />
+            <strong>확인할 완료 거래가 없습니다.</strong>
+            <span>거래가 완료되면 이곳에서 입금 확인을 처리할 수 있습니다.</span>
+          </div>
+        )}
+      </section>
     </Page>
   );
 }
@@ -13514,11 +16402,13 @@ function AdminPlaybooksPage({ data, navigate }: PageProps) {
   );
 }
 
-function QuickReorderPage({ data, navigate, setData }: MutatingPageProps) {
-  const buyerRequests = data.quote_requests.filter((entry) => entry.buyer_id === "buyer-1");
-  const buyerPurchases = data.purchase_records.filter((entry) => entry.buyer_id === "buyer-1");
-  const groups = data.favorite_item_groups.filter((entry) => entry.buyer_id === "buyer-1");
-  const [createdId, setCreatedId] = useState("");
+function QuickReorderPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const buyerIds = getBuyerIdsForSession(data, authSession);
+  const buyerId = getPrimaryBuyerIdForSession(data, authSession);
+  const buyerRequests = data.quote_requests.filter((entry) => buyerIds.has(entry.buyer_id));
+  const buyerPurchases = data.purchase_records.filter((entry) => buyerIds.has(entry.buyer_id) && !entry.deleted_at);
+  const groups = data.favorite_item_groups.filter((entry) => buyerIds.has(entry.buyer_id));
+  const [message, setMessage] = useState("");
 
   function createFromRequest(request: QuoteRequest) {
     const category = data.categories.find((entry) => entry.name === request.category_name) ?? data.categories[0];
@@ -13547,9 +16437,9 @@ function QuickReorderPage({ data, navigate, setData }: MutatingPageProps) {
       include_delivery_fee: request.include_delivery_fee ?? true,
       items: items.map((item) => ({ item_name: item.item_name, spec: item.spec, quantity: item.quantity, unit: item.unit, memo: item.memo, is_required: true, allow_alternative: item.allow_alternative ?? true, confidence_score: 96, needs_review: false, review_reason: "" })),
       attachments: [],
-    });
+    }, buyerId);
     setData(result.data);
-    setCreatedId(result.requestId);
+    navigate(`/app/requests/${result.requestId}`);
   }
 
   function createFromGroup(groupId: string) {
@@ -13581,19 +16471,64 @@ function QuickReorderPage({ data, navigate, setData }: MutatingPageProps) {
       include_delivery_fee: true,
       items: items.map((item) => ({ item_name: item.item_name, spec: item.spec, quantity: item.quantity, unit: item.unit, memo: item.memo, is_required: true, allow_alternative: item.allow_alternative, confidence_score: 96, needs_review: false, review_reason: "" })),
       attachments: [],
-    });
+    }, buyerId);
     setData(result.data);
-    setCreatedId(result.requestId);
+    navigate(`/app/requests/${result.requestId}`);
+  }
+
+  function createFromPurchase(record: PurchaseRecord) {
+    const recordOwnerId = record.business_id || record.buyer_id || buyerId;
+    const result = createRequoteDraftFromPurchaseRecords(data, { businessId: recordOwnerId, purchaseRecordIds: [record.id], createdBy: buyerId });
+    setData(result.data);
+    if (result.url) {
+      navigate(result.url);
+      return;
+    }
+    setMessage(result.error ?? "구매내역으로 견적요청 초안을 만들 수 없습니다.");
+  }
+
+  function purchaseItemSummary(record: PurchaseRecord) {
+    const items = data.purchase_record_items.filter((item) => item.purchase_record_id === record.id);
+    if (items.length) return items.slice(0, 3).map((item) => `${item.item_name} ${item.quantity.toLocaleString()}${item.unit}`).join(", ");
+    return record.item_summary || "품목 확인 필요";
   }
 
   return (
     <Page>
       <BackButton onClick={() => navigate("/app")} label="앱 홈" />
-      <PageTitle eyebrow="Quick Reorder" title="자주 사는 품목은 다시 입력하지 마세요." desc="지난 요청/구매/품목 묶음에서 수량과 납품일만 바꿔 빠르게 견적받습니다." />
-      {createdId && <p className="savingText">재요청이 생성되었습니다. 요청번호 {createdId}</p>}
+      <PageTitle eyebrow="다시 견적받기" title="지난 구매 품목을 불러와 바로 견적요청하세요." desc="구매한 품목은 아래 최근 구매 카드에 표시됩니다. 버튼을 누르면 품목 확인 화면으로 이동해 수량과 납품일을 확인한 뒤 제출합니다." />
+      <section className="statusNotice quickReorderGuide" aria-label="빠른 재구매 사용 순서">
+        <PackageCheck size={22} />
+        <div>
+          <strong>구매 품목 선택 → 품목 확인 → 견적요청 제출 순서로 진행됩니다.</strong>
+          <p>아래 버튼을 누르면 바로 제출되지 않고, 품목과 수량을 확인하는 화면으로 먼저 이동합니다.</p>
+        </div>
+      </section>
+      {message && <div className="alert warning">{message}</div>}
+      <section className="toolPanel">
+        <SectionHeader title="최근 구매한 품목" />
+        <div className="stackList">
+          {buyerPurchases.slice(0, 6).map((record) => (
+            <article className="leadCard" key={record.id}>
+              <div className="cardTopline">
+                <strong>{record.purchase_title}</strong>
+                <StatusBadge tone="green">{record.category_name || record.accounting_category}</StatusBadge>
+              </div>
+              <p>{purchaseItemSummary(record)}</p>
+              <p className="mutedText">{record.supplier_name} · {record.purchase_date} · {money(record.total_amount)}</p>
+              <button className="primaryButton compact" type="button" data-testid={`quick-reorder-purchase-${record.id}`} onClick={() => createFromPurchase(record)}>
+                이 구매 품목으로 다시 견적받기
+              </button>
+            </article>
+          ))}
+          {!buyerPurchases.length && (
+            <EmptyState icon={<PackageCheck />} title="아직 불러올 구매내역이 없습니다." desc="거래 완료 후 구매내역이 생기면 이곳에서 같은 품목으로 다시 견적받을 수 있습니다." actionLabel="구매내역 보기" onAction={() => navigate("/app/purchases")} />
+          )}
+        </div>
+      </section>
       <div className="twoColumn">
         <section className="toolPanel">
-          <SectionHeader title="최근 요청 다시 사용" />
+          <SectionHeader title="지난 견적요청 다시 사용" />
           <div className="stackList">
             {buyerRequests.map((request) => (
               <article className="leadCard" key={request.id}>
@@ -13617,30 +16552,12 @@ function QuickReorderPage({ data, navigate, setData }: MutatingPageProps) {
           </div>
         </section>
       </div>
-      <section className="toolPanel">
-        <SectionHeader title="최근 구매 다시 견적" />
-        <div className="tableWrap">
-          <table>
-            <thead><tr><th>구매</th><th>카테고리</th><th>금액</th><th>공급업체</th><th>추천 액션</th></tr></thead>
-            <tbody>
-              {buyerPurchases.slice(0, 5).map((record) => (
-                <tr key={record.id}>
-                  <td><strong>{record.purchase_title}</strong></td>
-                  <td>{record.category_name}</td>
-                  <td>{money(record.total_amount)}</td>
-                  <td>{record.supplier_name}</td>
-                  <td>가격 변동 확인 요청 · 같은 업체 재견적 · 다른 업체 비교</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
     </Page>
   );
 }
 
-function FavoriteItemsPage({ data, navigate, setData }: MutatingPageProps) {
+function FavoriteItemsPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const buyerId = authSession?.role === "buyer" ? authSession.id : "buyer-1";
   const [name, setName] = useState("");
   const [category, setCategory] = useState("포장재");
 
@@ -13651,7 +16568,7 @@ function FavoriteItemsPage({ data, navigate, setData }: MutatingPageProps) {
       ...data,
       favorite_item_groups: [{
         id: `fav-group-${Date.now()}`,
-        buyer_id: "buyer-1",
+        buyer_id: buyerId,
         name: name.trim(),
         category_name: category,
         description: "베타에서 추가한 자주 쓰는 품목 묶음",
@@ -13679,7 +16596,7 @@ function FavoriteItemsPage({ data, navigate, setData }: MutatingPageProps) {
         <button className="primaryButton compact" type="button" onClick={addGroup}>묶음 추가</button>
       </section>
       <div className="playbookGrid">
-        {data.favorite_item_groups.filter((group) => group.buyer_id === "buyer-1").map((group) => (
+        {data.favorite_item_groups.filter((group) => group.buyer_id === buyerId).map((group) => (
           <article className="toolPanel" key={group.id}>
             <div className="cardTopline"><h2>{group.name}</h2><StatusBadge tone="green">{group.category_name}</StatusBadge></div>
             <p>{group.description}</p>
@@ -13864,7 +16781,15 @@ function AdminPlansPage({ data, setData }: { data: AppData; setData: (data: AppD
 
   return (
     <Page>
-      <PageTitle eyebrow="요금제 관리" title="공급업체 플랜과 견적 참여 한도를 관리하세요." desc="실제 구독 결제 연동 전까지 관리자 수동 변경과 샘플 요금제를 제공합니다." />
+      <PageTitle eyebrow="구독 전환 준비" title="정식 출시용 공급업체 플랜을 미리 설계하세요." desc="현재는 전면 무료 베타로 운영하고, 관리자 화면에서는 향후 구독 전환을 위한 플랜/한도/혜택만 준비합니다." />
+      <section className="subscriptionBetaHero">
+        <div>
+          <span className="eyebrow">현재 운영 정책</span>
+          <h2>공급업체 과금은 아직 시작하지 않습니다.</h2>
+          <p>모든 공급업체는 베타 기간 무료로 이용합니다. 아래 설정은 유료 전환 시점에 적용할 기준을 미리 정리하는 용도입니다.</p>
+        </div>
+        <StatusBadge tone="green">베타 무료</StatusBadge>
+      </section>
       <div className="planGrid">
         {data.supplier_plans.sort((a, b) => a.sort_order - b.sort_order).map((plan) => {
           const count = data.supplier_subscriptions.filter((subscription) => subscription.plan_id === plan.id).length;
@@ -13906,7 +16831,8 @@ function AdminPlansPage({ data, setData }: { data: AppData; setData: (data: AppD
       <section className="billingAccountPanel">
         <div>
           <span className="eyebrow">공급업체 플랜 수동 변경</span>
-          <h2>관리자가 공급업체 플랜을 즉시 변경할 수 있습니다.</h2>
+          <h2>정식 전환 전까지는 내부 분류와 테스트 목적으로만 사용합니다.</h2>
+          <p>베타 기간에는 플랜을 바꿔도 실제 청구가 발생하지 않습니다. 사용량과 전환 대상 분류를 확인하기 위한 준비 기능입니다.</p>
         </div>
         <div className="formGrid">
           <Field label="공급업체">
@@ -14087,7 +17013,7 @@ function AdminBetaKpiPage({ data, navigate }: PageProps) {
   const supplierResponseRows = data.supplier_profiles
     .filter((supplier) => supplier.approval_status === "approved")
     .map((supplier) => {
-      const targetRequests = data.quote_requests.filter((request) => calculateSupplierMatchScore(supplier, request, data) >= 70).length;
+      const targetRequests = getVisibleRequestsForSupplier(supplier, data.quote_requests, data).length;
       const submittedQuotes = data.quotes.filter((quote) => quote.supplier_id === supplier.id).length;
       const responseRate = Math.round((submittedQuotes / Math.max(1, targetRequests)) * 100);
       return { supplier, targetRequests, submittedQuotes, responseRate };
@@ -14669,6 +17595,8 @@ function AdminSuppliersPage({ data, setData }: { data: AppData; setData: (data: 
   const [regionFilter, setRegionFilter] = useState("");
   const [selectedSupplierId, setSelectedSupplierId] = useState(data.supplier_profiles[0]?.id ?? "");
   const [adminMemo, setAdminMemo] = useState("관리자 검토 완료");
+  const [approvalSaving, setApprovalSaving] = useState(false);
+  const [approvalError, setApprovalError] = useState("");
   const suppliers = data.supplier_profiles
     .filter((supplier) => statusFilter === "전체" || supplier.approval_status === statusFilter)
     .filter((supplier) => categoryFilter === "전체" || supplier.categories.includes(categoryFilter))
@@ -14677,10 +17605,33 @@ function AdminSuppliersPage({ data, setData }: { data: AppData; setData: (data: 
   const selectedDocs = selectedSupplier ? data.supplier_documents.filter((document) => document.supplier_id === selectedSupplier.id) : [];
   const selectedStats = selectedSupplier ? supplierStatsFor(data, selectedSupplier.id) : null;
 
-  function changeStatus(status: SupplierProfile["approval_status"]) {
+  async function changeStatus(status: SupplierProfile["approval_status"]) {
     if (!selectedSupplier) return;
-    const nextData = updateSupplierApprovalStatus(data, selectedSupplier.id, status, adminMemo || supplierApprovalLabels[status]);
-    setData(nextData);
+    const memo = adminMemo || supplierApprovalLabels[status];
+    setApprovalError("");
+    setApprovalSaving(true);
+    if (isLiveModeReady()) {
+      const liveResult = await updateLiveSupplierApprovalStatus(selectedSupplier.id, status, memo);
+      if (!liveResult.ok) {
+        setApprovalError(`승인 상태 저장에 실패했습니다. ${liveResult.error}`);
+        setApprovalSaving(false);
+        return;
+      }
+      if (!liveResult.data) {
+        setApprovalError("승인 상태 저장에 실패했습니다. 운영 DB 응답이 비어 있습니다.");
+        setApprovalSaving(false);
+        return;
+      }
+      const nextData = updateSupplierApprovalStatus(data, selectedSupplier.id, status, memo);
+      setData({
+        ...nextData,
+        supplier_profiles: nextData.supplier_profiles.map((supplier) => supplier.id === selectedSupplier.id ? { ...supplier, ...liveResult.data } : supplier),
+      });
+      setApprovalSaving(false);
+      return;
+    }
+    setData(updateSupplierApprovalStatus(data, selectedSupplier.id, status, memo));
+    setApprovalSaving(false);
   }
 
   return (
@@ -14752,11 +17703,12 @@ function AdminSuppliersPage({ data, setData }: { data: AppData; setData: (data: 
             <Field label="관리자 메모">
               <textarea value={adminMemo} onChange={(event) => setAdminMemo(event.target.value)} />
             </Field>
+            {approvalError && <p className="formError">{approvalError}</p>}
             <div className="adminActionGrid">
-              <button className="primaryButton compact" type="button" onClick={() => changeStatus("approved")}>승인</button>
-              <button className="secondaryButton compact" type="button" onClick={() => changeStatus("needs_revision")}>보완 요청</button>
-              <button className="ghostButton compact" type="button" onClick={() => changeStatus("rejected")}>반려</button>
-              <button className="ghostButton compact" type="button" onClick={() => changeStatus("suspended")}>이용 제한</button>
+              <button className="primaryButton compact" type="button" disabled={approvalSaving} onClick={() => changeStatus("approved")}>{approvalSaving ? "저장 중" : "승인"}</button>
+              <button className="secondaryButton compact" type="button" disabled={approvalSaving} onClick={() => changeStatus("needs_revision")}>보완 요청</button>
+              <button className="ghostButton compact" type="button" disabled={approvalSaving} onClick={() => changeStatus("rejected")}>반려</button>
+              <button className="ghostButton compact" type="button" disabled={approvalSaving} onClick={() => changeStatus("suspended")}>이용 제한</button>
             </div>
           </aside>
         )}
@@ -14837,7 +17789,7 @@ function SupplierRequestList({ data, supplier, requests, navigate }: { data: App
               <span>세금계산서 {yesNo(request.need_tax_invoice)}</span>
               <span>카드 {yesNo(request.card_payment_required)}</span>
             </div>
-            <button className="textLink" type="button">견적 입력 <ArrowRight size={15} /></button>
+            <button className="textLink" type="button">{submitted ? "견적 보기/수정" : "견적 입력"} <ArrowRight size={15} /></button>
           </article>
         );
       })}
@@ -14941,8 +17893,8 @@ function BetaLimitationsNotice({ navigate, context }: { navigate: Navigate; cont
       body: "베타 기간의 오늘장사 전표 반영과 세금 관련 정보는 참고용이며 실제 신고 전 별도 확인이 필요합니다.",
     },
     payment: {
-      title: "결제/정산은 실제 청구가 아닙니다.",
-      body: "베타 기간의 요금제, 수수료, 정산 내역은 테스트 계산값이며 결제나 지급이 발생하지 않습니다.",
+      title: "입금/증빙 확인 안내",
+      body: "이 화면은 완료된 거래의 입금 여부와 증빙 상태를 확인하는 용도입니다. 공급업체 과금은 구독 전환 전까지 발생하지 않습니다.",
     },
   }[context];
 
@@ -15097,9 +18049,40 @@ function RequestSummary({ data, request, items }: { data: AppData; request: Quot
   const expectedSupplierCount = request.expected_supplier_count ?? estimateSupplierMatches(data, request.category_name, request.delivery_region, request.need_tax_invoice, request.card_payment_required);
   const estimatedSelectedAmount = request.previous_amount && request.estimated_savings_amount ? request.previous_amount - request.estimated_savings_amount : undefined;
   const savings = calculateEstimatedSavings(request.previous_amount, estimatedSelectedAmount);
+  const budgetLabel = request.budget_min || request.budget_max
+    ? `${request.budget_min ? money(request.budget_min) : "하한 없음"} ~ ${request.budget_max ? money(request.budget_max) : "상한 없음"}`
+    : "미입력";
+  const conditionGroups: Array<{ title: string; facts: Array<{ label: string; value: string; strong?: boolean }> }> = [
+    {
+      title: "배송 조건",
+      facts: [
+        { label: "지역", value: request.delivery_region },
+        { label: "희망 납품일", value: request.desired_delivery_date },
+        ...(request.preferred_delivery_time ? [{ label: "희망 시간", value: request.preferred_delivery_time }] : []),
+        ...(request.delivery_address ? [{ label: "상세 위치", value: request.delivery_address }] : []),
+      ],
+    },
+    {
+      title: "결제/증빙",
+      facts: [
+        { label: "세금계산서", value: yesNo(request.need_tax_invoice), strong: request.need_tax_invoice },
+        { label: "카드결제 필수", value: yesNo(request.card_payment_required), strong: request.card_payment_required },
+        { label: "배송비 포함", value: yesNo(request.include_delivery_fee ?? true), strong: request.include_delivery_fee ?? true },
+      ],
+    },
+    {
+      title: "요청 옵션",
+      facts: [
+        { label: "입력 방식", value: request.input_method ? requestInputMethodLabels[request.input_method] : "직접 입력" },
+        { label: "대체품 허용", value: yesNo(request.allow_alternatives ?? true), strong: request.allow_alternatives ?? true },
+        { label: "예산", value: budgetLabel },
+        ...(request.preferred_brand ? [{ label: "선호 브랜드", value: request.preferred_brand }] : []),
+      ],
+    },
+  ];
 
   return (
-    <section className="detailBand">
+    <section className="detailBand requestSummaryPanel">
       <div className="detailHeader">
         <div>
           <span className="eyebrow">{request.category_name}</span>
@@ -15108,7 +18091,7 @@ function RequestSummary({ data, request, items }: { data: AppData; request: Quot
         </div>
         <StatusBadge tone={request.status === "selected" ? "green" : request.status === "open" ? "orange" : "blue"}>{requestStatusLabels[request.status]}</StatusBadge>
       </div>
-      <div className="requestInsightGrid">
+      <div className="requestInsightGrid requestSummaryMetrics">
         <QualityMeter score={qualityScore} />
         <div className="matchEstimate">
           <span>예상 응답 업체</span>
@@ -15118,34 +18101,42 @@ function RequestSummary({ data, request, items }: { data: AppData; request: Quot
           <span>예상 절감</span>
           <strong>{request.estimated_savings_amount ? money(request.estimated_savings_amount) : savings.amount ? money(savings.amount) : "계산 전"}</strong>
         </div>
+        <div className="matchEstimate">
+          <span>도착 견적</span>
+          <strong>{quoteCount}건</strong>
+        </div>
       </div>
-      <div className="detailMeta">
-        <span>입력 방식: {request.input_method ? requestInputMethodLabels[request.input_method] : "직접 입력"}</span>
-        <span>배송 지역: {request.delivery_region}</span>
-        {request.delivery_address && <span>위치: {request.delivery_address}</span>}
-        <span>희망 납품일: {request.desired_delivery_date}</span>
-        {request.preferred_delivery_time && <span>희망 시간: {request.preferred_delivery_time}</span>}
-        <span>세금계산서: {yesNo(request.need_tax_invoice)}</span>
-        <span>카드결제 필수: {yesNo(request.card_payment_required)}</span>
-        <span>배송비 포함: {yesNo(request.include_delivery_fee ?? true)}</span>
-        <span>대체품 허용: {yesNo(request.allow_alternatives ?? true)}</span>
-        {request.urgent && <span>긴급 요청</span>}
-        {request.budget_min || request.budget_max ? <span>예산: {request.budget_min ? money(request.budget_min) : "하한 없음"} ~ {request.budget_max ? money(request.budget_max) : "상한 없음"}</span> : null}
-        {request.preferred_brand && <span>선호 브랜드: {request.preferred_brand}</span>}
-        <span>도착 견적: {quoteCount}건</span>
-      </div>
-      <div className="itemsList">
-        {items.map((itemEntry) => (
-          <div className="itemPill" key={itemEntry.id}>
-            <strong>{itemEntry.item_name}</strong>
-            <span>{itemEntry.spec || `${itemEntry.quantity}${itemEntry.unit}`}</span>
-            {itemEntry.memo && <small>{itemEntry.memo}</small>}
-            <div className="miniBadges">
-              <span>{itemEntry.is_required === false ? "선택" : "필수"}</span>
-              <span>{itemEntry.allow_alternative === false ? "대체 불가" : "대체 가능"}</span>
-              {itemEntry.needs_review && <span>확인 필요</span>}
-            </div>
+      <div className="requestConditionGrid" aria-label="견적 요청 조건">
+        {conditionGroups.map((group) => (
+          <div className="requestConditionGroup" key={group.title}>
+            <strong>{group.title}</strong>
+            <dl>
+              {group.facts.map((fact) => (
+                <div className={fact.strong ? "strong" : ""} key={`${group.title}-${fact.label}`}>
+                  <dt>{fact.label}</dt>
+                  <dd>{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
+        ))}
+      </div>
+      {request.urgent && <div className="requestUrgentNotice">긴급 요청입니다. 납품 가능 여부와 대체품 가능 여부를 먼저 확인해 주세요.</div>}
+      <div className="requestItemList" aria-label="요청 품목">
+        {items.map((itemEntry) => (
+          <article className="requestItemCard" key={itemEntry.id}>
+            <div>
+              <span className="requestItemQuantity">{itemEntry.quantity}{itemEntry.unit}</span>
+              <strong>{itemEntry.item_name}</strong>
+              <p>{itemEntry.spec || "규격 미입력"}</p>
+            </div>
+            <div className="requestItemMeta">
+              <span className={itemEntry.is_required === false ? "" : "strong"}>{itemEntry.is_required === false ? "선택 품목" : "필수 품목"}</span>
+              <span>{itemEntry.allow_alternative === false ? "대체 불가" : "대체 가능"}</span>
+              {itemEntry.needs_review && <span className="warning">확인 필요</span>}
+            </div>
+            {itemEntry.memo && <small className="requestItemMemo">{itemEntry.memo}</small>}
+          </article>
         ))}
       </div>
       {attachments.length > 0 && <AttachmentStatusList attachments={attachments.map((attachment) => ({
@@ -15200,7 +18191,7 @@ function SupplierRequestInsight({ request, qualityScore, attachmentsCount }: { r
 function SupplierQuoteFitPanel({ supplier, request }: { supplier: SupplierProfile; request: QuoteRequest }) {
   const matchScore = calculateSupplierMatchScore(supplier, request);
   const checks = [
-    { label: "카테고리 일치", ok: supplier.categories.includes(request.category_name) },
+    { label: "카테고리 일치", ok: supplier.categories.some((category) => normalizeSupplierCategoryFilter(category) === normalizeSupplierCategoryFilter(request.category_name)) },
     { label: "납품 지역 적합", ok: calculateSupplierMatchScore(supplier, { ...request, need_tax_invoice: false, card_payment_required: false }) >= 70 },
     { label: "세금계산서 조건", ok: !request.need_tax_invoice || supplier.tax_invoice_available },
     { label: "카드결제 조건", ok: !request.card_payment_required || supplier.card_payment_available },
@@ -15267,15 +18258,18 @@ function UploadMockPanel({
         <span className="tileIcon"><ReceiptText size={20} /></span>
         <div>
           <strong>영수증·메모 이미지로 품목 자동 입력</strong>
-          <p>기존 구매영수증, 거래명세서 캡처, 자필 주문 메모를 올리면 AI가 품목명, 규격, 수량을 채웁니다.</p>
+          <p>구매영수증이나 자필 주문 메모를 올리면 AI가 품목명, 규격, 수량을 채웁니다.</p>
         </div>
       </div>
       <div className="receiptUploadGrid">
         <Field label="이미지 파일">
           <input
             type="file"
-            accept="image/*"
-            onChange={(event) => onImageFileChange(event.target.files?.[0] ?? null)}
+            accept="image/png,image/jpeg,image/webp,image/heic,image/heif,image/*"
+            onChange={(event) => {
+              onImageFileChange(event.target.files?.[0] ?? null);
+              event.currentTarget.value = "";
+            }}
           />
         </Field>
         <Field label="메모 또는 파일명">
@@ -15361,38 +18355,71 @@ function RepeatRequestPanel({ data, selectedId, onSelect }: { data: AppData; sel
 
 function ItemReviewEditor({
   items,
+  previousPurchaseLookup,
   onUpdate,
   onRemove,
 }: {
   items: QuoteRequestDraft["items"];
+  previousPurchaseLookup: Map<string, PreviousPurchaseInfo>;
   onUpdate: (index: number, key: keyof QuoteRequestDraft["items"][number], value: string | number | boolean) => void;
   onRemove: (index: number) => void;
 }) {
   return (
     <div className="itemReviewEditor">
-      {items.map((entry, index) => (
-        <article className={entry.needs_review ? "itemReviewRow needsReview" : "itemReviewRow"} key={`item-${index}`}>
-          <div className="itemEssentialFields">
-            <input value={entry.item_name} onChange={(event) => onUpdate(index, "item_name", event.target.value)} placeholder="품목명" />
-            <input type="number" min="1" value={entry.quantity} onChange={(event) => onUpdate(index, "quantity", Number(event.target.value))} aria-label="수량" />
-            <input value={entry.unit} onChange={(event) => onUpdate(index, "unit", event.target.value)} aria-label="단위" />
-          </div>
-          <details className="itemOptionalDetails">
-            <summary>선택 입력</summary>
-            <div className="itemReviewFields">
-              <input value={entry.spec} onChange={(event) => onUpdate(index, "spec", event.target.value)} placeholder="규격" />
-              <input value={entry.memo} onChange={(event) => onUpdate(index, "memo", event.target.value)} placeholder="메모" />
+      {items.map((entry, index) => {
+        const previousPurchase = findPreviousPurchaseForItem(previousPurchaseLookup, entry.item_name);
+        return (
+          <article className={entry.needs_review ? "itemReviewRow needsReview" : "itemReviewRow"} key={`item-${index}`}>
+            <div className="itemReviewNumber" aria-hidden="true">{index + 1}</div>
+            <div className="itemReviewMain">
+              <div className="itemReviewTopLine">
+                <label className="itemNameField">
+                  <span>품목명</span>
+                  <input value={entry.item_name} onChange={(event) => onUpdate(index, "item_name", event.target.value)} placeholder="품목명" />
+                </label>
+                <button className="ghostButton compact itemRemoveButton" type="button" onClick={() => onRemove(index)}>삭제</button>
+              </div>
+              <div className="itemReviewSummaryGrid">
+                <label className="compactField">
+                  <span>수량</span>
+                  <input type="number" min="1" value={entry.quantity} onChange={(event) => onUpdate(index, "quantity", Number(event.target.value))} aria-label="수량" />
+                </label>
+                <label className="compactField">
+                  <span>단위</span>
+                  <input value={entry.unit} onChange={(event) => onUpdate(index, "unit", event.target.value)} aria-label="단위" />
+                </label>
+                <div className={previousPurchase ? "previousPurchaseBox hasHistory" : "previousPurchaseBox"}>
+                  <span>이전 구매</span>
+                  {previousPurchase ? (
+                    <>
+                      <strong>{money(previousPurchase.unitPrice)} / {previousPurchase.unit || entry.unit || "개"}</strong>
+                      <small>{previousPurchase.date} · {previousPurchase.supplierName} · {previousPurchase.quantity}{previousPurchase.unit} {money(previousPurchase.totalAmount)}</small>
+                    </>
+                  ) : (
+                    <>
+                      <strong>기록 없음</strong>
+                      <small>첫 견적이거나 품목명이 달라요.</small>
+                    </>
+                  )}
+                </div>
+              </div>
+              <details className="itemOptionalDetails">
+                <summary>규격·메모·옵션</summary>
+                <div className="itemReviewFields">
+                  <input value={entry.spec} onChange={(event) => onUpdate(index, "spec", event.target.value)} placeholder="규격 예: 1kg, 대, 국내산" />
+                  <input value={entry.memo} onChange={(event) => onUpdate(index, "memo", event.target.value)} placeholder="메모 예: 상태 좋은 상품 선호" />
+                </div>
+                <div className="itemReviewMeta">
+                  <Toggle checked={entry.is_required ?? true} label="필수" onChange={(checked) => onUpdate(index, "is_required", checked)} />
+                  <Toggle checked={entry.allow_alternative ?? true} label="대체 가능" onChange={(checked) => onUpdate(index, "allow_alternative", checked)} />
+                  <span>인식률 {entry.confidence_score ?? 96}%</span>
+                  {entry.review_reason && <small>{entry.review_reason}</small>}
+                </div>
+              </details>
             </div>
-            <div className="itemReviewMeta">
-              <Toggle checked={entry.is_required ?? true} label="필수" onChange={(checked) => onUpdate(index, "is_required", checked)} />
-              <Toggle checked={entry.allow_alternative ?? true} label="대체 가능" onChange={(checked) => onUpdate(index, "allow_alternative", checked)} />
-              <span>인식률 {entry.confidence_score ?? 96}%</span>
-              {entry.review_reason && <small>{entry.review_reason}</small>}
-            </div>
-          </details>
-          <button className="ghostButton compact" type="button" onClick={() => onRemove(index)}>삭제</button>
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -15447,6 +18474,20 @@ function MoneyStatList({ title, items, secondaryLabel }: { title: string; items:
 
 function UsageLimitNotice({ data, supplierId, navigate }: { data: AppData; supplierId: string; navigate: Navigate }) {
   const gate = canSubmitQuoteByPlan(data, supplierId);
+  if (SUPPLIER_BETA_FREE_ENABLED) {
+    const plannedLimitText = gate.limit <= 0 ? "정식 플랜 기준 무제한" : `정식 플랜 기준 월 ${gate.limit}건`;
+    return (
+      <section className="usageNotice ok">
+        <div>
+          <span className="eyebrow">베타 무료 사용량</span>
+          <h2>현재 견적 참여는 제한 없이 이용할 수 있습니다.</h2>
+          <p>이번 달 {gate.usage.quotes_submitted_count}건을 사용했습니다. {plannedLimitText} 한도는 정식 출시 전환 준비용으로만 표시됩니다.</p>
+          {gate.limit > 0 && <div className="usageBar"><span style={{ width: `${Math.min(100, Math.round((gate.usage.quotes_submitted_count / gate.limit) * 100))}%` }} /></div>}
+        </div>
+        <button className="secondaryButton" type="button" onClick={() => navigate("/app/supplier/billing")}>구독 준비 보기</button>
+      </section>
+    );
+  }
   if (gate.limit <= 0) {
     return (
       <section className="usageNotice ok">
@@ -15472,24 +18513,13 @@ function UsageLimitNotice({ data, supplierId, navigate }: { data: AppData; suppl
   );
 }
 
-function PlanCard({ plan, active, onChange }: { plan: SupplierPlan; active: boolean; onChange: () => void }) {
+function PlanCard({ plan }: { plan: SupplierPlan }) {
   return (
-    <article className={active ? "planCard active" : "planCard"}>
+    <article className="planCard planCardPrivate">
       <div>
-        <span className="eyebrow">{plan.code}</span>
         <h3>{plan.name}</h3>
-        <strong>{money(plan.monthly_price)} / 월</strong>
       </div>
-      <p>{planLimitLabel(plan.quote_participation_limit)} 견적 참여 · 매칭 조회 {planLimitLabel(plan.matched_request_view_limit)}</p>
-      <div className="chipLine">
-        {plan.priority_exposure_enabled && <span className="chip">상위노출</span>}
-        {plan.analytics_enabled && <span className="chip">통계</span>}
-        {plan.badge_enabled && <span className="chip">{plan.badge_label}</span>}
-        <span className="chip">{plan.support_level}</span>
-      </div>
-      <button className={active ? "secondaryButton" : "primaryButton"} type="button" onClick={onChange} disabled={active}>
-        {active ? "현재 요금제" : "요금제 변경하기"}
-      </button>
+      <p>세부 조건과 가격은 정식 출시 전까지 비공개입니다.</p>
     </article>
   );
 }
@@ -15792,45 +18822,74 @@ function DealTable({ data, deals, navigate, basePath, role }: { data: AppData; d
   }
 
   return (
-    <div className="tableWrap">
-      <table>
-        <thead>
-          <tr>
-            <th>거래명</th>
-            <th>{role === "buyer" ? "공급업체" : "구매자"}</th>
-            <th>지역</th>
-            <th>납품일</th>
-            <th>최종금액</th>
-            <th>상태</th>
-            <th>생성일</th>
-            <th>상세</th>
-          </tr>
-        </thead>
-        <tbody>
-          {deals.map((deal) => {
-            const buyer = data.profiles.find((entry) => entry.id === deal.buyer_id);
-            return (
-              <tr key={deal.id} onClick={() => navigate(`${basePath}/${deal.id}`)}>
-                <td>{deal.title}</td>
-                <td>{role === "buyer" ? supplierName(data, deal.supplier_id) : buyer?.business_name ?? "구매자"}</td>
-                <td>{deal.delivery_region}</td>
-                <td>{deal.confirmed_delivery_date || deal.desired_delivery_date}</td>
-                <td>{money(deal.final_amount)}</td>
-                <td>
-                  <StatusBadge tone={deal.status === "completed" ? "green" : deal.status === "disputed" ? "orange" : deal.status.includes("cancelled") ? "gray" : "blue"}>
-                    {dealStatusLabels[deal.status]}
-                  </StatusBadge>
-                </td>
-                <td>{deal.created_at.slice(0, 10)}</td>
-                <td>
-                  <button className="ghostButton compact" type="button">상세보기</button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className="tableWrap dealTableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>거래명</th>
+              <th>{role === "buyer" ? "공급업체" : "구매자"}</th>
+              <th>지역</th>
+              <th>납품일</th>
+              <th>최종금액</th>
+              <th>상태</th>
+              <th>생성일</th>
+              <th>상세</th>
+            </tr>
+          </thead>
+          <tbody>
+            {deals.map((deal) => {
+              const buyer = data.profiles.find((entry) => entry.id === deal.buyer_id);
+              return (
+                <tr key={deal.id} onClick={() => navigate(`${basePath}/${deal.id}`)}>
+                  <td>{deal.title}</td>
+                  <td>{role === "buyer" ? supplierName(data, deal.supplier_id) : buyer?.business_name ?? "구매자"}</td>
+                  <td>{deal.delivery_region}</td>
+                  <td>{deal.confirmed_delivery_date || deal.desired_delivery_date}</td>
+                  <td>{money(deal.final_amount)}</td>
+                  <td>
+                    <StatusBadge tone={deal.status === "completed" ? "green" : deal.status === "disputed" ? "orange" : deal.status.includes("cancelled") ? "gray" : "blue"}>
+                      {dealStatusLabels[deal.status]}
+                    </StatusBadge>
+                  </td>
+                  <td>{deal.created_at.slice(0, 10)}</td>
+                  <td>
+                    <button className="ghostButton compact" type="button">상세보기</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="dealMobileList" aria-label="모바일 거래 목록">
+        {deals.map((deal) => {
+          const buyer = data.profiles.find((entry) => entry.id === deal.buyer_id);
+          const counterpart = role === "buyer" ? supplierName(data, deal.supplier_id) : buyer?.business_name ?? "구매자";
+          return (
+            <article className="dealMobileCard" key={deal.id}>
+              <div className="dealMobileHeader">
+                <div>
+                  <span>{role === "buyer" ? "공급업체" : "구매자"} · {counterpart}</span>
+                  <h3>{deal.title}</h3>
+                </div>
+                <StatusBadge tone={deal.status === "completed" ? "green" : deal.status === "disputed" ? "orange" : deal.status.includes("cancelled") ? "gray" : "blue"}>
+                  {dealStatusLabels[deal.status]}
+                </StatusBadge>
+              </div>
+              <div className="dealMobileFacts">
+                <span><small>최종금액</small><strong>{money(deal.final_amount)}</strong></span>
+                <span><small>납품일</small><strong>{deal.confirmed_delivery_date || deal.desired_delivery_date}</strong></span>
+                <span><small>지역</small><strong>{deal.delivery_region}</strong></span>
+              </div>
+              <button className="primaryButton full" type="button" onClick={() => navigate(`${basePath}/${deal.id}`)}>
+                거래 상세보기
+              </button>
+            </article>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
@@ -15864,6 +18923,7 @@ function DealActions({
   onDispute,
   navigate,
   purchaseRecordId,
+  reviewId,
 }: {
   deal: Deal;
   role: "buyer" | "supplier" | "admin";
@@ -15872,14 +18932,35 @@ function DealActions({
   onDispute: () => void;
   navigate: Navigate;
   purchaseRecordId?: string;
+  reviewId?: string;
 }) {
   if (deal.status === "completed") {
+    if (role === "supplier") {
+      return (
+        <div className="actionStack">
+          <p className="mutedText">거래 완료됨</p>
+          <button className="secondaryButton" type="button" onClick={() => navigate("/app/today/supplier/sales")}>매출내역 보기</button>
+          <button className="ghostButton" type="button" onClick={() => navigate("/app/supplier/settlements")}>입금/증빙 확인</button>
+        </div>
+      );
+    }
+
+    if (role === "admin") {
+      return (
+        <div className="actionStack">
+          <p className="mutedText">거래 완료됨</p>
+          <button className="secondaryButton" type="button" onClick={() => navigate("/app/admin/deals")}>전체 거래 보기</button>
+          <button className="ghostButton" type="button" onClick={() => navigate("/app/admin/settlements")}>정산 관리</button>
+        </div>
+      );
+    }
+
     return (
       <div className="actionStack">
         <p className="mutedText">거래 완료됨</p>
         <button className="secondaryButton" type="button" onClick={() => purchaseRecordId && navigate(`/app/purchases/${purchaseRecordId}`)}>구매내역 보기</button>
         <button className="primaryButton" type="button" onClick={() => navigate("/app/requests/new")}>다시 견적요청하기</button>
-        <button className="ghostButton" type="button" onClick={() => navigate(`/app/deals/${deal.id}/review`)}>후기 작성</button>
+        <button className="ghostButton" type="button" onClick={() => navigate(reviewId ? "/app/reviews" : `/app/deals/${deal.id}/review`)}>{reviewId ? "작성한 후기 보기" : "후기 작성"}</button>
         {purchaseRecordId && <p className="mutedText">구매내역 ID: {purchaseRecordId}</p>}
       </div>
     );
@@ -16106,6 +19187,89 @@ function RegionSearchField({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function SupplierRegionSelector({ regions, onChange }: { regions: string[]; onChange: (regions: string[]) => void }) {
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().replace(/\s+/g, " ");
+  const compactQuery = normalizedQuery.replace(/\s+/g, "");
+  const selectedRegions = Array.from(new Set(regions.filter(Boolean)));
+  const suggestions = useMemo(() => {
+    if (!normalizedQuery) return [];
+    return KOREA_REGION_OPTIONS
+      .filter((region) => !selectedRegions.includes(region))
+      .filter((region) => region.includes(normalizedQuery) || region.replace(/\s+/g, "").includes(compactQuery))
+      .slice(0, 12);
+  }, [compactQuery, normalizedQuery, selectedRegions]);
+
+  function addRegion(region: string) {
+    onChange([...selectedRegions, region]);
+    setQuery("");
+  }
+
+  function removeRegion(region: string) {
+    onChange(selectedRegions.filter((entry) => entry !== region));
+  }
+
+  return (
+    <div className="supplierRegionSelector">
+      <div className="supplierRegionSearchPanel">
+        <div className="supplierRegionPanelHeader">
+          <div>
+            <strong>지역명으로 검색</strong>
+            <span>시/군/구 단위로 검색해서 추가하세요.</span>
+          </div>
+          <span className="supplierRegionCount">{selectedRegions.length}개 선택</span>
+        </div>
+        <div className="supplierRegionInputRow">
+          <span className="supplierRegionInputPrefix">검색</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && suggestions[0]) {
+                event.preventDefault();
+                addRegion(suggestions[0]);
+              }
+            }}
+            placeholder="예: 서울 강남구, 경기 성남시"
+            autoComplete="address-level2"
+          />
+          {query && <button className="supplierRegionClearButton" type="button" onClick={() => setQuery("")}>지우기</button>}
+        </div>
+        <div className={normalizedQuery ? "supplierRegionResults active" : "supplierRegionResults"}>
+          {!normalizedQuery && <span>검색어를 입력하면 저장된 대한민국 지역 목록에서 결과가 표시됩니다.</span>}
+          {normalizedQuery && suggestions.length === 0 && <span>검색 결과가 없습니다. 다른 지역명으로 입력해 주세요.</span>}
+          {suggestions.map((region) => (
+            <button type="button" onClick={() => addRegion(region)} key={region}>
+              <span>{region}</span>
+              <strong>추가</strong>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="supplierSelectedRegionPanel">
+        <div className="supplierSelectedRegionHeader">
+          <strong>선택된 납품 가능 지역</strong>
+          {selectedRegions.length > 0 && <button type="button" onClick={() => onChange([])}>전체 삭제</button>}
+        </div>
+        {selectedRegions.length > 0 ? (
+          <div className="supplierSelectedRegionGrid" aria-label="선택된 납품 가능 지역">
+            {selectedRegions.map((region) => (
+              <button type="button" onClick={() => removeRegion(region)} key={region}>
+                <span>{region}</span>
+                <strong aria-hidden="true">×</strong>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="supplierRegionEmptyState">
+            아직 선택된 지역이 없습니다.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -16623,13 +19787,57 @@ function reputationTone(reputation: SupplierReputationScore): "orange" | "blue" 
 }
 
 function riskLabel(level: SupplierReputationScore["risk_level"]) {
-  if (level === "high") return "높은 리스크";
-  if (level === "medium") return "주의 리스크";
-  return "낮은 리스크";
+  if (level === "high") return "집중 관리";
+  if (level === "medium") return "관리 필요";
+  return "안정 운영";
 }
 
-function getActiveSupplier(data: AppData) {
-  return data.supplier_profiles.find((supplier) => supplier.id === "sup-1") ?? data.supplier_profiles[0];
+function getActiveSupplier(data: AppData, authSession?: AppAuthSession | null): SupplierProfile {
+  if (authSession?.role === "supplier") {
+    const sessionSupplier = data.supplier_profiles.find((supplier) => supplier.user_id === authSession.id);
+    if (sessionSupplier) return sessionSupplier;
+    const sessionBusinessNumber = cleanBusinessNumber(authSession.businessNumber);
+    if (sessionBusinessNumber) {
+      const businessSupplier = data.supplier_profiles.find((supplier) => cleanBusinessNumber(supplier.business_number) === sessionBusinessNumber);
+      if (businessSupplier) return businessSupplier;
+    }
+  }
+  const fallbackSupplier = data.supplier_profiles.find((supplier) => supplier.id === "sup-1") ?? data.supplier_profiles[0];
+  if (fallbackSupplier) return fallbackSupplier;
+  const safeSupplier: SupplierProfile = {
+    id: authSession?.id ? `supplier-${authSession.id}` : "supplier-missing",
+    user_id: authSession?.id ?? "supplier-missing-user",
+    business_name: authSession?.businessName ?? "공급업체",
+    business_number: authSession?.businessNumber ?? "",
+    representative_name: authSession?.name ?? "담당자",
+    manager_name: authSession?.name ?? "담당자",
+    manager_phone: "",
+    phone: "",
+    email: authSession?.email,
+    address: "",
+    description: "",
+    service_regions: ["전국"],
+    categories: [],
+    sub_categories: [],
+    min_order_amount: 0,
+    delivery_fee_policy: "",
+    free_delivery_min_amount: 0,
+    same_day_delivery_available: false,
+    urgent_delivery_available: false,
+    delivery_days: [],
+    delivery_time_slots: [],
+    tax_invoice_available: true,
+    card_payment_available: false,
+    bank_transfer_available: true,
+    on_site_payment_available: false,
+    default_quote_valid_days: 3,
+    approval_status: authSession?.supplierApprovalStatus ?? "approved",
+    operational_status: "normal",
+    document_status: "approved",
+    created_at: today,
+    updated_at: today,
+  };
+  return safeSupplier;
 }
 
 function supplierStatsFor(data: AppData, supplierId: string) {
@@ -16708,6 +19916,17 @@ function settlementTone(status: SettlementStatus): "orange" | "blue" | "green" |
   return "blue";
 }
 
+function supplierSettlementDisplayLabel(status: SettlementStatus) {
+  const labels: Record<SettlementStatus, string> = {
+    draft: "확인 전",
+    pending: "입금 확인 대기",
+    confirmed: "거래 확인",
+    paid: "입금 확인 완료",
+    cancelled: "취소",
+  };
+  return labels[status];
+}
+
 function feeStatusTone(status: PlatformFeeStatus): "orange" | "blue" | "green" | "gray" {
   if (status === "paid" || status === "confirmed") return "green";
   if (status === "pending" || status === "estimated" || status === "invoiced") return "orange";
@@ -16719,6 +19938,10 @@ function toggleArray<T>(items: T[], value: T) {
   return items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
 }
 
+function normalizeSupplierCategoryFilter(value: string) {
+  return canonicalSupplierCategoryName(value).replace(/\s+/g, "");
+}
+
 function sortSupplierRequests(a: QuoteRequest, b: QuoteRequest, sort: string, supplier: SupplierProfile) {
   if (sort === "최신순") return b.created_at.localeCompare(a.created_at);
   if (sort === "마감 임박순" || sort === "희망 납품일 빠른순") return a.desired_delivery_date.localeCompare(b.desired_delivery_date);
@@ -16728,21 +19951,23 @@ function sortSupplierRequests(a: QuoteRequest, b: QuoteRequest, sort: string, su
 }
 
 async function analyzeReceiptImageWithGemini(file: File, fileName: string, sourceType: "photo" | "invoice"): Promise<ReceiptAnalysisPreview> {
-  if (!file.type.startsWith("image/")) {
+  const mimeType = inferReceiptImageMimeType(file, fileName || file.name);
+  if (!mimeType) {
     throw new Error("이미지 파일만 분석할 수 있습니다.");
   }
 
-  const imageBase64 = await readFileAsBase64(file);
-  const response = await fetch(apiEndpoint("/api/analyze-receipt"), {
+  const receiptImage = await readReceiptImageForAnalysis(file, fileName || file.name);
+  const response = await fetchWithTimeout(apiEndpoint("/api/analyze-receipt"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      fileName: fileName || file.name,
-      mimeType: file.type || "image/jpeg",
-      imageBase64,
+      fileName: receiptImage.fileName,
+      mimeType: receiptImage.mimeType,
+      imageBase64: receiptImage.imageBase64,
+      optimized: receiptImage.optimized,
       sourceType,
     }),
-  });
+  }, IMAGE_ANALYSIS_TIMEOUT_MS);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(typeof payload.error === "string" ? payload.error : "AI 분석 API 응답이 올바르지 않습니다.");
@@ -16750,7 +19975,108 @@ async function analyzeReceiptImageWithGemini(file: File, fileName: string, sourc
   if (!payload || typeof payload !== "object" || !Array.isArray((payload as Record<string, unknown>).items)) {
     throw new Error("AI 분석 API 응답이 품목 형식이 아닙니다.");
   }
-  return normalizeGeminiReceiptPayload(payload, fileName || file.name, sourceType, file.type || "image/jpeg");
+  return normalizeGeminiReceiptPayload(payload, fileName || file.name, sourceType, receiptImage.mimeType || mimeType);
+}
+
+async function analyzeTodayReceiptImage(file: File, fileName: string): Promise<TodayAiPurchaseDraft> {
+  const mimeType = inferReceiptImageMimeType(file, fileName || file.name);
+  if (!mimeType) {
+    throw new Error("이미지 파일만 분석할 수 있습니다.");
+  }
+  const receiptImage = await readReceiptImageForAnalysis(file, fileName || file.name);
+  const response = await fetchWithTimeout(apiEndpoint("/api/analyze-receipt"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fileName: receiptImage.fileName,
+      mimeType: receiptImage.mimeType,
+      imageBase64: receiptImage.imageBase64,
+      optimized: receiptImage.optimized,
+      sourceType: "receipt",
+    }),
+  }, IMAGE_ANALYSIS_TIMEOUT_MS);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(typeof payload.error === "string" ? payload.error : "이미지 AI 분석 API 응답이 올바르지 않습니다.");
+  }
+  if (!payload || typeof payload !== "object") {
+    throw new Error("이미지 AI 분석 API 응답이 비어 있습니다.");
+  }
+  return normalizeTodayAiPayload(payload as Record<string, unknown>, "receipt", stringValue((payload as Record<string, unknown>).rawText) || fileName || file.name, fileName || file.name);
+}
+
+async function analyzeTodayVoiceOrder(transcript: string): Promise<TodayAiPurchaseDraft> {
+  const response = await fetchWithTimeout(apiEndpoint("/api/analyze-voice-order"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ transcript }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(typeof payload.error === "string" ? payload.error : "음성 AI 분석 API 응답이 올바르지 않습니다.");
+  }
+  if (!payload || typeof payload !== "object") {
+    throw new Error("음성 AI 분석 API 응답이 비어 있습니다.");
+  }
+  return normalizeTodayAiPayload(payload as Record<string, unknown>, "voice", transcript);
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = 35000) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if ((error as Error)?.name === "AbortError") {
+      throw new Error("AI 분석 응답이 지연되고 있습니다.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+function normalizeReceiptPreviewForToday(preview: ReceiptAnalysisPreview): TodayAiPurchaseDraft {
+  const category = normalizeTodayPurchaseCategoryName(preview.categoryName);
+  const evenAmount = preview.items.length && preview.totalAmount > 0 ? Math.round(preview.totalAmount / preview.items.length) : 0;
+  const items = preview.items.map((item) => {
+    const amount = findMoneyMentions(item.memo).pop() ?? evenAmount;
+    return {
+      item_name: item.item_name,
+      spec: item.spec,
+      quantity: item.quantity,
+      unit: item.unit,
+      unit_price: item.quantity > 0 && amount > 0 ? Math.round(amount / item.quantity) : amount,
+      total_price: amount,
+      memo: item.memo,
+      confidence_score: item.confidence_score,
+      needs_review: item.needs_review || amount <= 0,
+      review_reason: item.review_reason || (amount <= 0 ? "금액을 직접 확인해 주세요." : ""),
+    } satisfies TodayAiPurchaseItemDraft;
+  });
+  return {
+    source: "receipt",
+    raw_text: preview.rawText,
+    confidence_score: preview.confidenceScore,
+    purchase_title: `${items[0]?.item_name ?? "영수증"} 외 ${Math.max(0, items.length - 1)}건`,
+    supplier_name: preview.supplierName || "이미지 영수증",
+    supplier_business_number: "000-00-00000",
+    purchase_date: today,
+    category_name: category,
+    accounting_category: category,
+    sub_category: "",
+    total_amount: preview.totalAmount || items.reduce((sum, item) => sum + item.total_price, 0),
+    supply_amount: 0,
+    vat_amount: 0,
+    delivery_fee: 0,
+    discount_amount: 0,
+    payment_method: "undecided",
+    tax_invoice_status: "none",
+    receipt_status: "uploaded",
+    delivery_note_status: "none",
+    memo: `이미지 영수증 자동 입력: ${preview.fileName}\n${preview.rawText}`,
+    items,
+  };
 }
 
 function readFileAsBase64(file: File): Promise<string> {
@@ -16763,6 +20089,97 @@ function readFileAsBase64(file: File): Promise<string> {
     reader.onerror = () => reject(new Error("이미지를 읽지 못했습니다."));
     reader.readAsDataURL(file);
   });
+}
+
+async function readReceiptImageForAnalysis(file: File, fileName: string) {
+  const mimeType = inferReceiptImageMimeType(file, fileName || file.name) || "image/jpeg";
+  const optimized = await optimizeReceiptImageForAnalysis(file).catch(() => null);
+  if (optimized) {
+    return {
+      fileName: normalizedReceiptImageFileName(fileName, "jpg"),
+      mimeType: "image/jpeg",
+      imageBase64: optimized,
+      optimized: true,
+    };
+  }
+  return {
+    fileName,
+    mimeType,
+    imageBase64: await readFileAsBase64(file),
+    optimized: false,
+  };
+}
+
+function inferReceiptImageMimeType(file: File, fileName: string) {
+  const explicitType = file.type.trim().toLowerCase();
+  if (explicitType.startsWith("image/")) return explicitType;
+  const name = `${fileName || file.name || ""}`.toLowerCase();
+  if (/\.(jpe?g|jfif)$/.test(name)) return "image/jpeg";
+  if (/\.png$/.test(name)) return "image/png";
+  if (/\.webp$/.test(name)) return "image/webp";
+  if (/\.gif$/.test(name)) return "image/gif";
+  if (/\.heic$/.test(name)) return "image/heic";
+  if (/\.heif$/.test(name)) return "image/heif";
+  if (!explicitType || explicitType === "application/octet-stream") return "image/jpeg";
+  return "";
+}
+
+function optimizeReceiptImageForAnalysis(file: File): Promise<string | null> {
+  if (typeof document === "undefined" || typeof URL === "undefined") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      try {
+        const width = image.naturalWidth || image.width;
+        const height = image.naturalHeight || image.height;
+        if (!width || !height) {
+          resolve(null);
+          return;
+        }
+        const maxSide = 2200;
+        const scale = Math.min(1, maxSide / Math.max(width, height));
+        const targetWidth = Math.max(1, Math.round(width * scale));
+        const targetHeight = Math.max(1, Math.round(height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const context = canvas.getContext("2d", { alpha: false });
+        if (!context) {
+          resolve(null);
+          return;
+        }
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, targetWidth, targetHeight);
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(image, 0, 0, targetWidth, targetHeight);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            resolve(null);
+            return;
+          }
+          readFileAsBase64(new File([blob], "receipt-analysis.jpg", { type: "image/jpeg" }))
+            .then((base64) => resolve(base64))
+            .catch(() => resolve(null));
+        }, "image/jpeg", 0.9);
+      } catch {
+        resolve(null);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(null);
+    };
+    image.src = objectUrl;
+  });
+}
+
+function normalizedReceiptImageFileName(fileName: string, extension: string) {
+  const safeName = (fileName || "receipt-image").replace(/\.[^.]+$/, "").trim() || "receipt-image";
+  return `${safeName}.${extension}`;
 }
 
 function normalizeGeminiReceiptPayload(payload: Record<string, unknown>, fileName: string, sourceType: "photo" | "invoice", mimeType: string): ReceiptAnalysisPreview {
@@ -16837,6 +20254,9 @@ function formatGeminiAnalysisError(error: unknown) {
   if (isTemporaryGeminiDemandError(rawMessage)) {
     return "AI 분석 요청이 잠시 몰려 분석이 지연되고 있습니다. 1~2분 뒤 다시 'AI로 자동 입력'을 눌러 주세요. 급하면 아래 품목을 직접 입력해 견적요청을 계속 진행할 수 있습니다.";
   }
+  if (/failed to fetch|network|load failed|internet|연결/i.test(rawMessage)) {
+    return "AI 분석 서버와 연결하지 못했습니다. 모바일 데이터 또는 와이파이 연결을 확인한 뒤 다시 눌러 주세요.";
+  }
   return `AI 분석 연결 실패: ${message}`;
 }
 
@@ -16863,6 +20283,19 @@ function isTemporaryGeminiDemandError(message: string) {
 
 function money(value: number) {
   return new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 }).format(value);
+}
+
+function compactKrw(value: number) {
+  const amount = Math.max(0, Math.round(Number(value) || 0));
+  if (amount >= 100000000) {
+    const eok = amount / 100000000;
+    return `${Number.isInteger(eok) ? eok.toLocaleString("ko-KR") : eok.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억원`;
+  }
+  if (amount >= 10000) {
+    const man = amount / 10000;
+    return `${Number.isInteger(man) ? man.toLocaleString("ko-KR") : man.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}만원`;
+  }
+  return money(amount);
 }
 
 function yesNo(value: boolean) {
@@ -16986,6 +20419,10 @@ function Landmark(props: IconProps) {
   return <LineIcon {...props}><path d="m3 10 9-6 9 6Z" /><path d="M5 10v8M9 10v8M15 10v8M19 10v8M3 21h18" /></LineIcon>;
 }
 
+function MicIcon(props: IconProps) {
+  return <LineIcon {...props}><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v4" /></LineIcon>;
+}
+
 function PackageCheck(props: IconProps) {
   return <LineIcon {...props}><path d="M3 7.5 12 3l9 4.5-9 4.5Z" /><path d="M3 7.5V16l9 5 9-5V7.5" /><path d="m9 16 2 2 4-5" /></LineIcon>;
 }
@@ -17012,6 +20449,10 @@ function ShieldCheck(props: IconProps) {
 
 function SignOut(props: IconProps) {
   return <LineIcon {...props}><path d="M10 17 15 12l-5-5" /><path d="M15 12H3" /><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" /></LineIcon>;
+}
+
+function ShoppingCart(props: IconProps) {
+  return <LineIcon {...props}><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /><path d="M3 4h2l2.2 11.5a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 1.9-1.4L21 8H7" /></LineIcon>;
 }
 
 function Store(props: IconProps) {

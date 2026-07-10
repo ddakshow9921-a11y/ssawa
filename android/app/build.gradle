@@ -3,12 +3,16 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.ssawa.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    def ssawaStoreFile = findProperty("SSAWA_STORE_FILE")
+    def ssawaStorePassword = findProperty("SSAWA_STORE_PASSWORD")
+    def ssawaKeyAlias = findProperty("SSAWA_KEY_ALIAS")
+    def ssawaKeyPassword = findProperty("SSAWA_KEY_PASSWORD")
     defaultConfig {
         applicationId "com.ssawa.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 202607061
-        versionName "1.0.0-beta.16"
+        versionCode 202607101
+        versionName "1.0.23"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +20,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (ssawaStoreFile && ssawaStorePassword && ssawaKeyAlias && ssawaKeyPassword) {
+                storeFile rootProject.file(ssawaStoreFile)
+                storePassword ssawaStorePassword
+                keyAlias ssawaKeyAlias
+                keyPassword ssawaKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (ssawaStoreFile && ssawaStorePassword && ssawaKeyAlias && ssawaKeyPassword) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

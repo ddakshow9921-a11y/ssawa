@@ -1,9 +1,11 @@
 import { jsonResult, runJsonPost } from "./_http.js";
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_MODEL = "gemini-3.5-flash";
-const MAX_BASE64_LENGTH = 14 * 1024 * 1024;
-const MAX_GEMINI_ATTEMPTS = 3;
+const DEFAULT_MODEL = "gemini-3.1-flash-lite";
+const FALLBACK_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-3.5-flash"];
+const MAX_BASE64_LENGTH = 18 * 1024 * 1024;
+const MAX_GEMINI_ATTEMPTS = 2;
+const GEMINI_REQUEST_TIMEOUT_MS = Number(process.env.GEMINI_REQUEST_TIMEOUT_MS || 55000);
 const CATEGORY_NAMES = ["식자재", "포장재", "소모품", "주방용품", "설비/닥트/환기자재", "건축자재", "공구/산업자재", "기타"];
 const GEMINI_API_KEY_ENV_KEYS = ["GEMINI_API_KEY", "GOOGLE_AI_API_KEY", "GOOGLE_GENAI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"];
 const OAUTH_CREDENTIAL_ENV_KEYS = ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"];
@@ -27,10 +29,10 @@ async function handleAnalyzeBody(input) {
       return json({ error: "분석할 이미지 데이터가 없습니다." }, 400);
     }
     if (imageBase64.length > MAX_BASE64_LENGTH) {
-      return json({ error: "이미지 용량이 너무 큽니다. 10MB 이하 이미지로 다시 올려주세요." }, 413);
+      return json({ error: "이미지 용량이 너무 큽니다. 사진을 조금 더 가까이 찍거나 화면을 잘라 다시 올려주세요." }, 413);
     }
 
-    const model = cleanModelName(process.env.GEMINI_MODEL || DEFAULT_MODEL);
+    const models = geminiModelCandidates(process.env.GEMINI_MODEL || DEFAULT_MODEL);
     const geminiRequestBody = JSON.stringify({
       contents: [
         {
@@ -51,26 +53,43 @@ async function handleAnalyzeBody(input) {
         response_schema: receiptSchema(),
       },
     });
+    let model = models[0];
     let geminiResponse;
     let geminiPayload = {};
-    for (let attempt = 1; attempt <= MAX_GEMINI_ATTEMPTS; attempt += 1) {
-      geminiResponse = await globalThis.fetch(`${GEMINI_API_BASE}/${model}:generateContent`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: geminiRequestBody,
-      });
-      geminiPayload = await geminiResponse.json().catch(() => ({}));
-      if (geminiResponse.ok || !isTemporaryGeminiDemandError(geminiErrorMessage(geminiPayload), geminiResponse.status) || attempt === MAX_GEMINI_ATTEMPTS) {
+    for (const candidateModel of models) {
+      model = candidateModel;
+      for (let attempt = 1; attempt <= MAX_GEMINI_ATTEMPTS; attempt += 1) {
+        try {
+          geminiResponse = await fetchWithTimeout(`${GEMINI_API_BASE}/${candidateModel}:generateContent`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": apiKey,
+            },
+            body: geminiRequestBody,
+          });
+        } catch (error) {
+          if (isAbortError(error)) {
+            geminiPayload = { error: { message: geminiTimeoutMessage() } };
+            break;
+          }
+          throw error;
+        }
+        geminiPayload = await geminiResponse.json().catch(() => ({}));
+        if (geminiResponse.ok) break;
+        if (!isTemporaryGeminiDemandError(geminiErrorMessage(geminiPayload), geminiResponse.status) || attempt === MAX_GEMINI_ATTEMPTS) {
+          break;
+        }
+        await waitForRetry(attempt);
+      }
+      if (geminiResponse?.ok) break;
+      if (!isTemporaryGeminiDemandError(geminiErrorMessage(geminiPayload), geminiResponse?.status ?? 504)) {
         break;
       }
-      await waitForRetry(attempt);
     }
 
-    if (!geminiResponse.ok) {
-      return json({ error: geminiErrorMessage(geminiPayload, geminiResponse.status) }, geminiResponse.status);
+    if (!geminiResponse?.ok) {
+      return json({ error: geminiErrorMessage(geminiPayload, geminiResponse?.status ?? 504), model }, geminiResponse?.status ?? 504);
     }
 
     const text = extractGeminiText(geminiPayload);
@@ -196,6 +215,15 @@ function cleanModelName(value) {
   return cleanString(value).replace(/^models\//, "") || DEFAULT_MODEL;
 }
 
+function geminiModelCandidates(primaryModel) {
+  const primary = cleanModelName(primaryModel);
+  const preferredModels = [DEFAULT_MODEL, ...FALLBACK_MODELS].map(cleanModelName);
+  const candidates = primary === "gemini-3.5-flash"
+    ? [...preferredModels, primary]
+    : [primary, ...preferredModels];
+  return Array.from(new Set(candidates));
+}
+
 function extractGeminiText(payload) {
   return payload?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim() || "";
 }
@@ -219,7 +247,11 @@ function isTemporaryGeminiDemandError(message, status = 0) {
     || text.includes("temporarily unavailable")
     || text.includes("overloaded")
     || text.includes("resource exhausted")
-    || text.includes("rate limit");
+    || text.includes("rate limit")
+    || text.includes("timeout")
+    || text.includes("timed out")
+    || text.includes("abort")
+    || text.includes("지연");
 }
 
 function temporaryGeminiDemandMessage() {
@@ -237,6 +269,25 @@ function neutralizeAiProviderMessage(message) {
 
 function waitForRetry(attempt) {
   return new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+}
+
+async function fetchWithTimeout(url, options) {
+  const controller = new AbortController();
+  const timeout = Number.isFinite(GEMINI_REQUEST_TIMEOUT_MS) && GEMINI_REQUEST_TIMEOUT_MS > 0 ? GEMINI_REQUEST_TIMEOUT_MS : 25000;
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    return await globalThis.fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function isAbortError(error) {
+  return error?.name === "AbortError" || /abort|timeout/i.test(String(error?.message || ""));
+}
+
+function geminiTimeoutMessage() {
+  return "AI 분석 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요. 급한 경우 앱 내부 분석 초안으로 품목을 확인해 진행할 수 있습니다.";
 }
 
 function looksLikeGoogleOAuthCredential(value) {

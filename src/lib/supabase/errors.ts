@@ -10,7 +10,18 @@ export function isPermissionError(error: SupabaseLikeError) {
 
 export function getUserFriendlySupabaseError(error: SupabaseLikeError) {
   if (!error) return "알 수 없는 Supabase 오류입니다.";
-  if (isPermissionError(error)) return "권한이 없습니다. RLS 정책 또는 GRANT 설정을 확인해야 합니다.";
+  if (isPermissionError(error)) {
+    const message = error.message || "";
+    if (
+      message.includes("현재 로그인 계정")
+      || message.includes("공급업체 권한")
+      || message.includes("견적요청을 찾을 수 없습니다")
+      || message.includes("login required")
+    ) {
+      return message;
+    }
+    return "권한이 없습니다. RLS 정책 또는 GRANT 설정을 확인해야 합니다.";
+  }
   if (error.message.includes("JWT")) return "로그인 세션이 만료되었습니다. 다시 로그인해 주세요.";
   if (error.message.includes("Network")) return "네트워크 연결을 확인해 주세요.";
   return error.message || "Supabase 요청 처리 중 오류가 발생했습니다.";

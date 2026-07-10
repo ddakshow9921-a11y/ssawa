@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import analyzeReceiptApi from "./api/analyze-receipt.js";
+import analyzeVoiceOrderApi from "./api/analyze-voice-order.js";
 import businessStatusApi from "./api/business/status.js";
 import businessValidateApi from "./api/business/validate.js";
 import statusApi from "./api/status.js";
@@ -10,6 +11,7 @@ const apiRoutes = new Map([
   ["/beta-status", statusApi],
   ["/api/status", statusApi],
   ["/api/analyze-receipt", analyzeReceiptApi],
+  ["/api/analyze-voice-order", analyzeVoiceOrderApi],
   ["/api/business/status", businessStatusApi],
   ["/api/business/validate", businessValidateApi],
 ]);

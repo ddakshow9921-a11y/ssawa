@@ -24,7 +24,7 @@
       "destination": "/api/status"
     },
     {
-      "source": "/((?!api/|assets/|로고.png|아이콘.png|favicon.ico|robots.txt).*)",
+      "source": "/((?!api/|assets/|logo.png|icon.png|favicon.ico|robots.txt).*)",
       "destination": "/index.html"
     }
   ],

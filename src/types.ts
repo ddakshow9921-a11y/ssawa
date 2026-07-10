@@ -2823,6 +2823,7 @@ export interface SupplierApplicationDraft {
 
 export interface QuoteDraft {
   supplier_id: string;
+  quote_mode?: "summary" | "itemized";
   total_amount: number;
   delivery_fee: number;
   available_delivery_date: string;
@@ -2830,6 +2831,15 @@ export interface QuoteDraft {
   card_payment_available: boolean;
   alternative_proposal: string;
   item_price_memo: string;
+  item_prices?: Array<{
+    item_id: string;
+    item_name: string;
+    quantity: number;
+    unit: string;
+    unit_price: number;
+    total_price: number;
+    memo?: string;
+  }>;
   memo: string;
   valid_until: string;
 }
