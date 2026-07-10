@@ -9524,6 +9524,16 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
     [data, selectedCategory, draft.delivery_region, draft.need_tax_invoice, draft.card_payment_required],
   );
   const cleanItems = draft.items.filter((entry) => entry.item_name.trim());
+  const isDirectItemReviewFlow = Boolean(todayDraftId || requestedInputMethod);
+  const visibleWizardSteps = isDirectItemReviewFlow ? ["품목 확인", "납품 조건", "최종 확인"] : wizardSteps;
+  const visibleStepIndex = isDirectItemReviewFlow ? Math.max(0, step - 1) : step;
+  const reviewItemCount = cleanItems.length;
+  const itemReviewIntro = draft.input_method === "photo" || draft.input_method === "invoice"
+    ? reviewItemCount > 0
+      ? "거래명세서에서 찾은 품목이에요. 수량과 단위를 확인해 주세요."
+      : "거래명세서나 영수증 사진을 올리면 품목과 수량을 자동으로 채웁니다."
+    : "품목과 수량을 확인해 주세요. 필요한 품목은 바로 추가할 수 있습니다.";
+  const requestCategoryTitle = selectedCategory?.name ? `${selectedCategory.name} 견적 요청` : "견적 요청";
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -9723,12 +9733,24 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
 
   return (
     <Page>
-      <BackButton onClick={() => navigate("/app/requests")} label="요청 목록" />
-      <PageTitle eyebrow="구매자" title="필요한 자재를 편하게 알려주세요." desc="영수증 사진, 문장, 지난 구매 중 편한 방식으로 시작하고 마지막에 품목과 납품 조건만 확인합니다." />
-      <form className="wizardShell" onSubmit={submit}>
+      <form className={isDirectItemReviewFlow ? "wizardShell quoteRequestShell directItemFlow" : "wizardShell quoteRequestShell"} onSubmit={submit}>
+        <div className="requestFormHeader">
+          <button className="requestFormBackButton" type="button" onClick={() => navigate("/app/requests")} aria-label="이전 화면">
+            <ChevronLeft size={30} />
+          </button>
+          <strong>{requestCategoryTitle}</strong>
+          <button className="requestDraftButton" type="button" onClick={() => setError("임시저장은 준비 중입니다. 현재 입력 내용은 이 화면에서 유지됩니다.")}>
+            임시저장
+          </button>
+        </div>
         <div className="wizardSteps" aria-label="견적요청 작성 단계">
-          {wizardSteps.map((label, index) => (
-            <button className={index === step ? "wizardStep active" : index < step ? "wizardStep done" : "wizardStep"} type="button" onClick={() => setStep(index)} key={label}>
+          {visibleWizardSteps.map((label, index) => (
+            <button
+              className={index === visibleStepIndex ? "wizardStep active" : index < visibleStepIndex ? "wizardStep done" : "wizardStep"}
+              type="button"
+              onClick={() => setStep(isDirectItemReviewFlow ? index + 1 : index)}
+              key={label}
+            >
               <span>{index + 1}</span>
               <strong>{label}</strong>
             </button>
@@ -9762,8 +9784,40 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
           <section className="wizardPanel">
             <div className="splitPanel">
               <div>
-                <SectionHeader title="품목을 확인하세요" action="품목 추가" onAction={() => setDraft({ ...draft, items: [...draft.items, { ...emptyItem }] })} />
-                <div className="categoryChoiceGrid compact">
+                <div className="requestItemReviewHero">
+                  <h2>품목을 확인해 주세요</h2>
+                  <p>{itemReviewIntro}</p>
+                </div>
+                {reviewItemCount > 0 && (
+                  <div className="requestFoundNotice">
+                    <span aria-hidden="true"><Check size={20} /></span>
+                    <strong>{reviewItemCount}개 품목을 찾았어요</strong>
+                    <button type="button" onClick={() => setStep(0)}>원본 보기</button>
+                  </div>
+                )}
+                {(draft.input_method === "photo" || draft.input_method === "invoice") && receiptAnalysisPreview && (
+                  <button
+                    className="requestReuploadButton"
+                    type="button"
+                    onClick={() => {
+                      setReceiptAnalysisPreview(null);
+                      setReceiptAnalysisNotice("");
+                      setReceiptImageFile(null);
+                      setReceiptFileName("");
+                    }}
+                  >
+                    <Upload size={22} />
+                    거래명세서 다시 올리기
+                  </button>
+                )}
+                <div className="requestItemToolbar">
+                  <h3>견적 품목 <span>{reviewItemCount}</span></h3>
+                  <button className="secondaryButton compact" type="button" onClick={() => setDraft({ ...draft, items: [...draft.items, { ...emptyItem }] })}>
+                    <Plus size={16} />
+                    품목 추가
+                  </button>
+                </div>
+                <div className="categoryChoiceGrid compact requestCategoryChips">
                   {data.categories.map((category) => (
                     <button className={draft.category_id === category.id ? "categoryChoiceCard active" : "categoryChoiceCard"} type="button" onClick={() => setDraft({ ...draft, category_id: category.id })} key={category.id}>
                       <strong>{category.name}</strong>
@@ -9780,7 +9834,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
                     <button className="primaryButton compact" type="button" onClick={parseTextInput}>품목 후보 만들기</button>
                   </div>
                 )}
-                {(draft.input_method === "photo" || draft.input_method === "invoice") && (
+                {(draft.input_method === "photo" || draft.input_method === "invoice") && !receiptAnalysisPreview && (
                   <UploadMockPanel
                     attachments={draft.attachments}
                     fileName={receiptFileName}
@@ -9885,12 +9939,15 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
           </section>
         )}
         <div className="wizardActions">
+          <div className="wizardActionSummary">
+            총 <strong>{reviewItemCount}</strong>개 품목
+          </div>
           <button className="secondaryButton" type="button" onClick={() => (step === 0 ? navigate("/app/requests") : setStep((current) => current - 1))}>
             {step === 0 ? "취소" : "이전"}
           </button>
           {step < wizardSteps.length - 1 ? (
             <button className="primaryButton" type="button" onClick={goNext}>
-              다음
+              {step === 1 ? "다음 · 납품 조건" : "다음"}
               <ArrowRight size={17} />
             </button>
           ) : (
@@ -18473,30 +18530,38 @@ function ItemReviewEditor({
   onUpdate: (index: number, key: keyof QuoteRequestDraft["items"][number], value: string | number | boolean) => void;
   onRemove: (index: number) => void;
 }) {
+  const unitOptions = ["개", "박스", "봉", "망", "단", "kg", "g", "장", "팩", "병", "통", "포", "묶음"];
   return (
     <div className="itemReviewEditor">
       {items.map((entry, index) => {
         const previousPurchase = findPreviousPurchaseForItem(previousPurchaseLookup, entry.item_name);
+        const quantity = Math.max(1, Number(entry.quantity) || 1);
+        const unitChoices = entry.unit && !unitOptions.includes(entry.unit) ? [entry.unit, ...unitOptions] : unitOptions;
         return (
-          <article className={entry.needs_review ? "itemReviewRow needsReview" : "itemReviewRow"} key={`item-${index}`}>
-            <div className="itemReviewNumber" aria-hidden="true">{index + 1}</div>
+          <article className={entry.needs_review ? "itemReviewRow quoteItemCard needsReview" : "itemReviewRow quoteItemCard"} key={`item-${index}`}>
             <div className="itemReviewMain">
-              <div className="itemReviewTopLine">
+              <div className="quoteItemHeader">
+                <span className="itemReviewNumber" aria-hidden="true">{index + 1}</span>
                 <label className="itemNameField">
-                  <span>품목명</span>
                   <input value={entry.item_name} onChange={(event) => onUpdate(index, "item_name", event.target.value)} placeholder="품목명" />
                 </label>
-                <button className="ghostButton compact itemRemoveButton" type="button" onClick={() => onRemove(index)}>삭제</button>
+                <button className="quoteItemDeleteButton" type="button" onClick={() => onRemove(index)} aria-label={`${entry.item_name || `${index + 1}번 품목`} 삭제`}>
+                  <Trash2 size={22} />
+                </button>
+              </div>
+              {(entry.spec || entry.memo) && <p className="quoteItemSpec">{[entry.spec, entry.memo].filter(Boolean).join(" · ")}</p>}
+              <div className="quoteItemControlRow">
+                <span className="quoteItemControlLabel">수량</span>
+                <div className="quantityStepper" role="group" aria-label={`${entry.item_name || "품목"} 수량`}>
+                  <button type="button" onClick={() => onUpdate(index, "quantity", Math.max(1, quantity - 1))} aria-label="수량 줄이기">-</button>
+                  <input type="number" min="1" value={quantity} onChange={(event) => onUpdate(index, "quantity", Math.max(1, Number(event.target.value) || 1))} aria-label="수량" />
+                  <button type="button" onClick={() => onUpdate(index, "quantity", quantity + 1)} aria-label="수량 늘리기">+</button>
+                </div>
+                <select className="quoteUnitSelect" value={entry.unit} onChange={(event) => onUpdate(index, "unit", event.target.value)} aria-label="단위">
+                  {unitChoices.map((unit) => <option value={unit} key={unit}>{unit}</option>)}
+                </select>
               </div>
               <div className="itemReviewSummaryGrid">
-                <label className="compactField">
-                  <span>수량</span>
-                  <input type="number" min="1" value={entry.quantity} onChange={(event) => onUpdate(index, "quantity", Number(event.target.value))} aria-label="수량" />
-                </label>
-                <label className="compactField">
-                  <span>단위</span>
-                  <input value={entry.unit} onChange={(event) => onUpdate(index, "unit", event.target.value)} aria-label="단위" />
-                </label>
                 <div className={previousPurchase ? "previousPurchaseBox hasHistory" : "previousPurchaseBox"}>
                   <span>이전 구매</span>
                   {previousPurchase ? (
@@ -18513,7 +18578,7 @@ function ItemReviewEditor({
                 </div>
               </div>
               <details className="itemOptionalDetails">
-                <summary>규격·메모·옵션</summary>
+                <summary>선택 입력</summary>
                 <div className="itemReviewFields">
                   <input value={entry.spec} onChange={(event) => onUpdate(index, "spec", event.target.value)} placeholder="규격 예: 1kg, 대, 국내산" />
                   <input value={entry.memo} onChange={(event) => onUpdate(index, "memo", event.target.value)} placeholder="메모 예: 상태 좋은 상품 선호" />
@@ -20566,6 +20631,10 @@ function ShoppingCart(props: IconProps) {
 
 function Store(props: IconProps) {
   return <LineIcon {...props}><path d="M4 10h16l-1-6H5Z" /><path d="M5 10v10h14V10" /><path d="M9 20v-6h6v6" /></LineIcon>;
+}
+
+function Trash2(props: IconProps) {
+  return <LineIcon {...props}><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 15h10l1-15" /><path d="M10 11v6M14 11v6" /></LineIcon>;
 }
 
 function Upload(props: IconProps) {

@@ -8418,6 +8418,400 @@ tbody tr:hover {
   padding-inline: 10px;
 }
 
+.quoteRequestShell {
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.requestFormHeader {
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.requestFormHeader strong {
+  min-width: 0;
+  color: var(--navy);
+  font-size: 26px;
+  font-weight: 950;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.requestFormBackButton,
+.requestDraftButton {
+  min-height: 46px;
+  border: 0;
+  background: transparent;
+  color: var(--navy);
+}
+
+.requestFormBackButton {
+  width: 46px;
+  display: inline-grid;
+  place-items: center;
+  justify-self: start;
+}
+
+.requestDraftButton {
+  color: var(--orange);
+  font-size: 18px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.quoteRequestShell .wizardSteps {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  padding: 24px 34px;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.quoteRequestShell.directItemFlow .wizardSteps {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.quoteRequestShell .wizardStep {
+  position: relative;
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+}
+
+.quoteRequestShell .wizardStep:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  left: calc(50% + 34px);
+  right: calc(-50% + 34px);
+  height: 2px;
+  background: #d8dee7;
+}
+
+.quoteRequestShell .wizardStep span {
+  position: relative;
+  z-index: 1;
+  width: 48px;
+  height: 48px;
+  background: #e5eaf1;
+  color: #6b7280;
+  font-size: 20px;
+}
+
+.quoteRequestShell .wizardStep strong {
+  color: #6b7280;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.quoteRequestShell .wizardStep.active strong,
+.quoteRequestShell .wizardStep.done strong {
+  color: var(--orange);
+}
+
+.quoteRequestShell .wizardPanel {
+  padding: 32px;
+  border: 0;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.requestItemReviewHero {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.requestItemReviewHero h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 34px;
+  line-height: 1.18;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.requestItemReviewHero p {
+  margin: 0;
+  max-width: 560px;
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+.requestFoundNotice {
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  border: 1px solid var(--orange-line);
+  border-radius: 8px;
+  background: #fff6ef;
+  color: var(--orange);
+}
+
+.requestFoundNotice > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--orange);
+  color: #ffffff;
+}
+
+.requestFoundNotice strong {
+  min-width: 0;
+  font-size: 20px;
+  font-weight: 950;
+}
+
+.requestFoundNotice button {
+  border: 0;
+  background: transparent;
+  color: var(--orange);
+  font-size: 16px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.requestReuploadButton {
+  width: 100%;
+  min-height: 66px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+  border: 2px solid var(--orange);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--orange);
+  font-size: 19px;
+  font-weight: 950;
+}
+
+.requestItemToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.requestItemToolbar h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 22px;
+  font-weight: 950;
+}
+
+.requestItemToolbar h3 span {
+  color: var(--orange);
+}
+
+.requestItemToolbar .secondaryButton {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.requestCategoryChips {
+  margin-bottom: 20px;
+}
+
+.requestCategoryChips .categoryChoiceCard {
+  min-height: 50px;
+  padding: 0 20px;
+  border-radius: 999px;
+}
+
+.requestCategoryChips .categoryChoiceCard.active {
+  color: #ffffff;
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.requestCategoryChips .categoryChoiceCard.active strong {
+  color: #ffffff;
+}
+
+.quoteItemCard {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  padding: 18px;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(16, 32, 51, 0.05);
+}
+
+.quoteItemHeader {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 12px;
+}
+
+.quoteItemHeader .itemReviewNumber {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #f0f2f6;
+  color: var(--navy);
+  font-size: 20px;
+}
+
+.quoteItemDeleteButton {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b7280;
+}
+
+.quoteItemDeleteButton:hover {
+  background: #fff1f2;
+  color: #b91c1c;
+}
+
+.quoteItemSpec {
+  margin: 8px 0 0 70px;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.quoteItemControlRow {
+  display: grid;
+  grid-template-columns: 160px minmax(180px, 260px) minmax(110px, 150px);
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.quoteItemControlLabel {
+  color: var(--navy);
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.quantityStepper {
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 56px minmax(58px, 1fr) 56px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.quantityStepper button,
+.quantityStepper input,
+.quoteUnitSelect {
+  border: 0;
+  background: #ffffff;
+  color: var(--navy);
+  font-size: 20px;
+  font-weight: 950;
+}
+
+.quantityStepper button {
+  display: grid;
+  place-items: center;
+}
+
+.quantityStepper input {
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+  appearance: textfield;
+}
+
+.quantityStepper input::-webkit-outer-spin-button,
+.quantityStepper input::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.quoteUnitSelect {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.quoteItemCard .itemReviewSummaryGrid {
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 14px;
+}
+
+.quoteItemCard .previousPurchaseBox {
+  min-height: 58px;
+}
+
+.quoteItemCard .itemOptionalDetails {
+  margin-top: 8px;
+}
+
+.wizardActionSummary {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--navy);
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.wizardActionSummary strong {
+  color: var(--orange);
+  font-size: 20px;
+}
+
+.quoteRequestShell .wizardActions {
+  position: sticky;
+  bottom: 0;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto minmax(260px, 420px);
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -12px 28px rgba(16, 32, 51, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.quoteRequestShell .wizardActions .secondaryButton,
+.quoteRequestShell .wizardActions .primaryButton {
+  min-height: 58px;
+  justify-content: center;
+  font-size: 18px;
+}
+
 .itemReviewMeta span,
 .itemReviewMeta small,
 .cardQualityLine span,
@@ -12605,5 +12999,224 @@ tr.selectedRow {
   .chatSafetyNotice {
     align-items: flex-start;
     line-height: 1.45;
+  }
+}
+
+@media (max-width: 760px) {
+  .quoteRequestShell {
+    margin-inline: -10px;
+    border-inline: 0;
+    border-radius: 0;
+  }
+
+  .requestFormHeader {
+    min-height: 72px;
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    padding: 0 14px;
+  }
+
+  .requestFormHeader strong {
+    font-size: 21px;
+  }
+
+  .requestDraftButton {
+    font-size: 16px;
+  }
+
+  .quoteRequestShell .wizardSteps,
+  .quoteRequestShell.directItemFlow .wizardSteps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 18px 16px;
+  }
+
+  .quoteRequestShell:not(.directItemFlow) .wizardSteps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .quoteRequestShell .wizardStep {
+    min-height: 72px;
+  }
+
+  .quoteRequestShell .wizardStep span {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .quoteRequestShell .wizardStep strong {
+    font-size: 14px;
+    line-height: 1.25;
+    word-break: keep-all;
+  }
+
+  .quoteRequestShell .wizardStep:not(:last-child)::after {
+    top: 20px;
+    left: calc(50% + 28px);
+    right: calc(-50% + 28px);
+  }
+
+  .quoteRequestShell .wizardPanel {
+    padding: 28px 14px 18px;
+  }
+
+  .quoteRequestShell .splitPanel {
+    display: block;
+  }
+
+  .quoteRequestShell .qualityPreview {
+    display: none;
+  }
+
+  .requestItemReviewHero h2 {
+    font-size: 31px;
+  }
+
+  .requestItemReviewHero p {
+    font-size: 17px;
+  }
+
+  .requestFoundNotice {
+    min-height: 74px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 14px;
+  }
+
+  .requestFoundNotice strong {
+    font-size: 18px;
+  }
+
+  .requestReuploadButton {
+    min-height: 62px;
+    font-size: 18px;
+  }
+
+  .requestItemToolbar {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .requestItemToolbar h3 {
+    font-size: 20px;
+  }
+
+  .requestItemToolbar .secondaryButton {
+    width: auto;
+    min-height: 48px;
+  }
+
+  .requestCategoryChips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+
+  .quoteItemCard {
+    padding: 14px;
+  }
+
+  .quoteItemHeader {
+    grid-template-columns: 50px minmax(0, 1fr) 42px;
+    gap: 10px;
+  }
+
+  .quoteItemHeader .itemReviewNumber {
+    width: 44px;
+    height: 44px;
+  }
+
+  .quoteItemHeader .itemNameField input {
+    min-height: 52px;
+    font-size: 20px;
+  }
+
+  .quoteItemSpec {
+    margin-left: 60px;
+    font-size: 14px;
+  }
+
+  .quoteItemControlRow {
+    grid-template-columns: minmax(68px, 0.35fr) minmax(150px, 1fr) minmax(92px, 0.42fr);
+    gap: 10px;
+  }
+
+  .quoteItemControlLabel {
+    font-size: 18px;
+  }
+
+  .quantityStepper {
+    grid-template-columns: 48px minmax(46px, 1fr) 48px;
+  }
+
+  .quantityStepper,
+  .quoteUnitSelect {
+    min-height: 54px;
+  }
+
+  .quoteRequestShell .wizardActions {
+    position: sticky;
+    bottom: 0;
+    z-index: 18;
+    grid-template-columns: minmax(94px, 0.42fr) minmax(0, 1fr);
+    padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
+    border-radius: 0;
+  }
+
+  .quoteRequestShell .wizardActions .secondaryButton {
+    display: none;
+  }
+
+  .quoteRequestShell .wizardActions .primaryButton {
+    width: 100%;
+    min-height: 64px;
+    font-size: 20px;
+  }
+
+  .wizardActionSummary {
+    min-height: 64px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 420px) {
+  .requestFormHeader strong {
+    font-size: 19px;
+  }
+
+  .requestDraftButton {
+    font-size: 15px;
+  }
+
+  .quoteRequestShell .wizardSteps,
+  .quoteRequestShell.directItemFlow .wizardSteps {
+    padding-inline: 10px;
+  }
+
+  .quoteRequestShell .wizardStep strong {
+    font-size: 13px;
+  }
+
+  .requestItemReviewHero h2 {
+    font-size: 28px;
+  }
+
+  .requestFoundNotice {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .requestFoundNotice button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .quoteItemControlRow {
+    grid-template-columns: 1fr;
+  }
+
+  .quoteItemControlLabel {
+    margin-top: 2px;
+  }
+
+  .quoteRequestShell .wizardActions {
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 }
