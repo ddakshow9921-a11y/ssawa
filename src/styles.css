@@ -12649,6 +12649,10 @@ tr.selectedRow {
     display: none;
   }
 
+  .buyerHeroActions .buyerHeroActionCard {
+    display: none;
+  }
+
   .buyerMobileCategorySection,
   .buyerQuickRequestSection {
     gap: 12px;

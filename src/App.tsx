@@ -8130,11 +8130,13 @@ function HomePage({ data, navigate, authSession }: PageProps & { authSession?: A
   const visibleProducts = getVisibleSupplierProducts(data).slice(0, 3);
   const recentRequests = [...buyerRequests].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 4);
   const quickReorderItems = buyerPurchases.slice(0, 3);
+  const categoryRequestPath = (categoryName: string, method: QuoteRequestInputMethod = "manual") =>
+    `/app/requests/new?method=${method}&category=${encodeURIComponent(categoryName)}`;
   const buyerCategoryShortcuts = [
-    { label: "식자재", desc: "신선식품", icon: "🥬", path: "/app/requests/new?method=manual" },
-    { label: "건축자재", desc: "철근·시멘트", icon: "🏗️", path: "/app/requests/new?method=manual" },
-    { label: "포장재", desc: "박스·봉투", icon: "📦", path: "/app/requests/new?method=manual" },
-    { label: "주방용품", desc: "도구·소모품", icon: "🍳", path: "/app/requests/new?method=manual" },
+    { label: "식자재", desc: "신선식품", icon: "🥬", path: categoryRequestPath("식자재") },
+    { label: "건축자재", desc: "철근·시멘트", icon: "🏗️", path: categoryRequestPath("건축자재") },
+    { label: "포장재", desc: "박스·봉투", icon: "📦", path: categoryRequestPath("포장재") },
+    { label: "주방용품", desc: "도구·소모품", icon: "🍳", path: categoryRequestPath("주방용품") },
     { label: "전체", desc: "전체 보기", icon: "▦", path: "/app/requests/new" },
   ];
   const buyerQuickRequestCards = [
@@ -8142,14 +8144,14 @@ function HomePage({ data, navigate, authSession }: PageProps & { authSession?: A
       badge: "인기",
       title: "건축 자재 견적 요청",
       desc: "철근, 시멘트, 합판 등",
-      path: "/app/requests/new?method=manual",
+      path: categoryRequestPath("건축자재"),
       tone: "warm",
     },
     {
       badge: "빠른 견적",
       title: "식자재 견적 요청",
       desc: "신선식품, 냉동, 가공식품 등",
-      path: "/app/requests/new?method=photo",
+      path: categoryRequestPath("식자재", "photo"),
       tone: "cool",
     },
   ];
@@ -9463,6 +9465,11 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
   const searchParams = getSearchParams(routePath);
   const todayDraftId = searchParams.get("draftId") ?? "";
   const requestedInputMethod = parseRequestInputMethod(searchParams.get("method") ?? searchParams.get("inputMethod"));
+  const requestedCategoryName = searchParams.get("category") ?? searchParams.get("categoryName") ?? "";
+  const requestedCategory = requestedCategoryName
+    ? data.categories.find((category) => category.name === requestedCategoryName)
+      ?? data.categories.find((category) => canonicalSupplierCategoryName(category.name) === canonicalSupplierCategoryName(requestedCategoryName))
+    : undefined;
   const buyerIdsForSession = useMemo(() => {
     const ids = getBuyerIdsForSession(data, authSession);
     if (authSession?.role === "buyer" && authSession.id) ids.add(authSession.id);
@@ -9488,7 +9495,7 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
   const [showMoreConditions, setShowMoreConditions] = useState(false);
   const [draft, setDraft] = useState<QuoteRequestDraft>({
     title: todayDraft?.title ?? todayRecommendation?.title ?? "",
-    category_id: todayDraftCategory?.id ?? todayRecommendation?.categoryId ?? data.categories[0]?.id ?? "",
+    category_id: todayDraftCategory?.id ?? todayRecommendation?.categoryId ?? requestedCategory?.id ?? data.categories[0]?.id ?? "",
     delivery_region: todayDraft?.region ?? "",
     delivery_address: todayDraft?.delivery_address_snapshot ?? "",
     desired_delivery_date: "2026-07-10",
