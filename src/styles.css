@@ -592,26 +592,26 @@ button:disabled {
 
 .buyerDashboard {
   display: grid;
-  gap: 18px;
+  gap: 20px;
 }
 
 .buyerDashboardTop {
   display: grid;
-  grid-template-columns: minmax(300px, 720px);
-  gap: 18px;
+  grid-template-columns: minmax(420px, 760px) 176px;
+  gap: 14px;
   align-items: center;
 }
 
 .buyerSearchBar {
-  min-height: 50px;
+  min-height: 56px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 18px;
+  gap: 12px;
+  padding: 0 20px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 10px 24px rgba(16, 32, 51, 0.04);
+  background: #f7f9fc;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .buyerSearchIcon {
@@ -626,7 +626,7 @@ button:disabled {
   outline: 0;
   background: transparent;
   color: var(--navy);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -711,33 +711,36 @@ button:disabled {
 .buyerHeroPanel {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(300px, 1fr) minmax(560px, 1.45fr);
-  gap: 18px;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.1fr);
+  gap: 22px;
   align-items: stretch;
-  padding: 22px;
+  min-height: 300px;
+  padding: 26px;
   overflow: hidden;
-  border: 1px solid var(--orange-line);
+  border: 1px solid rgba(8, 24, 55, 0.16);
   border-radius: 8px;
   background:
-    radial-gradient(circle at 30% 98%, rgba(255, 107, 26, 0.12), transparent 34%),
-    linear-gradient(135deg, #fff6f0 0%, #fffaf7 48%, #ffffff 100%);
+    radial-gradient(circle at 78% 18%, rgba(59, 130, 246, 0.35), transparent 30%),
+    radial-gradient(circle at 10% 98%, rgba(255, 107, 26, 0.22), transparent 32%),
+    linear-gradient(135deg, #061936 0%, #092753 58%, #061b3c 100%);
+  box-shadow: 0 18px 42px rgba(5, 24, 54, 0.14);
 }
 
 .buyerHeroCopy {
   position: relative;
-  min-height: 210px;
+  min-height: 248px;
   display: grid;
   align-content: center;
   gap: 16px;
-  padding: 8px 16px 8px 22px;
+  padding: 8px 16px 8px 30px;
 }
 
 .buyerHeroCopy h1 {
   position: relative;
   z-index: 1;
   margin: 0;
-  color: var(--navy);
-  font-size: clamp(28px, 2.5vw, 36px);
+  color: #ffffff;
+  font-size: clamp(34px, 3vw, 46px);
   font-weight: 950;
   line-height: 1.22;
   letter-spacing: 0;
@@ -751,7 +754,7 @@ button:disabled {
   position: relative;
   z-index: 1;
   margin: 0;
-  color: #667085;
+  color: #d9e7ff;
   font-size: 16px;
   font-weight: 800;
   line-height: 1.55;
@@ -794,25 +797,26 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  align-content: stretch;
 }
 
 .buyerHeroActionCard {
   position: relative;
   box-sizing: border-box;
   min-width: 0;
-  min-height: 205px;
+  min-height: 218px;
   display: grid;
   align-content: start;
   justify-items: start;
   gap: 14px;
-  padding: 28px 24px 22px;
-  border: 1px solid var(--orange-line);
+  padding: 30px 24px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.96);
   color: var(--navy);
   text-align: left;
   overflow: hidden;
-  box-shadow: 0 14px 34px rgba(16, 32, 51, 0.05);
+  box-shadow: 0 18px 42px rgba(0, 16, 44, 0.18);
 }
 
 .buyerHeroActionCard:hover,
@@ -824,8 +828,8 @@ button:disabled {
 }
 
 .buyerHeroActionIcon {
-  width: 50px;
-  height: 50px;
+  width: 54px;
+  height: 54px;
   display: inline-grid;
   place-items: center;
   border-radius: 8px;
@@ -835,7 +839,7 @@ button:disabled {
 
 .buyerHeroActionCard strong {
   color: var(--navy);
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 950;
   line-height: 1.25;
 }
@@ -857,8 +861,8 @@ button:disabled {
   display: inline-grid;
   place-items: center;
   border-radius: 50%;
-  background: #f2f4f7;
-  color: var(--navy);
+  background: var(--orange);
+  color: #ffffff;
 }
 
 .buyerProcessStrip {
@@ -866,11 +870,11 @@ button:disabled {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
   gap: 0;
-  padding: 12px 22px;
+  padding: 16px 24px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 8px 24px rgba(16, 32, 51, 0.04);
+  box-shadow: 0 10px 28px rgba(16, 32, 51, 0.04);
 }
 
 .buyerProcessStrip > div {
@@ -929,20 +933,21 @@ button:disabled {
   position: relative;
   box-sizing: border-box;
   min-width: 0;
-  min-height: 98px;
+  min-height: 116px;
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
   column-gap: 14px;
   align-items: center;
-  padding: 18px;
+  padding: 20px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(249, 251, 255, 0.96));
   color: var(--navy);
   text-align: left;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(16, 32, 51, 0.04);
+  box-shadow: 0 12px 30px rgba(16, 32, 51, 0.05);
 }
 
 .metricIcon {
@@ -972,7 +977,7 @@ button:disabled {
   grid-column: 2;
   grid-row: 2;
   color: var(--navy);
-  font-size: 28px;
+  font-size: 31px;
   font-weight: 950;
   line-height: 1.1;
 }
@@ -1002,17 +1007,17 @@ button:disabled {
 
 .buyerDashboardGrid {
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
 }
 
 .buyerPanel {
   min-width: 0;
-  padding: 20px;
+  padding: 22px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 10px 28px rgba(16, 32, 51, 0.04);
+  box-shadow: 0 12px 30px rgba(16, 32, 51, 0.05);
 }
 
 .buyerPanel > header {
@@ -1320,6 +1325,412 @@ button:disabled {
   background: #fff;
   color: var(--navy);
   font-weight: 900;
+  white-space: nowrap;
+}
+
+.buyerTopRequestButton {
+  min-height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 950;
+  white-space: nowrap;
+  box-shadow: 0 14px 28px rgba(255, 107, 26, 0.22);
+}
+
+.buyerHeroFeatureRow {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  color: #d9e7ff;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.buyerHeroCopy h1 {
+  position: relative;
+  z-index: 2;
+}
+
+.buyerHeroMobileBreak {
+  display: none;
+}
+
+.buyerHeroFeatureRow span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.buyerHeroFeatureRow span:not(:last-child)::after {
+  content: "";
+  width: 1px;
+  height: 14px;
+  margin-left: 6px;
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.buyerHeroPrimaryButton {
+  position: relative;
+  z-index: 2;
+  width: min(360px, 100%);
+  min-height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 950;
+  box-shadow: 0 18px 30px rgba(255, 107, 26, 0.28);
+}
+
+.buyerHeroBoxVisual {
+  position: absolute;
+  display: none;
+  z-index: 1;
+  right: 42px;
+  bottom: 22px;
+  width: 250px;
+  height: 170px;
+  pointer-events: none;
+}
+
+.buyerHeroBoxVisual::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 210px;
+  height: 96px;
+  border-radius: 14px 14px 22px 22px;
+  background: linear-gradient(145deg, #2d67c7, #174287);
+  box-shadow: 0 18px 36px rgba(0, 22, 64, 0.28);
+  transform: skewY(-3deg);
+}
+
+.buyerHeroBoxVisual::after {
+  content: "";
+  position: absolute;
+  right: 28px;
+  bottom: 84px;
+  width: 170px;
+  height: 52px;
+  background: linear-gradient(145deg, #4b86ef, #2b5eb3);
+  clip-path: polygon(10% 100%, 0 35%, 48% 0, 100% 36%, 86% 100%);
+}
+
+.buyerHeroBoxVisual strong {
+  position: absolute;
+  right: 76px;
+  bottom: 28px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 20px;
+  font-weight: 950;
+  transform: rotate(-5deg);
+}
+
+.boxItem {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.boxItem.steel {
+  right: 130px;
+  bottom: 78px;
+  width: 28px;
+  height: 112px;
+  background: linear-gradient(90deg, #a7b0bd, #525d6b 48%, #d1d5db);
+  transform: rotate(-14deg);
+}
+
+.boxItem.board {
+  right: 74px;
+  bottom: 82px;
+  width: 34px;
+  height: 116px;
+  background: linear-gradient(90deg, #e7c081, #b98a52);
+  transform: rotate(10deg);
+}
+
+.boxItem.roll {
+  right: 108px;
+  bottom: 68px;
+  width: 68px;
+  height: 38px;
+  border: 8px solid #6b7280;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.boxItem.bag {
+  right: 22px;
+  bottom: 64px;
+  width: 70px;
+  height: 94px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #fff, #e6e9ee);
+  color: #334155;
+  font-size: 13px;
+  font-weight: 950;
+  transform: rotate(7deg);
+}
+
+.buyerMobileCategorySection,
+.buyerQuickRequestSection {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px rgba(16, 32, 51, 0.04);
+}
+
+.buyerMobileCategorySection header,
+.buyerQuickRequestSection header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.buyerMobileCategorySection h2,
+.buyerQuickRequestSection h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 21px;
+  font-weight: 950;
+}
+
+.buyerMobileCategorySection header button,
+.buyerQuickRequestSection header button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.buyerCategoryScroller {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.buyerCategoryScroller button {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  padding: 14px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--navy);
+}
+
+.buyerCategoryScroller button:hover {
+  border-color: var(--orange-line);
+  background: #fff8f3;
+  transform: translateY(-1px);
+}
+
+.buyerCategoryScroller button > span {
+  width: 84px;
+  height: 84px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #eef1f5;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 32px;
+  box-shadow: 0 12px 28px rgba(16, 32, 51, 0.08);
+}
+
+.buyerCategoryScroller strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--navy);
+  font-size: 15px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buyerCategoryScroller small {
+  display: none;
+}
+
+.buyerQuickRequestCards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.buyerQuickRequestCard {
+  position: relative;
+  min-height: 184px;
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  gap: 9px;
+  padding: 26px;
+  overflow: hidden;
+  border: 1px solid #f3dfd2;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 88% 76%, rgba(255, 107, 26, 0.15), transparent 28%),
+    #fff7f0;
+  color: var(--navy);
+  text-align: left;
+}
+
+.buyerQuickRequestCard.cool {
+  border-color: #d7e6ff;
+  background:
+    radial-gradient(circle at 88% 76%, rgba(37, 99, 235, 0.15), transparent 28%),
+    #f3f8ff;
+}
+
+.buyerQuickRequestCard span {
+  position: relative;
+  z-index: 1;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: #ffe2d0;
+  color: var(--orange);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.buyerQuickRequestCard.cool span {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.buyerQuickRequestCard strong,
+.buyerQuickRequestCard small,
+.buyerQuickRequestCard em {
+  position: relative;
+  z-index: 1;
+}
+
+.buyerQuickRequestCard strong {
+  color: var(--navy);
+  font-size: 23px;
+  font-weight: 950;
+}
+
+.buyerQuickRequestCard small {
+  color: #667085;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.buyerQuickRequestCard em {
+  margin-top: 4px;
+  padding: 8px 15px;
+  border: 1px solid var(--orange);
+  border-radius: 8px;
+  color: var(--orange);
+  background: #fff;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.buyerQuickRequestCard.cool em {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.buyerQuickRequestCard i {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  width: 92px;
+  height: 70px;
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, transparent 0 16%, rgba(71, 85, 105, 0.8) 16% 28%, transparent 28% 38%, rgba(71, 85, 105, 0.72) 38% 50%, transparent 50%),
+    linear-gradient(135deg, rgba(255, 107, 26, 0.2), rgba(255, 255, 255, 0.2));
+  opacity: 0.42;
+}
+
+.buyerQuickRequestCard.cool i {
+  background:
+    radial-gradient(circle at 34% 36%, #ef4444 0 16%, transparent 17%),
+    radial-gradient(circle at 56% 42%, #22c55e 0 18%, transparent 19%),
+    radial-gradient(circle at 70% 54%, #f59e0b 0 15%, transparent 16%),
+    linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(255, 255, 255, 0.2));
+  opacity: 0.7;
+}
+
+.buyerBenefitBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 124px;
+  padding: 26px 30px;
+  overflow: hidden;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 9% 50%, rgba(255, 255, 255, 0.35), transparent 18%),
+    linear-gradient(135deg, #ff7a00, #ff5c00);
+  color: #fff;
+  box-shadow: 0 16px 34px rgba(255, 107, 26, 0.22);
+}
+
+.buyerBenefitBanner div {
+  display: grid;
+  gap: 5px;
+}
+
+.buyerBenefitBanner span,
+.buyerBenefitBanner small {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.buyerBenefitBanner strong {
+  font-size: 28px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.buyerBenefitBanner button {
+  min-height: 48px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 950;
   white-space: nowrap;
 }
 
@@ -11703,7 +12114,37 @@ tr.selectedRow {
   }
 
   .buyerDashboardTop {
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .buyerSearchBar {
+    min-height: 58px;
+    border: 0;
+    border-radius: 18px;
+    background: #f3f5f8;
+    box-shadow: none;
+  }
+
+  .buyerSearchIcon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .buyerSearchBar input {
+    font-size: 16px;
+  }
+
+  .buyerTopRequestButton {
+    min-height: 58px;
+    padding-inline: 15px;
+    border: 0;
+    border-radius: 18px;
+    background: #f3f5f8;
+    color: var(--navy);
+    box-shadow: none;
+    font-size: 15px;
   }
 
   .buyerTopActions {
@@ -11726,36 +12167,135 @@ tr.selectedRow {
   }
 
   .buyerHeroPanel {
-    gap: 14px;
-    padding: 16px;
+    display: block;
+    min-height: 320px;
+    padding: 22px;
+    border: 0;
+    border-radius: 22px;
+    background:
+      radial-gradient(circle at 79% 24%, rgba(64, 117, 220, 0.5), transparent 30%),
+      linear-gradient(135deg, #061936 0%, #092753 58%, #061b3c 100%);
+    box-shadow: 0 18px 38px rgba(5, 24, 54, 0.2);
   }
 
   .buyerHeroCopy {
-    min-height: 160px;
-    padding: 6px 4px;
+    min-height: 276px;
+    align-content: start;
+    gap: 14px;
+    padding: 18px 0 0;
   }
 
   .buyerHeroCopy h1 {
-    font-size: 28px;
-    line-height: 1.28;
+    max-width: 248px;
+    color: #fff;
+    font-size: 27px;
+    line-height: 1.25;
+  }
+
+  .buyerHeroMobileBreak {
+    display: block;
   }
 
   .buyerHeroCopy p {
-    font-size: 15px;
+    display: none;
+  }
+
+  .buyerHeroFeatureRow {
+    max-width: 220px;
+    color: #d9e7ff;
+    font-size: 12px;
+  }
+
+  .buyerHeroPrimaryButton {
+    width: 225px;
+    min-height: 60px;
+    margin-top: 14px;
+    font-size: 19px;
   }
 
   .buyerHeroBoxes {
-    width: 150px;
-    opacity: 0.24;
+    display: none;
+  }
+
+  .buyerHeroBoxVisual {
+    display: block;
+    right: -12px;
+    bottom: 4px;
+    width: 185px;
+    height: 142px;
+    transform: scale(0.7);
+    transform-origin: right bottom;
   }
 
   .buyerHeroActions,
-  .buyerMetricGrid,
   .buyerProductScroller,
   .buyerQuickReorderList,
   .supplierActionGrid,
   .supplierMetricGrid {
     grid-template-columns: 1fr;
+  }
+
+  .buyerHeroActions {
+    display: none;
+  }
+
+  .buyerMobileCategorySection,
+  .buyerQuickRequestSection {
+    gap: 12px;
+    padding: 18px;
+  }
+
+  .buyerMobileCategorySection h2,
+  .buyerQuickRequestSection h2 {
+    font-size: 21px;
+  }
+
+  .buyerCategoryScroller {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    overflow-x: visible;
+    padding-bottom: 2px;
+    scroll-snap-type: none;
+  }
+
+  .buyerCategoryScroller button {
+    scroll-snap-align: start;
+  }
+
+  .buyerCategoryScroller button > span {
+    width: 54px;
+    height: 54px;
+    font-size: 23px;
+  }
+
+  .buyerCategoryScroller strong {
+    font-size: 12px;
+  }
+
+  .buyerQuickRequestCards {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .buyerQuickRequestCard {
+    min-height: 162px;
+    padding: 17px;
+  }
+
+  .buyerQuickRequestCard strong {
+    font-size: 17px;
+    line-height: 1.3;
+  }
+
+  .buyerQuickRequestCard small {
+    min-height: 34px;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .buyerQuickRequestCard em {
+    padding: 7px 12px;
+    font-size: 12px;
   }
 
   .supplierActionCard {
@@ -11834,8 +12374,30 @@ tr.selectedRow {
     display: none;
   }
 
+  .buyerMetricGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
   .buyerMetricGrid button {
-    min-height: 86px;
+    min-height: 104px;
+    grid-template-columns: 44px minmax(0, 1fr) 16px;
+    column-gap: 10px;
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .metricIcon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .buyerMetricGrid small {
+    font-size: 12px;
+  }
+
+  .buyerMetricGrid strong {
+    font-size: 24px;
   }
 
   .buyerPanel {
@@ -11913,15 +12475,34 @@ tr.selectedRow {
   }
 
   .buyerQuickReorderBand {
-    padding: 16px;
+    padding: 17px;
+    border-radius: 18px;
   }
 
   .buyerMoreButton {
     width: 100%;
   }
+
+  .buyerBenefitBanner {
+    min-height: 124px;
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .buyerBenefitBanner strong {
+    font-size: 22px;
+  }
+
+  .buyerBenefitBanner button {
+    min-width: 108px;
+  }
 }
 
 @media (max-width: 420px) {
+  .buyerDashboardTop {
+    grid-template-columns: minmax(0, 1fr) 96px;
+  }
+
   .buyerTopActions {
     grid-template-columns: 46px minmax(0, 1fr);
   }
@@ -11937,6 +12518,61 @@ tr.selectedRow {
 
   .buyerSearchBar {
     padding-inline: 14px;
+  }
+
+  .buyerTopRequestButton {
+    padding-inline: 10px;
+    font-size: 14px;
+  }
+
+  .buyerHeroPanel {
+    min-height: 306px;
+    padding: 20px;
+  }
+
+  .buyerHeroCopy h1 {
+    max-width: 238px;
+  }
+
+  .buyerHeroPrimaryButton {
+    width: 208px;
+  }
+
+  .buyerHeroBoxVisual {
+    right: -24px;
+    bottom: -4px;
+    transform: scale(0.62);
+    transform-origin: right bottom;
+  }
+
+  .buyerCategoryScroller {
+    gap: 6px;
+  }
+
+  .buyerCategoryScroller button {
+    padding-inline: 2px;
+  }
+
+  .buyerCategoryScroller button > span {
+    width: 48px;
+    height: 48px;
+    font-size: 21px;
+  }
+
+  .buyerQuickRequestCards {
+    grid-template-columns: 1fr;
+  }
+
+  .buyerMetricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .buyerBenefitBanner {
+    display: grid;
+  }
+
+  .buyerBenefitBanner button {
+    width: 100%;
   }
 }
 

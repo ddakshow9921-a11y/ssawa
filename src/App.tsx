@@ -8130,6 +8130,29 @@ function HomePage({ data, navigate, authSession }: PageProps & { authSession?: A
   const visibleProducts = getVisibleSupplierProducts(data).slice(0, 3);
   const recentRequests = [...buyerRequests].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 4);
   const quickReorderItems = buyerPurchases.slice(0, 3);
+  const buyerCategoryShortcuts = [
+    { label: "식자재", desc: "신선식품", icon: "🥬", path: "/app/requests/new?method=manual" },
+    { label: "건축자재", desc: "철근·시멘트", icon: "🏗️", path: "/app/requests/new?method=manual" },
+    { label: "포장재", desc: "박스·봉투", icon: "📦", path: "/app/requests/new?method=manual" },
+    { label: "주방용품", desc: "도구·소모품", icon: "🍳", path: "/app/requests/new?method=manual" },
+    { label: "전체", desc: "전체 보기", icon: "▦", path: "/app/requests/new" },
+  ];
+  const buyerQuickRequestCards = [
+    {
+      badge: "인기",
+      title: "건축 자재 견적 요청",
+      desc: "철근, 시멘트, 합판 등",
+      path: "/app/requests/new?method=manual",
+      tone: "warm",
+    },
+    {
+      badge: "빠른 견적",
+      title: "식자재 견적 요청",
+      desc: "신선식품, 냉동, 가공식품 등",
+      path: "/app/requests/new?method=photo",
+      tone: "cool",
+    },
+  ];
 
   const getQuoteCount = (requestId: string) => data.quotes.filter((quote) => quote.quote_request_id === requestId).length;
   const getItemCount = (requestId: string) => data.quote_request_items.filter((item) => item.quote_request_id === requestId).length;
@@ -8156,18 +8179,38 @@ function HomePage({ data, navigate, authSession }: PageProps & { authSession?: A
             <span className="buyerSearchIcon"><SearchCheck size={18} /></span>
             <input type="search" placeholder="상품명, 규격, 브랜드, 업체명을 검색하세요" />
           </label>
+          <button className="buyerTopRequestButton" type="button" onClick={() => navigate("/app/requests/new")}>
+            <FilePlus2 size={22} />
+            <span>견적 요청</span>
+          </button>
         </section>
 
         <section className="buyerHeroPanel" aria-label="견적요청 시작">
           <div className="buyerHeroCopy">
             <h1>
               필요한 자재를 빠르게 올리고,<br />
-              <span>최적 견적</span>을 받아보세요
+              <span>최적 견적</span><br className="buyerHeroMobileBreak" />을 받아보세요
             </h1>
             <p>많은 업체가 경쟁적으로 견적을 보내드립니다.</p>
+            <div className="buyerHeroFeatureRow" aria-label="견적 장점">
+              <span><FilePlus2 size={15} /> 무료 견적</span>
+              <span><ClipboardList size={15} /> 복수 견적 비교</span>
+              <span><RefreshCcw size={15} /> 빠른 거래</span>
+            </div>
+            <button className="buyerHeroPrimaryButton" type="button" onClick={() => navigate("/app/requests/new")}>
+              견적 요청하기
+              <ArrowRight size={22} />
+            </button>
             <div className="buyerHeroBoxes" aria-hidden="true">
               <span />
               <span />
+            </div>
+            <div className="buyerHeroBoxVisual" aria-hidden="true">
+              <span className="boxItem steel" />
+              <span className="boxItem board" />
+              <span className="boxItem roll" />
+              <span className="boxItem bag">시멘트</span>
+              <strong>싸와!</strong>
             </div>
           </div>
           <div className="buyerHeroActions">
@@ -8189,6 +8232,46 @@ function HomePage({ data, navigate, authSession }: PageProps & { authSession?: A
               <small>상품명, 규격, 수량을 직접 입력하세요</small>
               <span className="buyerHeroActionArrow"><ArrowRight size={16} /></span>
             </button>
+          </div>
+        </section>
+
+        <section className="buyerMobileCategorySection" aria-label="카테고리 바로가기">
+          <header>
+            <h2>카테고리</h2>
+            <button type="button" onClick={() => navigate("/app/requests/new")}>
+              전체보기
+              <ArrowRight size={15} />
+            </button>
+          </header>
+          <div className="buyerCategoryScroller">
+            {buyerCategoryShortcuts.map((category) => (
+              <button type="button" key={category.label} onClick={() => navigate(category.path)}>
+                <span aria-hidden="true">{category.icon}</span>
+                <strong>{category.label}</strong>
+                <small>{category.desc}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="buyerQuickRequestSection" aria-label="빠른 견적 요청">
+          <header>
+            <h2>빠른 견적 요청</h2>
+            <button type="button" onClick={() => navigate("/app/requests/new")}>
+              더보기
+              <ArrowRight size={15} />
+            </button>
+          </header>
+          <div className="buyerQuickRequestCards">
+            {buyerQuickRequestCards.map((card) => (
+              <button className={`buyerQuickRequestCard ${card.tone}`} type="button" key={card.title} onClick={() => navigate(card.path)}>
+                <span>{card.badge}</span>
+                <strong>{card.title}</strong>
+                <small>{card.desc}</small>
+                <em>요청하기</em>
+                <i aria-hidden="true" />
+              </button>
+            ))}
           </div>
         </section>
 
@@ -8334,6 +8417,17 @@ function HomePage({ data, navigate, authSession }: PageProps & { authSession?: A
           <button className="buyerMoreButton" type="button" onClick={() => navigate("/app/quick-reorder")}>
             더 보기
             <ArrowRight size={16} />
+          </button>
+        </section>
+
+        <section className="buyerBenefitBanner" aria-label="신규 가입 혜택">
+          <div>
+            <span>신규 가입 혜택</span>
+            <strong>첫 견적 요청 시 포인트 5,000P!</strong>
+            <small>지금 바로 혜택을 받아보세요</small>
+          </div>
+          <button type="button" onClick={() => navigate("/app/requests/new")}>
+            혜택 받기
           </button>
         </section>
       </div>
