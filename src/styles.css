@@ -8630,11 +8630,6 @@ tbody tr:hover {
   color: var(--orange);
 }
 
-.requestItemToolbar .secondaryButton {
-  border-color: var(--orange);
-  color: var(--orange);
-}
-
 .requestCategoryChips {
   margin-bottom: 20px;
 }
@@ -8774,6 +8769,27 @@ tbody tr:hover {
 
 .quoteItemCard .itemOptionalDetails {
   margin-top: 8px;
+}
+
+.requestBottomAddButton {
+  width: 100%;
+  min-height: 62px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 14px 0 8px;
+  border: 1.5px dashed var(--orange);
+  border-radius: 8px;
+  background: #fffaf7;
+  color: var(--orange);
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.requestBottomAddButton:hover {
+  background: var(--orange-soft);
+  border-style: solid;
 }
 
 .wizardActionSummary {
@@ -13099,11 +13115,6 @@ tr.selectedRow {
     font-size: 20px;
   }
 
-  .requestItemToolbar .secondaryButton {
-    width: auto;
-    min-height: 48px;
-  }
-
   .requestCategoryChips {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -13150,6 +13161,12 @@ tr.selectedRow {
   .quantityStepper,
   .quoteUnitSelect {
     min-height: 54px;
+  }
+
+  .requestBottomAddButton {
+    min-height: 58px;
+    margin: 16px 0 18px;
+    font-size: 18px;
   }
 
   .quoteRequestShell .wizardActions {

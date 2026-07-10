@@ -9812,10 +9812,6 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
                 )}
                 <div className="requestItemToolbar">
                   <h3>견적 품목 <span>{reviewItemCount}</span></h3>
-                  <button className="secondaryButton compact" type="button" onClick={() => setDraft({ ...draft, items: [...draft.items, { ...emptyItem }] })}>
-                    <Plus size={16} />
-                    품목 추가
-                  </button>
                 </div>
                 <div className="categoryChoiceGrid compact requestCategoryChips">
                   {data.categories.map((category) => (
@@ -9851,6 +9847,10 @@ function NewRequestPage({ data, navigate, setData, routePath = "/app/requests/ne
                 {draft.input_method === "template" && <TemplatePicker onSelect={selectTemplate} selectedName={draft.template_name} />}
                 {draft.input_method === "repeat" && <RepeatRequestPanel data={data} onSelect={repeatRequest} selectedId={draft.previous_request_id} />}
                 <ItemReviewEditor items={draft.items} previousPurchaseLookup={previousPurchaseLookup} onUpdate={updateItem} onRemove={(index) => setDraft({ ...draft, items: draft.items.filter((_, itemIndex) => itemIndex !== index) })} />
+                <button className="requestBottomAddButton" type="button" onClick={() => setDraft({ ...draft, items: [...draft.items, { ...emptyItem }] })}>
+                  <Plus size={18} />
+                  품목 추가
+                </button>
               </div>
               <QualityPreview score={qualityScore} expectedSupplierCount={expectedSupplierCount} />
             </div>
