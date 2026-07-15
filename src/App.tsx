@@ -2467,7 +2467,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/supplier/deals") return <SupplierDealsPage data={data} navigate={navigate} authSession={authSession} />;
   if (path.startsWith("/app/supplier/deals/") && path.endsWith("/messages")) return <DealMessagesPage data={data} navigate={navigate} setData={setData} dealId={path.split("/")[4] ?? ""} role="supplier" />;
   if (path.startsWith("/app/supplier/deals/")) return <DealDetailPage data={data} navigate={navigate} setData={setData} dealId={path.split("/").pop() ?? ""} role="supplier" />;
-  if (path === "/app/supplier/requests") return <SupplierRequestsPage data={data} navigate={navigate} authSession={authSession} />;
+  if (routePath === "/app/supplier/requests") return <SupplierRequestsPage data={data} navigate={navigate} authSession={authSession} routePath={path} />;
   if (path.startsWith("/app/supplier/requests/") && path.endsWith("/messages")) return <RequestMessagesPage data={data} navigate={navigate} setData={setData} requestId={path.split("/")[4] ?? ""} role="supplier" />;
   if (path.startsWith("/app/supplier/quotes/")) return <SupplierQuoteDetailPage data={data} navigate={navigate} setData={setData} quoteId={path.split("/").pop() ?? ""} authSession={authSession} />;
   if (path.startsWith("/app/supplier/requests/")) return <SupplierRequestDetailPage data={data} navigate={navigate} setData={setData} requestId={path.split("/").pop() ?? ""} authSession={authSession} />;
@@ -13875,7 +13875,7 @@ function SupplierDashboard({ data, navigate, authSession }: PageProps & { authSe
             <small>{todayRequests}건을 확인할 수 있습니다.</small>
             <ArrowRight size={18} />
           </button>
-          <button className="supplierActionCard" type="button" onClick={() => navigate("/app/supplier/requests")}>
+          <button className="supplierActionCard" type="button" onClick={() => navigate("/app/supplier/requests?unquoted=1")}>
             <span><FilePlus2 size={30} /></span>
             <strong>견적 제출</strong>
             <small>{pendingQuoteRequests.length}건이 견적을 기다립니다.</small>
@@ -14021,15 +14021,16 @@ function SupplierDashboard({ data, navigate, authSession }: PageProps & { authSe
   );
 }
 
-function SupplierRequestsPage({ data, navigate, authSession }: PageProps & { authSession?: AppAuthSession | null }) {
+function SupplierRequestsPage({ data, navigate, authSession, routePath = "/app/supplier/requests" }: PageProps & { authSession?: AppAuthSession | null; routePath?: string }) {
   const supplier = getActiveSupplier(data, authSession);
+  const params = getSearchParams(routePath);
   const [categoryFilter, setCategoryFilter] = useState("전체");
   const [regionFilter, setRegionFilter] = useState("전체");
   const [sort, setSort] = useState("요청 완성도 높은순");
   const [taxOnly, setTaxOnly] = useState(false);
   const [cardOnly, setCardOnly] = useState(false);
   const [urgentOnly, setUrgentOnly] = useState(false);
-  const [unquotedOnly, setUnquotedOnly] = useState(false);
+  const [unquotedOnly, setUnquotedOnly] = useState(params.get("unquoted") === "1");
   const myQuotes = data.quotes.filter((quote) => quote.supplier_id === supplier.id);
   const baseRequests = getVisibleRequestsForSupplier(supplier, getSupplierQuoteRequestSource(data), data);
   const requests = baseRequests
@@ -14064,7 +14065,7 @@ function SupplierRequestsPage({ data, navigate, authSession }: PageProps & { aut
             <Toggle checked={taxOnly} label="세금계산서 필요" onChange={setTaxOnly} />
             <Toggle checked={cardOnly} label="카드결제 필요" onChange={setCardOnly} />
             <Toggle checked={urgentOnly} label="긴급 요청" onChange={setUrgentOnly} />
-            <Toggle checked={unquotedOnly} label="내가 제출한 요청 제외" onChange={setUnquotedOnly} />
+            <Toggle checked={unquotedOnly} label="아직 견적 안 보낸 요청만" onChange={setUnquotedOnly} />
           </section>
           <SupplierRequestList data={data} supplier={supplier} requests={requests} navigate={navigate} />
         </>
