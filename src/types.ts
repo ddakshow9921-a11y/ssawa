@@ -787,25 +787,6 @@ export interface PurchaseRecord {
   deleted_at?: string;
 }
 
-export type RegularSupplierCadence = "weekly" | "biweekly" | "monthly" | "on_demand";
-export type RegularSupplierStatus = "active" | "paused";
-
-export interface RegularSupplier {
-  id: string;
-  buyer_id: string;
-  supplier_id: string;
-  supplier_name: string;
-  nickname: string;
-  cadence: RegularSupplierCadence;
-  preferred_order_day: string;
-  last_purchase_record_id?: string;
-  last_deal_id?: string;
-  note: string;
-  status: RegularSupplierStatus;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface TodayCategory {
   id: string;
   business_id?: string;
@@ -2594,7 +2575,6 @@ export interface AppData {
   deal_attachments: DealAttachment[];
   purchase_records: PurchaseRecord[];
   purchase_record_items: PurchaseRecordItem[];
-  regular_suppliers: RegularSupplier[];
   purchase_documents: PurchaseDocument[];
   tax_documents: TaxDocument[];
   tax_document_checks: TaxDocumentCheck[];
