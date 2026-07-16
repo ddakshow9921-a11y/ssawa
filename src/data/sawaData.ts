@@ -119,6 +119,7 @@ import type {
   QuoteRequestItem,
   QuoteRiskLevel,
   ReceiptStatus,
+  RegularSupplier,
   RepeatUsageInsight,
   Report,
   ReportAction,
@@ -1959,6 +1960,24 @@ const samplePurchaseRecords: PurchaseRecord[] = [
   },
 ];
 
+const sampleRegularSuppliers: RegularSupplier[] = [
+  {
+    id: "regular-supplier-1",
+    buyer_id: "buyer-1",
+    supplier_id: "sup-1",
+    supplier_name: "서울포장",
+    nickname: "월간 포장재 단골",
+    cadence: "monthly",
+    preferred_order_day: "매월 첫째 주",
+    last_purchase_record_id: "purchase-1",
+    last_deal_id: "deal-1",
+    note: "치킨박스, 소스컵, 배달봉투는 매월 가격 확인 후 주문",
+    status: "active",
+    created_at: "2026-07-04T09:20:00.000Z",
+    updated_at: "2026-07-04T09:20:00.000Z",
+  },
+];
+
 const samplePurchaseRecordItems: PurchaseRecordItem[] = [
   purchaseItem("purchase-item-1", "purchase-1", "치킨박스", "1,000개", 1000, "개", 280, "무지 박스", "deal-item-1"),
   purchaseItem("purchase-item-2", "purchase-1", "소스컵", "2,000개", 2000, "개", 55, "뚜껑 포함", "deal-item-2"),
@@ -3129,6 +3148,7 @@ export const initialData: AppData = {
   ],
   purchase_records: samplePurchaseRecords,
   purchase_record_items: samplePurchaseRecordItems,
+  regular_suppliers: sampleRegularSuppliers,
   purchase_documents: samplePurchaseDocuments,
   tax_documents: sampleTaxDocuments,
   tax_document_checks: sampleTaxDocumentChecks,
@@ -3268,6 +3288,7 @@ const productionInitialData: AppData = {
   deal_attachments: [],
   purchase_records: [],
   purchase_record_items: [],
+  regular_suppliers: [],
   purchase_documents: [],
   tax_documents: [],
   tax_document_checks: [],
@@ -11754,6 +11775,7 @@ export function normalizeData(data: Partial<AppData>): AppData {
     deal_attachments: data.deal_attachments ?? fallbackData.deal_attachments,
     purchase_records: (data.purchase_records ?? fallbackData.purchase_records).map(normalizePurchaseRecord),
     purchase_record_items: data.purchase_record_items ?? fallbackData.purchase_record_items,
+    regular_suppliers: data.regular_suppliers ?? fallbackData.regular_suppliers,
     purchase_documents: data.purchase_documents ?? fallbackData.purchase_documents,
     tax_documents: (data.tax_documents ?? fallbackData.tax_documents).map(normalizeTaxDocument),
     tax_document_checks: data.tax_document_checks ?? fallbackData.tax_document_checks,

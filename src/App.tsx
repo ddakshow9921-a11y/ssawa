@@ -270,7 +270,7 @@ import {
   createTodaySupportTicket,
   dismissTodayGuide,
 } from "./data/sawaData";
-import type { AccountingStatus, AdminTodayActionResultStatus, AdminTodayActionType, AdminTodayTargetType, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, BusinessManualReviewRequest, BusinessManualReviewStatus, BusinessOperatingStatus, BusinessVerification, BusinessVerificationStatus, Category, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, ProductInquiryDraft, ProductOrderRequestDraft, ProductStockStatus, Profile, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReply, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProduct, SupplierProductDraft, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, TodayAdminSettingKey, TodayEvidenceStatus, TodayNotificationAudience, TodayNotificationStatus, TodayRequoteRecommendation, TodaySecurityEventType, TodaySecuritySeverity, TodaySsawaQuoteDraft, TodayUploadFinalRecordType, TodayUploadTargetField, TodayUploadType, UserRole } from "./types";
+import type { AccountingStatus, AdminTodayActionResultStatus, AdminTodayActionType, AdminTodayTargetType, AnalysisDisclosureScope, AnalysisItem, AnalysisItemReviewStatus, AnalysisJobStatus, AnalysisSourceType, AppData, AttachmentAnalysisStatus, AttachmentType, BetaFeedback, BillingAccount, BlacklistStatus, BusinessManualReviewRequest, BusinessManualReviewStatus, BusinessOperatingStatus, BusinessVerification, BusinessVerificationStatus, Category, CommissionPolicy, Deal, DealStatus, DeliveryNoteStatus, FeedbackStatus, FeedbackType, ManualPurchaseDraft, Message, MessageReportStatus, MessageThread, Notification, NotificationPriority, PaymentMethod, PlatformFee, PlatformFeeStatus, ProductInquiryDraft, ProductOrderRequestDraft, ProductStockStatus, Profile, PurchaseDocumentType, PurchaseRecord, QaChecklistStatus, Quote, QuoteAttachmentDraft, QuoteDraft, QuoteRequest, QuoteRequestDraft, QuoteRequestInputMethod, QuoteRequestItem, ReceiptStatus, RegularSupplier, Report, ReportActionType, ReportEntityType, ReportStatus, ReportType, Review, ReviewReply, ReviewReportStatus, ReviewStatus, SanctionStatus, SanctionType, Settlement, SettlementStatus, SupplierApplicationDraft, SupplierDocumentDraft, SupplierPlan, SupplierProduct, SupplierProductDraft, SupplierProfile, SupplierReputationScore, TaxInvoiceStatus, TodayAdminSettingKey, TodayEvidenceStatus, TodayNotificationAudience, TodayNotificationStatus, TodayRequoteRecommendation, TodaySecurityEventType, TodaySecuritySeverity, TodaySsawaQuoteDraft, TodayUploadFinalRecordType, TodayUploadTargetField, TodayUploadType, UserRole } from "./types";
 import { appConfig, environmentLabel, isLiveModeReady } from "./lib/env";
 import { getSupabaseClient, isSupabaseConfigured, SUPABASE_PROJECT_URL } from "./lib/supabase/client";
 import { ensureProfile, getCurrentProfile, getCurrentUser, signOut as signOutSupabase } from "./lib/supabase/auth";
@@ -314,6 +314,7 @@ const navItemsByRole: Record<UserRole, NavItem[]> = {
     { label: "업체 상품", mobileLabel: "상품", path: "/app/products", icon: Boxes },
     { label: "거래", path: "/app/deals", icon: ReceiptText },
     { label: "구매내역", path: "/app/purchases", icon: PackageCheck },
+    { label: "단골 거래", path: "/app/regular-suppliers", icon: RefreshCcw },
     { label: "오늘장사", mobileLabel: "장부", path: "/app/today", icon: Landmark },
     { label: "후기", path: "/app/reviews", icon: BadgeCheck },
     { label: "내 사업장", mobileLabel: "사업장", path: "/app/buyer/profile", icon: ShieldCheck },
@@ -350,14 +351,16 @@ const mobileNavItemsByRole: Record<UserRole, NavItem[]> = {
   buyer: [
     navItemsByRole.buyer[0],
     navItemsByRole.buyer[1],
-    navItemsByRole.buyer[5],
     navItemsByRole.buyer[3],
+    navItemsByRole.buyer[4],
+    { label: "알림", path: "/app/notifications", icon: Bell, key: "buyer-mobile-notifications" },
   ],
   supplier: [
     navItemsByRole.supplier[0],
     navItemsByRole.supplier[1],
     navItemsByRole.supplier[2],
     navItemsByRole.supplier[3],
+    { label: "문의", path: "/app/supplier/chats", icon: MessageCircle, key: "supplier-mobile-chats" },
   ],
   admin: [
     navItemsByRole.admin[0],
@@ -1335,6 +1338,7 @@ const cloudSyncedDataKeys = [
   "deal_attachments",
   "purchase_records",
   "purchase_record_items",
+  "regular_suppliers",
   "purchase_documents",
   "tax_documents",
   "tax_document_checks",
@@ -2166,7 +2170,7 @@ export default function App() {
   const hasTodayFloatingActions = Boolean(authSession && (currentRoutePath === "/app/today" || currentRoutePath.startsWith("/app/today/")));
   const showChatShortcut = Boolean(authSession && isProtectedAppPath(path) && !isNavItemActive(path, chatPath) && !hasTodayFloatingActions);
   const showMobileNav = Boolean(authSession && isProtectedAppPath(path));
-  const showMobileMore = Boolean(showMobileNav && mobileMoreItems.length > 0);
+  const showMobileMore = Boolean(showMobileNav && mobileNavItems.length < 5 && mobileMoreItems.length > 0);
   const mobileMoreActive = mobileMoreItems.some((item) => isNavItemActive(path, item.path));
   const shellClassName = `appShell${hasTodayFloatingActions ? " hasTodayFloatingActions" : ""}`;
 
@@ -2399,6 +2403,7 @@ function renderRoute(path: string, data: AppData, navigate: Navigate, setData: (
   if (path === "/app/admin/today/help" || path === "/app/today/help/admin") return <TodayHelpPage data={data} setData={setData} navigate={navigate} audience="admin" userId="admin-1" />;
   if (path === "/app/admin/today/settings/notifications") return <TodayNotificationSettingsPage data={data} setData={setData} navigate={navigate} audience="admin" userId="admin-1" />;
   if (path === "/app/quick-reorder") return <QuickReorderPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
+  if (path === "/app/regular-suppliers") return <RegularSuppliersPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
   if (path === "/app/favorites/items") return <FavoriteItemsPage data={data} navigate={navigate} setData={setData} authSession={authSession} />;
   if (path === "/app/today/supplier" || path.startsWith("/app/today/supplier/")) {
     const currentRole = authSession?.role ?? shellRole;
@@ -7813,6 +7818,14 @@ function BuyerProfilePage({
     <Page>
       <BackButton onClick={() => navigate("/app")} label="구매자 홈" />
       <PageTitle eyebrow="내 사업장" title="기본 정보 수정" desc="견적요청과 거래에 표시되는 사업장 기본 정보를 관리합니다." />
+      <section className="statusNotice">
+        <Store size={22} />
+        <div>
+          <strong>자주 거래하는 업체가 있다면 단골로 등록해 두세요.</strong>
+          <p>지난 구매내역에서 업체를 선택해 주기와 메모를 남기고, 같은 품목으로 빠르게 다시 견적을 요청할 수 있습니다.</p>
+        </div>
+        <button className="secondaryButton compact" type="button" onClick={() => navigate("/app/regular-suppliers")}>단골 업체 관리</button>
+      </section>
       <section className="formStack">
         <div className="conditionGrid">
           <Field label="상호">
@@ -8175,7 +8188,122 @@ function HomePage({ data, navigate, authSession }: PageProps & { authSession?: A
 
   return (
     <Page>
-      <div className="buyerDashboard">
+      <div className="mobileRoleHome buyerMobileHome" aria-label="구매자 모바일 홈">
+        <section className="mobileHomeHero">
+          <span className="mobileHomeBrand">싸와!</span>
+          <h1>무엇이 필요하세요?</h1>
+          <p>품목을 몰라도 사진 한 장이면 견적요청을 시작할 수 있어요.</p>
+          <button className="mobileHomePrimary" type="button" onClick={() => navigate("/app/requests/new")}>
+            새 견적 요청
+          </button>
+          <div className="mobileHomeActionGrid">
+            <button type="button" onClick={() => navigate("/app/requests/new?method=photo&source=invoice")}>
+              <Upload size={20} />
+              <span>거래명세서</span>
+            </button>
+            <button type="button" onClick={() => navigate("/app/requests/new?method=photo")}>
+              <FilePlus2 size={20} />
+              <span>사진으로</span>
+            </button>
+            <button type="button" onClick={() => navigate("/app/requests/new?method=manual")}>
+              <ClipboardList size={20} />
+              <span>직접 입력</span>
+            </button>
+            <button type="button" onClick={() => navigate("/app/quick-reorder")}>
+              <RefreshCcw size={20} />
+              <span>지난 구매</span>
+            </button>
+            <button type="button" onClick={() => navigate("/app/regular-suppliers")}>
+              <Store size={20} />
+              <span>단골 업체</span>
+            </button>
+          </div>
+        </section>
+
+        <section className="mobileHomeSection" aria-label="한눈에 보기">
+          <div className="mobileSectionHeader">
+            <h2>한눈에 보기</h2>
+          </div>
+          <div className="mobileStatGrid">
+            <button type="button" onClick={() => navigate("/app/requests")}>
+              <small>새 견적</small>
+              <strong>{requestsWithQuotes || todayArrivals}건</strong>
+              <span>가격 비교</span>
+            </button>
+            <button type="button" onClick={() => navigate("/app/deals")}>
+              <small>진행 거래</small>
+              <strong>{activeDeals}건</strong>
+              <span>배송 확인</span>
+            </button>
+            <button type="button" onClick={() => navigate("/app/purchases")}>
+              <small>구매내역</small>
+              <strong>{buyerPurchases.length}건</strong>
+              <span>장부 확인</span>
+            </button>
+          </div>
+        </section>
+
+        <section className="mobileHomeSection" aria-label="빠른 메뉴">
+          <div className="mobileSectionHeader">
+            <h2>빠른 메뉴</h2>
+          </div>
+          <div className="mobileTaskList">
+            <button type="button" onClick={() => navigate("/app/requests/new?method=photo")}>
+              <span className="mobileTaskIcon orange"><Upload size={20} /></span>
+              <strong>사진으로 요청</strong>
+              <small>제품 사진이나 거래명세서를 올려요.</small>
+              <ArrowRight size={18} />
+            </button>
+            <button type="button" onClick={() => navigate("/app/quick-reorder")}>
+              <span className="mobileTaskIcon blue"><RefreshCcw size={20} /></span>
+              <strong>지난 주문 다시 요청</strong>
+              <small>이전에 산 품목을 다시 불러와요.</small>
+              <ArrowRight size={18} />
+            </button>
+            <button type="button" onClick={() => navigate("/app/regular-suppliers")}>
+              <span className="mobileTaskIcon orange"><Store size={20} /></span>
+              <strong>단골 업체 관리</strong>
+              <small>거래한 업체를 저장하고 주기를 정해요.</small>
+              <ArrowRight size={18} />
+            </button>
+            <button type="button" onClick={() => navigate("/app/chats")}>
+              <span className="mobileTaskIcon green"><MessageCircle size={20} /></span>
+              <strong>문의/채팅</strong>
+              <small>거래 문의를 바로 확인해요.</small>
+              <ArrowRight size={18} />
+            </button>
+          </div>
+        </section>
+
+        <section className="mobileHomeSection" aria-label="최근 요청">
+          <div className="mobileSectionHeader">
+            <h2>최근 요청</h2>
+            <button type="button" onClick={() => navigate("/app/requests")}>전체 보기</button>
+          </div>
+          <div className="mobileRecentList">
+            {recentRequests.slice(0, 3).map((request) => {
+              const quoteCount = getQuoteCount(request.id);
+              return (
+                <button type="button" key={request.id} onClick={() => navigate(`/app/requests/${request.id}`)}>
+                  <div>
+                    <strong>{request.title}</strong>
+                    <small>{formatHomeDate(request.created_at)} · {request.delivery_region}</small>
+                  </div>
+                  <em>{quoteCount > 0 ? `${quoteCount}건 도착` : requestStatusLabels[request.status]}</em>
+                </button>
+              );
+            })}
+            {!recentRequests.length && (
+              <div className="mobileEmptyCard">
+                <strong>아직 요청이 없습니다.</strong>
+                <span>사진이나 직접 입력으로 첫 견적을 요청해 보세요.</span>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <div className="buyerDashboard hasMobileRoleHome">
         <section className="buyerDashboardTop" aria-label="빠른 검색과 요청">
           <label className="buyerSearchBar">
             <span className="buyerSearchIcon"><SearchCheck size={18} /></span>
@@ -13844,7 +13972,94 @@ function SupplierDashboard({ data, navigate, authSession }: PageProps & { authSe
 
   return (
     <Page>
-      <div className="supplierDashboard">
+      <div className="mobileRoleHome supplierMobileHome" aria-label="공급업체 모바일 홈">
+        <section className="mobileHomeHero supplierTone">
+          <span className="mobileHomeBrand">싸와!</span>
+          <h1>{supplier.business_name}님, 오늘 할 일입니다.</h1>
+          <p>새 요청, 견적 작성, 거래 진행을 먼저 확인하세요.</p>
+          <button className="mobileHomePrimary" type="button" onClick={() => navigate("/app/supplier/requests")}>
+            새 요청 확인
+          </button>
+        </section>
+
+        <section className="mobileHomeSection" aria-label="오늘 할 일">
+          <div className="mobileSectionHeader">
+            <h2>오늘 할 일</h2>
+          </div>
+          <div className="mobileTaskList">
+            <button type="button" onClick={() => navigate("/app/supplier/requests?unquoted=1")}>
+              <span className="mobileTaskIcon orange"><SearchCheck size={20} /></span>
+              <strong>견적 보낼 요청</strong>
+              <small>{pendingQuoteRequests.length}건이 견적을 기다립니다.</small>
+              <em>{pendingQuoteRequests.length}건</em>
+            </button>
+            <button type="button" onClick={() => navigate("/app/supplier/deals")}>
+              <span className="mobileTaskIcon green"><PackageCheck size={20} /></span>
+              <strong>진행 거래</strong>
+              <small>상품 준비와 배송 상태를 확인하세요.</small>
+              <em>{supplierDeals.filter((deal) => !["completed", "cancelled_by_buyer", "cancelled_by_supplier"].includes(deal.status)).length}건</em>
+            </button>
+            <button type="button" onClick={() => navigate("/app/supplier/chats")}>
+              <span className="mobileTaskIcon blue"><MessageCircle size={20} /></span>
+              <strong>문의 답변</strong>
+              <small>구매자 문의를 놓치지 않게 모았습니다.</small>
+              <em>{unansweredThreads.length}건</em>
+            </button>
+          </div>
+        </section>
+
+        <section className="mobileHomeSection" aria-label="한눈에 보기">
+          <div className="mobileSectionHeader">
+            <h2>한눈에 보기</h2>
+          </div>
+          <div className="mobileStatGrid">
+            <button type="button" onClick={() => navigate("/app/supplier/requests")}>
+              <small>새 요청</small>
+              <strong>{todayRequests}건</strong>
+              <span>마감 확인</span>
+            </button>
+            <button type="button" onClick={() => navigate("/app/supplier/quotes")}>
+              <small>제출 견적</small>
+              <strong>{myQuotes.length}건</strong>
+              <span>결과 확인</span>
+            </button>
+            <button type="button" onClick={() => navigate("/app/supplier/reputation")}>
+              <small>후기</small>
+              <strong>{receivedReviews.length}건</strong>
+              <span>답변 관리</span>
+            </button>
+          </div>
+        </section>
+
+        <section className="mobileHomeSection" aria-label="최근 요청">
+          <div className="mobileSectionHeader">
+            <h2>최근 요청</h2>
+            <button type="button" onClick={() => navigate("/app/supplier/requests")}>전체 보기</button>
+          </div>
+          <div className="mobileRecentList">
+            {recentRequests.slice(0, 3).map((request) => {
+              const status = requestDashboardStatus(request);
+              return (
+                <button type="button" key={request.id} onClick={() => navigate(`/app/supplier/requests/${request.id}`)}>
+                  <div>
+                    <strong>{request.title}</strong>
+                    <small>{request.category_name} · {formatSupplierDeadline(request.desired_delivery_date || request.created_at)}</small>
+                  </div>
+                  <em>{status.label}</em>
+                </button>
+              );
+            })}
+            {!recentRequests.length && (
+              <div className="mobileEmptyCard">
+                <strong>조건에 맞는 새 요청이 없습니다.</strong>
+                <span>취급 카테고리와 납품 지역을 확인해 주세요.</span>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <div className="supplierDashboard hasMobileRoleHome">
         <p className="supplierDashboardIntro">{supplier.business_name}에 맞는 요청과 선택된 거래를 먼저 보여드립니다.</p>
 
         <section className={`supplierApprovalHero ${supplier.approval_status === "approved" ? "approved" : "pending"}`}>
@@ -16576,6 +16791,265 @@ function AdminPlaybooksPage({ data, navigate }: PageProps) {
   );
 }
 
+type RegularSupplierCandidate = {
+  supplierId: string;
+  supplierName: string;
+  supplier?: SupplierProfile;
+  purchases: PurchaseRecord[];
+  deals: Deal[];
+  totalAmount: number;
+  lastPurchase?: PurchaseRecord;
+  registered?: RegularSupplier;
+};
+
+const regularSupplierCadenceLabels: Record<RegularSupplier["cadence"], string> = {
+  weekly: "매주",
+  biweekly: "격주",
+  monthly: "매월",
+  on_demand: "필요할 때",
+};
+
+const regularSupplierCadenceHints: Record<RegularSupplier["cadence"], string> = {
+  weekly: "매주 같은 요일에 확인",
+  biweekly: "2주마다 확인",
+  monthly: "월 1회 정기 확인",
+  on_demand: "필요할 때 바로 요청",
+};
+
+function formatRegularDate(value?: string) {
+  if (!value) return "내역 없음";
+  const [year, month, day] = value.slice(0, 10).split("-");
+  if (!year || !month || !day) return value;
+  return `${Number(month)}월 ${Number(day)}일`;
+}
+
+function buildRegularSupplierCandidates(data: AppData, buyerIds: Set<string>): RegularSupplierCandidate[] {
+  const registeredBySupplier = new Map(data.regular_suppliers.filter((entry) => buyerIds.has(entry.buyer_id)).map((entry) => [entry.supplier_id, entry]));
+  const rows = new Map<string, RegularSupplierCandidate>();
+
+  function ensureRow(supplierId: string, supplierName: string) {
+    const supplier = data.supplier_profiles.find((entry) => entry.id === supplierId);
+    const key = supplierId || supplierName;
+    const existing = rows.get(key);
+    if (existing) return existing;
+    const row: RegularSupplierCandidate = {
+      supplierId,
+      supplierName: supplier?.business_name || supplierName || "거래 업체",
+      supplier,
+      purchases: [],
+      deals: [],
+      totalAmount: 0,
+      registered: registeredBySupplier.get(supplierId),
+    };
+    rows.set(key, row);
+    return row;
+  }
+
+  data.purchase_records
+    .filter((record) => buyerIds.has(record.buyer_id) && !record.deleted_at)
+    .filter((record) => record.supplier_id && record.supplier_id !== "manual-supplier")
+    .forEach((record) => {
+      const row = ensureRow(record.ssawa_supplier_id || record.supplier_id, record.supplier_name);
+      row.purchases.push(record);
+      row.totalAmount += record.total_amount;
+      if (!row.lastPurchase || record.purchase_date > row.lastPurchase.purchase_date) row.lastPurchase = record;
+    });
+
+  data.deals
+    .filter((deal) => buyerIds.has(deal.buyer_id))
+    .forEach((deal) => {
+      const supplier = data.supplier_profiles.find((entry) => entry.id === deal.supplier_id);
+      const row = ensureRow(deal.supplier_id, supplier?.business_name || deal.supplier_id);
+      row.deals.push(deal);
+      if (!row.lastPurchase && deal.completed_at) {
+        const purchase = data.purchase_records.find((record) => record.deal_id === deal.id);
+        if (purchase) row.lastPurchase = purchase;
+      }
+    });
+
+  data.regular_suppliers
+    .filter((entry) => buyerIds.has(entry.buyer_id))
+    .forEach((entry) => ensureRow(entry.supplier_id, entry.supplier_name));
+
+  return Array.from(rows.values())
+    .map((row) => ({
+      ...row,
+      purchases: [...row.purchases].sort((a, b) => b.purchase_date.localeCompare(a.purchase_date)),
+      deals: [...row.deals].sort((a, b) => b.updated_at.localeCompare(a.updated_at)),
+    }))
+    .sort((a, b) => {
+      if (Boolean(a.registered) !== Boolean(b.registered)) return a.registered ? -1 : 1;
+      return (b.lastPurchase?.purchase_date ?? "").localeCompare(a.lastPurchase?.purchase_date ?? "") || b.totalAmount - a.totalAmount;
+    });
+}
+
+function RegularSuppliersPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
+  const buyerIds = getBuyerIdsForSession(data, authSession);
+  const buyerId = getPrimaryBuyerIdForSession(data, authSession);
+  const candidates = buildRegularSupplierCandidates(data, buyerIds);
+  const registeredCount = candidates.filter((entry) => entry.registered?.status === "active").length;
+  const [message, setMessage] = useState("");
+
+  function commitRegularSuppliers(nextRegularSuppliers: RegularSupplier[]) {
+    const nextData = { ...data, regular_suppliers: nextRegularSuppliers };
+    saveData(nextData);
+    setData(nextData);
+  }
+
+  function registerSupplier(candidate: RegularSupplierCandidate, cadence: RegularSupplier["cadence"] = "monthly") {
+    const nowIso = new Date().toISOString();
+    const existing = data.regular_suppliers.find((entry) => entry.buyer_id === buyerId && entry.supplier_id === candidate.supplierId);
+    const nextEntry: RegularSupplier = {
+      id: existing?.id ?? `regular-supplier-${Date.now()}`,
+      buyer_id: buyerId,
+      supplier_id: candidate.supplierId,
+      supplier_name: candidate.supplierName,
+      nickname: existing?.nickname || `${candidate.supplierName} 단골 거래`,
+      cadence,
+      preferred_order_day: existing?.preferred_order_day || regularSupplierCadenceHints[cadence],
+      last_purchase_record_id: candidate.lastPurchase?.id ?? existing?.last_purchase_record_id,
+      last_deal_id: candidate.lastPurchase?.deal_id ?? candidate.deals[0]?.id ?? existing?.last_deal_id,
+      note: existing?.note || `최근 ${candidate.purchases.length || candidate.deals.length}회 거래한 업체입니다.`,
+      status: "active",
+      created_at: existing?.created_at ?? nowIso,
+      updated_at: nowIso,
+    };
+    const nextRegularSuppliers = existing
+      ? data.regular_suppliers.map((entry) => entry.id === existing.id ? nextEntry : entry)
+      : [nextEntry, ...data.regular_suppliers];
+    commitRegularSuppliers(nextRegularSuppliers);
+    setMessage(`${candidate.supplierName} 업체가 단골 거래에 등록되었습니다.`);
+  }
+
+  function updateRegularSupplier(entry: RegularSupplier, patch: Partial<RegularSupplier>) {
+    const nextRegularSuppliers = data.regular_suppliers.map((regular) =>
+      regular.id === entry.id ? { ...regular, ...patch, updated_at: new Date().toISOString() } : regular,
+    );
+    commitRegularSuppliers(nextRegularSuppliers);
+  }
+
+  function createFromCandidatePurchase(candidate: RegularSupplierCandidate, purchaseId?: string) {
+    const purchase = purchaseId
+      ? candidate.purchases.find((entry) => entry.id === purchaseId)
+      : candidate.purchases[0] ?? (candidate.registered?.last_purchase_record_id ? data.purchase_records.find((entry) => entry.id === candidate.registered?.last_purchase_record_id) : undefined);
+    if (!purchase) {
+      setMessage("다시 견적받을 구매내역이 없습니다. 먼저 거래 완료 또는 구매내역을 확인해 주세요.");
+      return;
+    }
+    const recordOwnerId = purchase.business_id || purchase.buyer_id || buyerId;
+    const result = createRequoteDraftFromPurchaseRecords(data, { businessId: recordOwnerId, purchaseRecordIds: [purchase.id], createdBy: buyerId });
+    setData(result.data);
+    if (result.url) {
+      navigate(result.url);
+      return;
+    }
+    setMessage(result.error ?? "구매내역으로 견적요청 초안을 만들 수 없습니다.");
+  }
+
+  function openSupplierChat(candidate: RegularSupplierCandidate) {
+    const thread = data.message_threads
+      .filter((entry) => buyerIds.has(entry.buyer_id) && entry.supplier_id === candidate.supplierId)
+      .sort((a, b) => b.last_message_at.localeCompare(a.last_message_at))[0];
+    navigate(thread ? `/app/chats/${thread.id}` : "/app/chats");
+  }
+
+  return (
+    <Page>
+      <BackButton onClick={() => navigate("/app")} label="앱 홈" />
+      <PageTitle eyebrow="단골 거래" title="거래한 업체를 단골로 등록해 반복 주문하세요." desc="이미 거래한 업체만 등록할 수 있습니다. 주기를 정해두고 지난 구매 품목으로 빠르게 다시 견적을 요청할 수 있습니다." />
+      {message && <div className="alert success">{message}</div>}
+      <div className="dashboardGrid">
+        <Metric label="단골 업체" value={`${registeredCount}곳`} icon={<RefreshCcw />} />
+        <Metric label="거래 업체 후보" value={`${candidates.length}곳`} icon={<Store />} />
+        <Metric label="최근 구매" value={`${candidates.reduce((sum, entry) => sum + entry.purchases.length, 0)}건`} icon={<PackageCheck />} />
+        <Metric label="단골 거래액" value={money(candidates.filter((entry) => entry.registered).reduce((sum, entry) => sum + entry.totalAmount, 0))} icon={<ReceiptText />} />
+      </div>
+      <section className="statusNotice regularSupplierIntro">
+        <RefreshCcw size={22} />
+        <div>
+          <strong>단골 거래는 업체 저장 기능입니다.</strong>
+          <p>품목 묶음 저장과 달리, 실제 거래했던 공급업체를 기준으로 주기·메모·최근 구매내역을 함께 관리합니다.</p>
+        </div>
+      </section>
+      <section className="regularSupplierGrid" aria-label="단골 거래 업체 목록">
+        {candidates.map((candidate) => {
+          const regular = candidate.registered;
+          const lastItems = candidate.lastPurchase
+            ? data.purchase_record_items.filter((item) => item.purchase_record_id === candidate.lastPurchase?.id).slice(0, 3)
+            : [];
+          return (
+            <article className={`regularSupplierCard ${regular ? "registered" : ""}`} key={candidate.supplierId}>
+              <div className="regularSupplierHeader">
+                <div>
+                  <span className="eyebrow">{regular ? "단골 등록됨" : "거래 이력 있음"}</span>
+                  <h2>{regular?.nickname || candidate.supplierName}</h2>
+                  <p>{candidate.supplier?.categories?.slice(0, 3).join(", ") || candidate.lastPurchase?.category_name || "거래 카테고리 확인"}</p>
+                </div>
+                <StatusBadge tone={regular?.status === "paused" ? "gray" : regular ? "green" : "blue"}>{regular ? regularSupplierCadenceLabels[regular.cadence] : "등록 가능"}</StatusBadge>
+              </div>
+              <div className="regularSupplierStats">
+                <span><strong>{candidate.purchases.length}</strong>회 구매</span>
+                <span><strong>{money(candidate.totalAmount)}</strong> 누적</span>
+                <span><strong>{formatRegularDate(candidate.lastPurchase?.purchase_date)}</strong> 최근</span>
+              </div>
+              <div className="regularSupplierItems">
+                {lastItems.length ? lastItems.map((item) => (
+                  <span key={item.id}>{item.item_name} {item.quantity.toLocaleString()}{item.unit}</span>
+                )) : <span>최근 품목을 불러오려면 구매내역을 확인해 주세요.</span>}
+              </div>
+              {regular ? (
+                <div className="regularSupplierControls">
+                  <label>
+                    거래 주기
+                    <select value={regular.cadence} onChange={(event) => updateRegularSupplier(regular, { cadence: event.target.value as RegularSupplier["cadence"], preferred_order_day: regularSupplierCadenceHints[event.target.value as RegularSupplier["cadence"]] })}>
+                      <option value="weekly">매주</option>
+                      <option value="biweekly">격주</option>
+                      <option value="monthly">매월</option>
+                      <option value="on_demand">필요할 때</option>
+                    </select>
+                  </label>
+                  <label>
+                    메모
+                    <input value={regular.note} onChange={(event) => updateRegularSupplier(regular, { note: event.target.value })} placeholder="예: 매주 월요일 가격 확인" />
+                  </label>
+                </div>
+              ) : (
+                <div className="regularSupplierRegister">
+                  <button className="primaryButton compact" type="button" onClick={() => registerSupplier(candidate, "monthly")}>단골 등록</button>
+                  <button className="secondaryButton compact" type="button" onClick={() => registerSupplier(candidate, "weekly")}>매주 거래로 등록</button>
+                </div>
+              )}
+              <div className="regularSupplierActions">
+                <button className="primaryButton compact" type="button" onClick={() => createFromCandidatePurchase(candidate)}>최근 품목으로 견적받기</button>
+                <button className="secondaryButton compact" type="button" onClick={() => openSupplierChat(candidate)}>문의하기</button>
+                {regular && (
+                  <button className="ghostButton compact" type="button" onClick={() => updateRegularSupplier(regular, { status: regular.status === "active" ? "paused" : "active" })}>
+                    {regular.status === "active" ? "잠시 중지" : "다시 활성화"}
+                  </button>
+                )}
+              </div>
+              {candidate.purchases.length > 1 && (
+                <div className="regularSupplierHistory">
+                  <strong>거래내역에서 선택</strong>
+                  {candidate.purchases.slice(0, 3).map((purchase) => (
+                    <button type="button" key={purchase.id} onClick={() => createFromCandidatePurchase(candidate, purchase.id)}>
+                      <span>{purchase.purchase_title}</span>
+                      <small>{formatRegularDate(purchase.purchase_date)} · {money(purchase.total_amount)}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </section>
+      {!candidates.length && (
+        <EmptyState icon={<Store />} title="아직 단골로 등록할 거래 업체가 없습니다." desc="거래가 완료되어 구매내역이 생기면 이곳에서 업체를 단골로 등록할 수 있습니다." actionLabel="견적 요청하기" onAction={() => navigate("/app/requests/new")} />
+      )}
+    </Page>
+  );
+}
+
 function QuickReorderPage({ data, navigate, setData, authSession }: MutatingPageProps & { authSession?: AppAuthSession | null }) {
   const buyerIds = getBuyerIdsForSession(data, authSession);
   const buyerId = getPrimaryBuyerIdForSession(data, authSession);
@@ -16677,6 +17151,7 @@ function QuickReorderPage({ data, navigate, setData, authSession }: MutatingPage
           <strong>구매 품목 선택 → 품목 확인 → 견적요청 제출 순서로 진행됩니다.</strong>
           <p>아래 버튼을 누르면 바로 제출되지 않고, 품목과 수량을 확인하는 화면으로 먼저 이동합니다.</p>
         </div>
+        <button className="secondaryButton compact" type="button" onClick={() => navigate("/app/regular-suppliers")}>단골 업체 관리</button>
       </section>
       {message && <div className="alert warning">{message}</div>}
       <section className="toolPanel">
